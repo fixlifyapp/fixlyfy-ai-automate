@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { InvoiceDialog } from "./dialogs/InvoiceDialog";
-import { InvoicePreviewWindow } from "./dialogs/InvoicePreviewWindow";
+import { SteppedInvoiceBuilder } from "./dialogs/SteppedInvoiceBuilder";
+import { UnifiedDocumentViewer } from "./dialogs/UnifiedDocumentViewer";
 import { formatCurrency } from "@/lib/utils";
 import { Invoice } from "@/hooks/useInvoices";
 
@@ -20,25 +21,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  
-  // Mock data for client and company info
-  const clientInfo = {
-    name: "Client Name",
-    address: "123 Client St",
-    phone: "123-456-7890",
-    email: "client@example.com"
-  };
-  
-  const companyInfo = {
-    name: "Your Company",
-    logo: "/placeholder.svg",
-    address: "123 Business Ave",
-    phone: "555-555-5555",
-    email: "company@example.com",
-    legalText: "Terms and conditions apply."
-  };
+  const [showViewer, setShowViewer] = useState(false);
   
   const fetchInvoices = async () => {
     setIsLoading(true);
@@ -96,30 +79,22 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       toast.error("Failed to delete invoice");
     }
   };
-  
-  const handleEditInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setIsEditMode(true);
-    setIsInvoiceDialogOpen(true);
-  };
 
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setShowPreview(true);
+    setShowViewer(true);
   };
   
   const handleNewInvoice = () => {
     setSelectedInvoice(null);
-    setIsEditMode(false);
     setIsInvoiceDialogOpen(true);
   };
 
-  const handleInvoiceCreated = (amount: number) => {
+  const handleInvoiceCreated = () => {
     fetchInvoices();
   };
 
-  const handlePaymentRecorded = () => {
-    // Refresh invoices when payment is recorded
+  const handleDocumentUpdated = () => {
     fetchInvoices();
     // Clear selected invoice to force refresh when reopened
     setSelectedInvoice(null);
@@ -217,15 +192,6 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
                     
                     <Button 
                       variant="outline" 
-                      size="sm"
-                      onClick={() => handleEditInvoice(invoice)}
-                    >
-                      <Edit size={16} className="mr-2" />
-                      Edit
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
                       size="sm" 
                       className="text-red-600 hover:bg-red-50"
                       onClick={() => handleDeleteInvoice(invoice.id)}
@@ -238,38 +204,28 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
               ))}
             </div>
           )}
-          
-          {/* Invoice Dialog */}
-          <InvoiceDialog 
-            open={isInvoiceDialogOpen}
-            onOpenChange={setIsInvoiceDialogOpen}
-            onInvoiceCreated={handleInvoiceCreated}
-            clientInfo={clientInfo}
-            companyInfo={companyInfo}
-            editInvoice={isEditMode ? selectedInvoice : undefined}
-          />
-
-          {/* Invoice Preview Window - Now uses UnifiedPaymentDialog */}
-          {selectedInvoice && (
-            <InvoicePreviewWindow
-              open={showPreview}
-              onOpenChange={(open) => {
-                setShowPreview(open);
-                if (!open) {
-                  // Refresh invoice data when closing preview
-                  const refreshedInvoice = invoices.find(inv => inv.id === selectedInvoice.id);
-                  if (refreshedInvoice) {
-                    setSelectedInvoice(refreshedInvoice);
-                  }
-                }
-              }}
-              invoice={selectedInvoice}
-              jobId={jobId}
-              onPaymentRecorded={handlePaymentRecorded}
-            />
-          )}
         </CardContent>
       </Card>
+
+      {/* Invoice Builder Dialog */}
+      <SteppedInvoiceBuilder
+        open={isInvoiceDialogOpen}
+        onOpenChange={setIsInvoiceDialogOpen}
+        jobId={jobId}
+        onInvoiceCreated={handleInvoiceCreated}
+      />
+
+      {/* Unified Document Viewer */}
+      {selectedInvoice && (
+        <UnifiedDocumentViewer
+          open={showViewer}
+          onOpenChange={setShowViewer}
+          document={selectedInvoice}
+          documentType="invoice"
+          jobId={jobId}
+          onDocumentUpdated={handleDocumentUpdated}
+        />
+      )}
     </>
   );
 };

@@ -2,10 +2,10 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye } from "lucide-react";
+import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
-import { EstimatePreviewWindow } from "./dialogs/EstimatePreviewWindow";
+import { UnifiedDocumentViewer } from "./dialogs/UnifiedDocumentViewer";
 import { useJobs } from "@/hooks/useJobs";
 import { useEstimates, Estimate } from "@/hooks/useEstimates";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ interface JobEstimatesTabProps {
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showViewer, setShowViewer] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   
   const { jobs } = useJobs();
@@ -43,7 +43,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
   const handleViewEstimate = (estimate: Estimate) => {
     console.log('Viewing estimate:', estimate.id);
     setSelectedEstimate(estimate);
-    setShowPreview(true);
+    setShowViewer(true);
   };
 
   const handleConvertToInvoice = async (estimate: Estimate) => {
@@ -52,6 +52,14 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
     if (success && onEstimateConverted) {
       onEstimateConverted();
       toast.success("Estimate converted to invoice!");
+    }
+    setShowViewer(false);
+  };
+
+  const handleDocumentUpdated = () => {
+    refreshEstimates();
+    if (onEstimateConverted) {
+      onEstimateConverted();
     }
   };
 
@@ -82,7 +90,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         </CardContent>
       </Card>
 
-      {/* Unified Document Builder for creating/editing estimates */}
+      {/* Unified Document Builder for creating estimates */}
       <UnifiedDocumentBuilder
         open={showCreateForm}
         onOpenChange={setShowCreateForm}
@@ -91,13 +99,16 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         onDocumentCreated={handleEstimateCreated}
       />
 
-      {/* Estimate Preview Window */}
+      {/* Unified Document Viewer */}
       {selectedEstimate && (
-        <EstimatePreviewWindow
-          open={showPreview}
-          onOpenChange={setShowPreview}
-          estimate={selectedEstimate}
+        <UnifiedDocumentViewer
+          open={showViewer}
+          onOpenChange={setShowViewer}
+          document={selectedEstimate}
+          documentType="estimate"
+          jobId={jobId}
           onConvertToInvoice={handleConvertToInvoice}
+          onDocumentUpdated={handleDocumentUpdated}
         />
       )}
     </>
