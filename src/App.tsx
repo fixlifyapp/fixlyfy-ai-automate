@@ -15,6 +15,7 @@ import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailPage';
 import EstimateViewPage from './pages/EstimateViewPage';
+import SecureDocumentViewer from "@/pages/SecureDocumentViewer";
 
 function App() {
   return (
@@ -34,6 +35,10 @@ function App() {
           <Route path="/estimate/view/:id" element={<ProtectedRoute><EstimateViewPage /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          
+          {/* Secure document viewer - no authentication required */}
+          <Route path="/view/:token" element={<SecureDocumentViewer />} />
+          
         </Routes>
       </AppProviders>
     </Router>
