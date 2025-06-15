@@ -8,6 +8,7 @@ import { DocumentInfoGrid } from "./components/DocumentInfoGrid";
 import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
 import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
 import { DocumentPreviewFooter } from "./components/DocumentPreviewFooter";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UnifiedDocumentPreviewProps {
   documentType: DocumentType;
@@ -40,6 +41,8 @@ export const UnifiedDocumentPreview = ({
   dueDate,
   jobId
 }: UnifiedDocumentPreviewProps) => {
+  const isMobile = useIsMobile();
+  
   console.log('=== UnifiedDocumentPreview Debug ===');
   console.log('JobId prop received:', jobId);
   console.log('ClientInfo prop received:', clientInfo);
@@ -61,8 +64,8 @@ export const UnifiedDocumentPreview = ({
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200">
-        <div className="animate-pulse space-y-8 p-8">
+      <div className={`${isMobile ? 'w-full' : 'max-w-5xl'} mx-auto bg-white shadow-2xl border border-gray-200`}>
+        <div className={`animate-pulse space-y-8 ${isMobile ? 'p-4' : 'p-8'}`}>
           <div className="h-24 bg-gray-200 rounded"></div>
           <div className="h-48 bg-gray-200 rounded"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -78,7 +81,7 @@ export const UnifiedDocumentPreview = ({
   const documentColor = documentType === 'estimate' ? 'text-blue-700' : 'text-purple-700';
 
   return (
-    <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200 print:shadow-none print:border-gray-300">
+    <div className={`${isMobile ? 'w-full' : 'max-w-5xl'} mx-auto bg-white shadow-2xl border border-gray-200 print:shadow-none print:border-gray-300 ${isMobile ? 'text-sm' : ''}`}>
       <DocumentPreviewHeader
         documentType={documentType}
         documentNumber={documentNumber}
@@ -102,11 +105,11 @@ export const UnifiedDocumentPreview = ({
           lineItems={lineItems}
         />
       ) : (
-        <div className="px-8 py-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className={`${isMobile ? 'px-4 py-4' : 'px-8 py-6'}`}>
+          <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-900 mb-6`}>
             {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
           </h3>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+          <div className={`bg-gray-50 border border-gray-200 rounded-lg ${isMobile ? 'p-4' : 'p-8'} text-center`}>
             <p className="text-gray-500">No items found for this {documentType}</p>
           </div>
         </div>
@@ -122,13 +125,13 @@ export const UnifiedDocumentPreview = ({
 
       {/* Notes Section */}
       {notes && (
-        <div className="px-8 py-8 border-t">
-          <h3 className={`font-bold text-xl ${documentColor} mb-4 flex items-center`}>
+        <div className={`${isMobile ? 'px-4 py-4' : 'px-8 py-8'} border-t`}>
+          <h3 className={`font-bold ${isMobile ? 'text-lg' : 'text-xl'} ${documentColor} mb-4 flex items-center`}>
             <div className={`w-1 h-6 ${documentType === 'estimate' ? 'bg-blue-700' : 'bg-purple-700'} mr-3`}></div>
             Notes & Instructions
           </h3>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-base">{notes}</p>
+          <div className={`bg-amber-50 border border-amber-200 rounded-xl ${isMobile ? 'p-4' : 'p-6'}`}>
+            <p className={`text-gray-800 whitespace-pre-wrap leading-relaxed ${isMobile ? 'text-sm' : 'text-base'}`}>{notes}</p>
           </div>
         </div>
       )}

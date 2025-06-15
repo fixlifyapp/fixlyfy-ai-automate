@@ -209,52 +209,92 @@ export const UnifiedDocumentBuilder3Step = ({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className={`${isMobile ? 'w-[95vw] h-[95vh] max-w-none' : 'max-w-6xl'} ${isMobile ? 'p-4' : ''} max-h-[90vh] overflow-y-auto`}>
-        <DialogHeader className={isMobile ? "pb-4" : ""}>
-          <DialogTitle className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2'}`}>
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-              Step {currentStepNumber} of 3
-            </span>
-            <span className={isMobile ? "text-lg" : ""}>{stepTitles[currentStep]}</span>
-            {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
+      <DialogContent className={`${isMobile ? 'w-[98vw] h-[98vh] max-w-none m-1 p-0' : 'max-w-6xl'} max-h-[90vh] overflow-y-auto`}>
+        <DialogHeader className={`${isMobile ? 'p-4 pb-2 border-b' : 'pb-4'}`}>
+          <DialogTitle className={`flex ${isMobile ? 'flex-col gap-1' : 'items-center gap-2'}`}>
+            <div className={`flex ${isMobile ? 'justify-between items-center' : 'items-center gap-2'}`}>
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                Step {currentStepNumber} of 3
+              </span>
+              {documentNumber && <span className="text-xs text-muted-foreground">(#{documentNumber})</span>}
+            </div>
+            <span className={`${isMobile ? 'text-base font-medium' : 'text-lg'}`}>{stepTitles[currentStep]}</span>
           </DialogTitle>
           
           {/* Step Indicator - Mobile Optimized */}
-          <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center justify-center space-x-4'} py-4`}>
-            {steps.map((step, index) => (
-              <div key={step.number} className={`flex items-center ${isMobile ? 'w-full' : ''}`}>
-                <div className={`flex items-center justify-center ${isMobile ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 ${
-                  currentStepNumber === step.number
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : isStepComplete(step.number)
-                    ? "border-green-500 bg-green-500 text-white"
-                    : "border-gray-300 bg-white text-gray-500"
-                }`}>
-                  {isStepComplete(step.number) ? (
-                    <Check className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                  ) : (
-                    <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>{step.number}</span>
+          {isMobile ? (
+            <div className="flex justify-between items-center py-2">
+              {steps.map((step, index) => (
+                <div key={step.number} className="flex flex-col items-center flex-1">
+                  <div className={`flex items-center justify-center w-6 h-6 rounded-full border-2 ${
+                    currentStepNumber === step.number
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : isStepComplete(step.number)
+                      ? "border-green-500 bg-green-500 text-white"
+                      : "border-gray-300 bg-white text-gray-500"
+                  }`}>
+                    {isStepComplete(step.number) ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <span className="text-xs font-medium">{step.number}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-center">
+                    <div className={`text-xs font-medium ${
+                      currentStepNumber === step.number ? "text-primary" : "text-gray-500"
+                    }`}>
+                      {step.title.split(' ')[0]}
+                    </div>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`absolute top-3 w-8 h-0.5 bg-gray-300 ${
+                      index === 0 ? 'left-[calc(33.33%+12px)] right-[calc(66.66%-12px)]' : 
+                      'left-[calc(66.66%+12px)] right-[12px]'
+                    }`} style={{
+                      left: `calc(${((index + 1) * 33.33)}% + 12px)`,
+                      right: `calc(${(100 - ((index + 2) * 33.33))}% + 12px)`
+                    }} />
                   )}
                 </div>
-                
-                <div className={`ml-3 ${isMobile ? 'flex-1' : 'text-left'}`}>
-                  <div className={`${isMobile ? 'text-sm' : 'text-sm'} font-medium ${
-                    currentStepNumber === step.number ? "text-primary" : "text-gray-500"
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center space-x-4 py-4">
+              {steps.map((step, index) => (
+                <div key={step.number} className="flex items-center">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                    currentStepNumber === step.number
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : isStepComplete(step.number)
+                      ? "border-green-500 bg-green-500 text-white"
+                      : "border-gray-300 bg-white text-gray-500"
                   }`}>
-                    {step.title}
+                    {isStepComplete(step.number) ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <span className="text-sm font-medium">{step.number}</span>
+                    )}
                   </div>
-                  {!isMobile && <div className="text-xs text-gray-500">{step.description}</div>}
+                  
+                  <div className="ml-3 text-left">
+                    <div className={`text-sm font-medium ${
+                      currentStepNumber === step.number ? "text-primary" : "text-gray-500"
+                    }`}>
+                      {step.title}
+                    </div>
+                    <div className="text-xs text-gray-500">{step.description}</div>
+                  </div>
+                  
+                  {index < steps.length - 1 && (
+                    <ArrowRight className="h-4 w-4 text-gray-400 mx-4" />
+                  )}
                 </div>
-                
-                {!isMobile && index < steps.length - 1 && (
-                  <ArrowRight className="h-4 w-4 text-gray-400 mx-4" />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </DialogHeader>
         
-        <div className={`${isMobile ? 'py-2' : 'py-6'}`}>
+        <div className={`${isMobile ? 'p-4 pt-2' : 'py-6'}`}>
           {currentStep === "items" && (
             <>
               <UnifiedItemsStep
@@ -274,11 +314,11 @@ export const UnifiedDocumentBuilder3Step = ({
                 calculateGrandTotal={calculateGrandTotal}
               />
 
-              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4 border-t`}>
+              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4 border-t mt-4`}>
                 <Button 
                   variant="outline" 
                   onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
-                  className={isMobile ? 'w-full h-12' : ''}
+                  className={`${isMobile ? 'w-full h-12 text-sm' : ''}`}
                 >
                   {lineItems.length > 0 ? "Save for Later" : "Cancel"}
                 </Button>
@@ -286,7 +326,7 @@ export const UnifiedDocumentBuilder3Step = ({
                 <Button 
                   onClick={handleSaveAndContinue}
                   disabled={isSubmitting || lineItems.length === 0}
-                  className={`gap-2 ${isMobile ? 'w-full h-12' : ''}`}
+                  className={`gap-2 ${isMobile ? 'w-full h-12 text-sm' : ''}`}
                 >
                   {isSubmitting ? "Saving..." : "Save & Continue"}
                   <ArrowRight className="h-4 w-4" />
