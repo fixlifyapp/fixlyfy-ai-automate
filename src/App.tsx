@@ -15,6 +15,13 @@ import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailPage';
 import EstimateViewPage from './pages/EstimateViewPage';
+import SchedulePage from './pages/SchedulePage';
+import FinancePage from './pages/FinancePage';
+import ConnectCenterPage from './pages/ConnectCenterPage';
+import AiCenterPage from './pages/AiCenterPage';
+import AutomationsPage from './pages/AutomationsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import ProfileCompanyPage from './pages/ProfileCompanyPage';
 
 function App() {
   return (
@@ -34,6 +41,13 @@ function App() {
           <Route path="/estimate/view/:id" element={<ProtectedRoute><EstimateViewPage /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+          <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
+          <Route path="/connect" element={<ProtectedRoute><ConnectCenterPage /></ProtectedRoute>} />
+          <Route path="/ai-center" element={<ProtectedRoute><AiCenterPage /></ProtectedRoute>} />
+          <Route path="/automations" element={<ProtectedRoute><AutomationsPage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/profile-company" element={<ProtectedRoute><ProfileCompanyPage /></ProtectedRoute>} />
         </Routes>
       </AppProviders>
     </Router>
