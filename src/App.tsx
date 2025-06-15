@@ -11,11 +11,12 @@ import EstimatesPage from './pages/EstimatesPage';
 import TeamPage from './pages/TeamManagementPage';
 import LoginPage from './pages/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailPage';
+import InvoiceViewPage from './pages/InvoiceViewPage';
 import EstimateViewPage from './pages/EstimateViewPage';
-import SecureDocumentViewer from "@/pages/SecureDocumentViewer";
+import PortalLoginPage from './pages/portal/PortalLoginPage';
+import SecureDocumentViewer from "./pages/SecureDocumentViewer";
 
 function App() {
   return (
@@ -23,7 +24,7 @@ function App() {
       <Toaster />
       <AppProviders>
         <Routes>
-          <Route path="/auth" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><JobsPage /></ProtectedRoute>} />
@@ -31,10 +32,12 @@ function App() {
           <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailsPage /></ProtectedRoute>} />
           <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
+          <Route path="/invoices/view/:id" element={<ProtectedRoute><InvoiceViewPage /></ProtectedRoute>} />
           <Route path="/estimates" element={<ProtectedRoute><EstimatesPage /></ProtectedRoute>} />
           <Route path="/estimate/view/:id" element={<ProtectedRoute><EstimateViewPage /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/portal/login" element={<PortalLoginPage />} />
           
           {/* Secure document viewer - no authentication required */}
           <Route path="/view/:token" element={<SecureDocumentViewer />} />
