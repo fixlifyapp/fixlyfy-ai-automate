@@ -564,6 +564,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         onOpenChange={setIsDescriptionDialogOpen}
         initialDescription={jobDetails.description}
         onSave={handleUpdateDescription}
+        jobId={jobId}
       />
       
       <JobTypeDialog
