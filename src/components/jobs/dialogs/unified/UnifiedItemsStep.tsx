@@ -77,14 +77,16 @@ export const UnifiedItemsStep = ({
         <CardHeader className="pb-3 sm:pb-6">
           <CardTitle className="text-sm sm:text-base">Line Items</CardTitle>
         </CardHeader>
-        <CardContent className="p-2 sm:p-6">
-          <DocumentLineItemsTable
-            documentType={documentType}
-            lineItems={lineItems}
-          />
-          
-          {lineItems.length === 0 && (
-            <div className="text-center py-6 sm:py-8 text-muted-foreground">
+        <CardContent className="p-0">
+          {lineItems.length > 0 ? (
+            <DocumentLineItemsTable
+              documentType={documentType}
+              lineItems={lineItems}
+              onUpdateLineItem={onUpdateLineItem}
+              onRemoveLineItem={onRemoveLineItem}
+            />
+          ) : (
+            <div className="text-center py-6 sm:py-8 text-muted-foreground px-4">
               <Plus className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4" />
               <p className="text-sm sm:text-lg font-medium">No items added yet</p>
               <p className="text-xs sm:text-sm">Add products to get started</p>
