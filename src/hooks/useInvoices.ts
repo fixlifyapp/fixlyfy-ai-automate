@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,8 +16,10 @@ export interface Invoice {
   created_at: string;
   updated_at: string;
   due_date?: string;
-  issue_date?: string; // Add this missing property
-  estimate_id?: string; // Add this missing property
+  issue_date?: string;
+  estimate_id?: string;
+  tax_rate?: number; // Add missing tax_rate property
+  tax_amount?: number; // Add missing tax_amount property
 }
 
 export const useInvoices = (jobId: string) => {
@@ -62,6 +63,8 @@ export const useInvoices = (jobId: string) => {
           notes: invoice.notes || '',
           issue_date: invoice.issue_date || invoice.created_at, // Add issue_date as alias
           estimate_id: invoice.estimate_id || undefined, // Add estimate_id
+          tax_rate: invoice.tax_rate || 0, // Include tax_rate from database
+          tax_amount: invoice.tax_amount || 0, // Include tax_amount from database
           items: items // Properly handle items
         };
       });

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +15,8 @@ export interface Estimate {
   created_at: string;
   updated_at: string;
   valid_until?: string;
+  tax_rate?: number; // Add missing tax_rate property
+  tax_amount?: number; // Add missing tax_amount property
   items?: Array<{
     id: string;
     description: string;
@@ -61,6 +62,8 @@ export const useEstimates = (jobId?: string) => {
         date: item.created_at, // Use created_at as date
         estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
         valid_until: item.valid_until || undefined, // Handle valid_until properly
+        tax_rate: item.tax_rate || 0, // Include tax_rate from database
+        tax_amount: item.tax_amount || 0, // Include tax_amount from database
         items: Array.isArray(item.items) ? item.items : (item.items ? JSON.parse(JSON.stringify(item.items)) : []), // Handle Json type
       })) as Estimate[];
       
