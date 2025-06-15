@@ -61,11 +61,11 @@ export const UnifiedDocumentPreview = ({
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200">
-        <div className="animate-pulse space-y-8 p-8">
-          <div className="h-24 bg-gray-200 rounded"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+      <div className="max-w-full mx-auto bg-white shadow-2xl border border-gray-200">
+        <div className="animate-pulse space-y-4 sm:space-y-8 p-4 sm:p-8">
+          <div className="h-16 sm:h-24 bg-gray-200 rounded"></div>
+          <div className="h-32 sm:h-48 bg-gray-200 rounded"></div>
+          <div className="h-48 sm:h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
@@ -78,7 +78,7 @@ export const UnifiedDocumentPreview = ({
   const documentColor = documentType === 'estimate' ? 'text-blue-700' : 'text-purple-700';
 
   return (
-    <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200 print:shadow-none print:border-gray-300">
+    <div className="max-w-full mx-auto bg-white shadow-2xl border border-gray-200 print:shadow-none print:border-gray-300 overflow-x-auto">
       <DocumentPreviewHeader
         documentType={documentType}
         documentNumber={documentNumber}
@@ -97,17 +97,19 @@ export const UnifiedDocumentPreview = ({
 
       {/* Line Items Section */}
       {lineItems && lineItems.length > 0 ? (
-        <DocumentLineItemsTable
-          documentType={documentType}
-          lineItems={lineItems}
-        />
+        <div className="overflow-x-auto">
+          <DocumentLineItemsTable
+            documentType={documentType}
+            lineItems={lineItems}
+          />
+        </div>
       ) : (
-        <div className="px-8 py-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="px-4 sm:px-8 py-4 sm:py-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">
             {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
           </h3>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-            <p className="text-gray-500">No items found for this {documentType}</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 sm:p-8 text-center">
+            <p className="text-gray-500 text-sm sm:text-base">No items found for this {documentType}</p>
           </div>
         </div>
       )}
@@ -122,13 +124,13 @@ export const UnifiedDocumentPreview = ({
 
       {/* Notes Section */}
       {notes && (
-        <div className="px-8 py-8 border-t">
-          <h3 className={`font-bold text-xl ${documentColor} mb-4 flex items-center`}>
-            <div className={`w-1 h-6 ${documentType === 'estimate' ? 'bg-blue-700' : 'bg-purple-700'} mr-3`}></div>
-            Notes & Instructions
+        <div className="px-4 sm:px-8 py-6 sm:py-8 border-t">
+          <h3 className={`font-bold text-lg sm:text-xl ${documentColor} mb-3 sm:mb-4 flex items-center`}>
+            <div className={`w-1 h-4 sm:h-6 ${documentType === 'estimate' ? 'bg-blue-700' : 'bg-purple-700'} mr-2 sm:mr-3`}></div>
+            <span className="text-sm sm:text-xl break-words">Notes & Instructions</span>
           </h3>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-base">{notes}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-6">
+            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-xs sm:text-base break-words">{notes}</p>
           </div>
         </div>
       )}
