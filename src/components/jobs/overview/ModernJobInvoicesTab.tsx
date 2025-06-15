@@ -3,10 +3,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Send, Edit, ArrowRight, CreditCard, Eye, FileText, Trash2 } from "lucide-react";
+import { Plus, Send, Edit, CreditCard, Eye, FileText, Trash2 } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
-import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
+import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
 import { UniversalSendDialog } from "../dialogs/shared/UniversalSendDialog";
 import { UnifiedDocumentViewer } from "../dialogs/UnifiedDocumentViewer";
 import { formatCurrency } from "@/lib/utils";
@@ -336,14 +336,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
       </Card>
 
       {/* Dialogs */}
-      <UnifiedDocumentBuilder
+      <SteppedInvoiceBuilder
         open={showInvoiceBuilder}
         onOpenChange={setShowInvoiceBuilder}
-        documentType="invoice"
         jobId={jobId}
-        existingDocument={selectedInvoice}
+        existingInvoice={selectedInvoice}
         estimateToConvert={selectedEstimate}
-        onDocumentCreated={refreshInvoices}
+        onInvoiceCreated={refreshInvoices}
       />
 
       {selectedInvoice && (

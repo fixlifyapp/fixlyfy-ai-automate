@@ -9,7 +9,6 @@ import { ProductCatalog } from "../../builder/ProductCatalog";
 import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
 import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
 import { NotesSection } from "./components/NotesSection";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UnifiedItemsStepProps {
   documentType: "estimate" | "invoice";
@@ -45,7 +44,6 @@ export const UnifiedItemsStep = ({
   calculateGrandTotal
 }: UnifiedItemsStepProps) => {
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const isMobile = useIsMobile();
 
   const handleProductSelect = (product: Product) => {
     onAddProduct(product);
@@ -55,18 +53,18 @@ export const UnifiedItemsStep = ({
   return (
     <div className="space-y-6">
       {/* Document Header */}
-      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
+          <h3 className="text-lg font-semibold">
             {documentType === "estimate" ? "Estimate" : "Invoice"} Items
           </h3>
-          <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
+          <p className="text-sm text-muted-foreground">
             Add line items and configure pricing for this {documentType}
           </p>
         </div>
         <Button 
           onClick={() => setShowProductDialog(true)}
-          className={`gap-2 ${isMobile ? 'w-full h-12 text-sm' : ''}`}
+          className="gap-2"
         >
           <Plus className="h-4 w-4" />
           Add Product
@@ -75,20 +73,20 @@ export const UnifiedItemsStep = ({
 
       {/* Line Items Table */}
       <Card>
-        <CardHeader className={isMobile ? "p-4 pb-2" : ""}>
-          <CardTitle className={isMobile ? "text-base" : ""}>Line Items</CardTitle>
+        <CardHeader>
+          <CardTitle>Line Items</CardTitle>
         </CardHeader>
-        <CardContent className={isMobile ? "p-4 pt-2" : ""}>
+        <CardContent>
           <DocumentLineItemsTable
             documentType={documentType}
             lineItems={lineItems}
           />
           
           {lineItems.length === 0 && (
-            <div className={`text-center ${isMobile ? 'py-6' : 'py-8'} text-muted-foreground`}>
-              <Plus className={`mx-auto ${isMobile ? 'h-8 w-8' : 'h-12 w-12'} text-gray-400 mb-4`} />
-              <p className={`${isMobile ? 'text-base' : 'text-lg'} font-medium`}>No items added yet</p>
-              <p className={`${isMobile ? 'text-xs' : 'text-sm'}`}>Add products to get started</p>
+            <div className="text-center py-8 text-muted-foreground">
+              <Plus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-medium">No items added yet</p>
+              <p className="text-sm">Add products to get started</p>
             </div>
           )}
         </CardContent>
@@ -111,11 +109,11 @@ export const UnifiedItemsStep = ({
 
       {/* Product Selection Dialog */}
       <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
-        <DialogContent className={`${isMobile ? 'w-[95vw] h-[90vh] max-w-none p-4' : 'max-w-4xl max-h-[80vh]'} overflow-hidden`}>
-          <DialogHeader className={isMobile ? "pb-2" : ""}>
-            <DialogTitle className={isMobile ? "text-base" : ""}>Select Products</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Products</DialogTitle>
           </DialogHeader>
-          <div className={`overflow-auto ${isMobile ? 'max-h-[75vh]' : 'max-h-[70vh] p-4'}`}>
+          <div className="overflow-auto max-h-[70vh] p-4">
             <ProductCatalog
               onAddProduct={handleProductSelect}
             />
