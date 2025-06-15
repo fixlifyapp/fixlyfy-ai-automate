@@ -122,38 +122,15 @@ serve(async (req) => {
       try {
         console.log('Generating portal link for client email:', client.email);
         
-        // Ensure client portal user exists first
-        const { data: existingPortalUser, error: portalUserError } = await supabaseAdmin
-          .from('client_portal_users')
-          .select('*')
-          .eq('email', client.email)
-          .single();
-
-        if (portalUserError && portalUserError.code === 'PGRST116') {
-          // Create client portal user if doesn't exist
-          const { error: createError } = await supabaseAdmin
-            .from('client_portal_users')
-            .insert({
-              email: client.email,
-              client_id: client.id,
-              is_active: true
-            });
-
-          if (createError) {
-            console.error('Error creating client portal user:', createError);
-          } else {
-            console.log('Created client portal user for:', client.email);
-          }
-        }
-
-        // Use the single-parameter version of the function explicitly
+        // Call the unified function
         const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-          p_email: client.email
+          p_email: client.email,
+          p_expiry_hours: 24
         });
 
         if (!tokenError && tokenData) {
           portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/invoices?id=${invoice.id}`;
-          console.log('Portal link generated for SMS');
+          console.log('Portal link generated for SMS:', portalLink.substring(0, 60) + '...');
         } else {
           console.error('Failed to generate portal login token:', tokenError);
         }
@@ -162,7 +139,7 @@ serve(async (req) => {
       }
     }
 
-    // Create SMS message with portal link and improved formatting
+    // Create SMS message with portal link
     const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
     
     let smsMessage;
@@ -178,7 +155,8 @@ serve(async (req) => {
       }
     }
 
-    console.log('SMS message length:', smsMessage);
+    console.log('SMS message to send:', smsMessage);
+    console.log('SMS message length:', smsMessage.length);
 
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
@@ -229,7 +207,8 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: telnyxResult.data?.id,
-        portalLinkIncluded: !!portalLink
+        portalLinkIncluded: !!portalLink,
+        smsContent: smsMessage
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
