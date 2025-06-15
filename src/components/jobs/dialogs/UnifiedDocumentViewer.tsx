@@ -41,7 +41,11 @@ export const UnifiedDocumentViewer = ({
   
   // Calculate line items and totals
   const lineItems = Array.isArray(document.items) ? document.items : [];
-  const taxRate = document.tax_rate || 0;
+  
+  // Handle tax rate properly for both invoice and estimate
+  const taxRate = documentType === "estimate" 
+    ? (document as Estimate).tax_rate || 0
+    : (document as Invoice).tax_rate || 0;
   
   const calculateSubtotal = () => {
     return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
