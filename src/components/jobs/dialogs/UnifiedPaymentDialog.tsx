@@ -145,7 +145,15 @@ export const UnifiedPaymentDialog = ({
   const handleQuickAmount = (percentage: number) => {
     if (isSubmitting || isProcessing) return;
     
-    const quickAmount = (remainingBalance * percentage / 100).toFixed(2);
+    let quickAmount: string;
+    
+    // For 100%, use the exact maxPayment to avoid precision issues
+    if (percentage === 100) {
+      quickAmount = maxPayment.toFixed(2);
+    } else {
+      quickAmount = (remainingBalance * percentage / 100).toFixed(2);
+    }
+    
     setAmount(quickAmount);
   };
 
