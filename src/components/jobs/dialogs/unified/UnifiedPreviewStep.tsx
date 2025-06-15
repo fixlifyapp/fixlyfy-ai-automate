@@ -120,9 +120,9 @@ export const UnifiedPreviewStep = ({
     
     // Fallback: calculate from items
     if (Array.isArray(document.items)) {
-      return document.items.reduce((sum, item) => {
+      return document.items.reduce((sum: number, item: any) => {
         const quantity = item.quantity || 1;
-        const unitPrice = item.unitPrice || item.unit_price || 0;
+        const unitPrice = item.unitPrice || 0;
         return sum + (quantity * unitPrice);
       }, 0);
     }
