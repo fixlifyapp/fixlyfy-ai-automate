@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
 
 interface JobDetailsEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialDescription: string;
   onSave: (description: string) => void;
+  jobId: string; // Add jobId prop
 }
 
 export function JobDetailsEditDialog({
@@ -24,10 +25,17 @@ export function JobDetailsEditDialog({
   onOpenChange,
   initialDescription,
   onSave,
+  jobId,
 }: JobDetailsEditDialogProps) {
   const [description, setDescription] = useState(initialDescription);
+  const { logNoteAdded } = useJobHistoryIntegration(jobId);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Log the description change as a note if it's different
+    if (description !== initialDescription) {
+      await logNoteAdded(`Job description updated: ${description}`);
+    }
+    
     onSave(description);
     onOpenChange(false);
     toast.success("Job description updated");

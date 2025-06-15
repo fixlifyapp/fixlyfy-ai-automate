@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useJobHistoryIntegration } from '@/hooks/useJobHistoryIntegration';
 
 export interface PaymentData {
   invoiceId: string;
@@ -12,6 +12,7 @@ export interface PaymentData {
 }
 
 export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
+  const { logPaymentReceived } = useJobHistoryIntegration(jobId);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addPayment = async (paymentData: PaymentData): Promise<boolean> => {
@@ -66,6 +67,13 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
         .eq('id', paymentData.invoiceId);
 
       if (updateError) throw updateError;
+
+      // Log the payment
+      await logPaymentReceived(
+        paymentData.amount, 
+        paymentData.method as any, 
+        paymentData.reference
+      );
 
       toast.success('Payment recorded successfully!');
       if (onSuccess) onSuccess();

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +12,7 @@ import { useState, useRef, ChangeEvent } from "react";
 import { toast } from "sonner";
 import { FileText, X, Upload } from "lucide-react";
 import { useJobAttachments } from "@/hooks/useJobAttachments";
+import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
 
 interface AttachmentUploadDialogProps {
   open: boolean;
@@ -30,6 +30,7 @@ export function AttachmentUploadDialog({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadAttachments, isUploading } = useJobAttachments(jobId);
+  const { logFileAttached } = useJobHistoryIntegration(jobId);
   
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -62,6 +63,12 @@ export function AttachmentUploadDialog({
     
     if (success) {
       console.log("Upload successful, clearing files and closing dialog");
+      
+      // Log each file attachment
+      for (const file of selectedFiles) {
+        await logFileAttached(file.name, `job-attachments/${jobId}/${file.name}`);
+      }
+      
       setSelectedFiles([]);
       onOpenChange(false);
       

@@ -1,13 +1,27 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
 
 export const useJobStatusUpdate = (jobId: string, refreshJob: () => void) => {
-  const updateJobStatus = async (newStatus: string) => {
+  const { logStatusChange } = useJobHistoryIntegration(jobId);
+
+  const updateJobStatus = async (newStatus: string, oldStatus?: string) => {
     if (!jobId) return;
     
     try {
       console.log('Updating job status:', { jobId, newStatus });
+      
+      // Get current status if not provided
+      let currentStatus = oldStatus;
+      if (!currentStatus) {
+        const { data: jobData } = await supabase
+          .from('jobs')
+          .select('status')
+          .eq('id', jobId)
+          .single();
+        currentStatus = jobData?.status || 'unknown';
+      }
       
       // Update job status in database
       const { error } = await supabase
@@ -20,6 +34,9 @@ export const useJobStatusUpdate = (jobId: string, refreshJob: () => void) => {
         toast.error("Failed to update job status");
         return;
       }
+      
+      // Log the status change to job history
+      await logStatusChange(currentStatus, newStatus);
       
       toast.success(`Job status updated to ${newStatus}`);
       

@@ -148,6 +148,7 @@ export const ModalRenderer = () => {
         {...modalProps}
         initialDescription={modalProps.initialDescription || ""}
         onSave={modalProps.onSave || (() => {})}
+        jobId={modalProps.jobId || ""}
       />;
 
     default:

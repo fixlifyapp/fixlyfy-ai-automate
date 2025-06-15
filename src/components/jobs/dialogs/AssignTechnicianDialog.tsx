@@ -1,4 +1,3 @@
-
 import {
   DialogContent,
   DialogHeader,
@@ -22,6 +21,7 @@ import { fetchTeamMembers } from "@/data/team";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
 
 interface AssignTechnicianDialogProps {
   selectedJobs: string[];
@@ -67,6 +67,8 @@ export function AssignTechnicianDialog({
     loadTechnicians();
   }, []);
 
+  const { logTechnicianChange } = useJobHistoryIntegration();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -78,6 +80,12 @@ export function AssignTechnicianDialog({
     setIsSubmitting(true);
     
     try {
+      // Get current technician assignments for logging
+      const { data: jobsData } = await supabase
+        .from('jobs')
+        .select('id, technician_id')
+        .in('id', selectedJobs);
+
       // Update all selected jobs with the technician ID
       const updates = selectedJobs.map(jobId => 
         supabase
@@ -90,6 +98,19 @@ export function AssignTechnicianDialog({
       
       const selectedTech = technicians.find(tech => tech.id === technicianId);
       const techName = selectedTech ? selectedTech.name : "selected technician";
+      
+      // Log technician changes for each job
+      if (jobsData) {
+        for (const job of jobsData) {
+          const oldTechName = job.technician_id ? 
+            technicians.find(t => t.id === job.technician_id)?.name || 'Unknown Technician' : 
+            'Unassigned';
+          
+          // Use the hook for each job
+          const { logTechnicianChange: logTechChange } = useJobHistoryIntegration(job.id);
+          await logTechChange(oldTechName, techName);
+        }
+      }
       
       onSuccess(technicianId, techName);
       onOpenChange(false);

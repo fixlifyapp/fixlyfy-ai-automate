@@ -1,4 +1,3 @@
-
 import {
   DialogContent,
   DialogHeader,
@@ -15,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Check, Clock, Loader2, XCircle, Calendar, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useJobStatuses } from "@/hooks/useConfigItems";
+import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
 
 interface ChangeStatusDialogProps {
   selectedJobs: string[];
@@ -77,6 +77,12 @@ export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: Ch
     setIsSubmitting(true);
     
     try {
+      // Get current statuses for logging
+      const { data: jobsData } = await supabase
+        .from('jobs')
+        .select('id, status')
+        .in('id', selectedJobs);
+
       // Update status for all selected jobs in Supabase
       const { error } = await supabase
         .from('jobs')
@@ -85,6 +91,14 @@ export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: Ch
         
       if (error) {
         throw error;
+      }
+      
+      // Log status changes for each job
+      if (jobsData) {
+        for (const job of jobsData) {
+          const { logStatusChange } = useJobHistoryIntegration(job.id);
+          await logStatusChange(job.status, status);
+        }
       }
       
       // Call onSuccess with the new status
