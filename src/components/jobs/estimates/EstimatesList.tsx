@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Edit, Send, DollarSign, Eye } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
+import { UnifiedDocumentViewer } from "../dialogs/UnifiedDocumentViewer";
 import { EstimateSendDialog } from "../dialogs/estimate-builder/EstimateSendDialog";
 import { formatCurrency } from "@/lib/utils";
 import { Estimate } from "@/hooks/useEstimates";
@@ -14,13 +16,13 @@ import { useJobs } from "@/hooks/useJobs";
 interface EstimatesListProps {
   jobId: string;
   onEstimateConverted?: () => void;
-  onViewEstimate?: (estimate: Estimate) => void;
 }
 
-export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: EstimatesListProps) => {
+export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps) => {
   const { estimates, isLoading, convertEstimateToInvoice, refreshEstimates } = useEstimates(jobId);
   const { jobs } = useJobs();
   const [editingEstimate, setEditingEstimate] = useState<Estimate | null>(null);
+  const [viewingEstimate, setViewingEstimate] = useState<Estimate | null>(null);
   const [sendingEstimate, setSendingEstimate] = useState<Estimate | null>(null);
 
   const job = jobs.find(j => j.id === jobId);
@@ -37,9 +39,7 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
 
   const handleView = (estimate: Estimate) => {
     console.log('Viewing estimate:', estimate.id);
-    if (onViewEstimate) {
-      onViewEstimate(estimate);
-    }
+    setViewingEstimate(estimate);
   };
 
   const handleConvert = async (estimate: Estimate) => {
@@ -54,6 +54,18 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
     console.log('Estimate updated, refreshing');
     setEditingEstimate(null);
     refreshEstimates();
+  };
+
+  const handleViewerClosed = () => {
+    setViewingEstimate(null);
+  };
+
+  const handleConvertToInvoice = async (estimate: Estimate) => {
+    const success = await convertEstimateToInvoice(estimate.id);
+    if (success && onEstimateConverted) {
+      onEstimateConverted();
+    }
+    setViewingEstimate(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -162,6 +174,19 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
         existingDocument={editingEstimate || undefined}
         onDocumentCreated={handleEstimateUpdated}
       />
+
+      {/* Unified Document Viewer for Estimates */}
+      {viewingEstimate && (
+        <UnifiedDocumentViewer
+          open={!!viewingEstimate}
+          onOpenChange={handleViewerClosed}
+          document={viewingEstimate}
+          documentType="estimate"
+          jobId={jobId}
+          onConvertToInvoice={handleConvertToInvoice}
+          onDocumentUpdated={refreshEstimates}
+        />
+      )}
 
       {/* Send Estimate Dialog */}
       <EstimateSendDialog

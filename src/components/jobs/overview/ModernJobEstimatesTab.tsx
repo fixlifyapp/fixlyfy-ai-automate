@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,8 @@ import { Plus, FileText, Send, Trash2, Edit, DollarSign, Eye } from "lucide-reac
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
 import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
-import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
+import { UnifiedDocumentViewer } from "@/components/jobs/dialogs/UnifiedDocumentViewer";
 import { UniversalSendDialog } from "@/components/jobs/dialogs/shared/UniversalSendDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -124,7 +124,6 @@ export const ModernJobEstimatesTab = ({
     setIsConverting(true);
     
     try {
-      // Use the confirmConvertToInvoice action from useEstimateActions
       actions.setSelectedEstimate(estimate);
       const success = await actions.confirmConvertToInvoice();
       
@@ -134,7 +133,6 @@ export const ModernJobEstimatesTab = ({
         if (onEstimateConverted) {
           onEstimateConverted();
         }
-        // Switch to invoices tab after successful conversion
         if (onTabChange) {
           onTabChange('invoices');
         }
@@ -144,6 +142,17 @@ export const ModernJobEstimatesTab = ({
       toast.error("Failed to convert estimate to invoice");
     } finally {
       setIsConverting(false);
+    }
+  };
+
+  const handleConvertToInvoice = async (estimate: any) => {
+    const success = await actions.convertEstimateToInvoice(estimate.id);
+    if (success && onEstimateConverted) {
+      onEstimateConverted();
+    }
+    setShowPreview(false);
+    if (onTabChange) {
+      onTabChange('invoices');
     }
   };
 
@@ -303,31 +312,18 @@ export const ModernJobEstimatesTab = ({
         onEstimateCreated={handleEstimateCreated}
       />
 
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-sm sm:text-base break-all">
-              Estimate Preview - {previewEstimate?.estimate_number}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-auto max-h-[80vh]">
-            {previewEstimate && (
-              <UnifiedDocumentPreview
-                documentType="estimate"
-                documentNumber={previewEstimate.estimate_number}
-                lineItems={[]}
-                taxRate={13}
-                calculateSubtotal={() => previewEstimate.total * 0.885}
-                calculateTotalTax={() => previewEstimate.total * 0.115}
-                calculateGrandTotal={() => previewEstimate.total}
-                notes={previewEstimate.notes || ''}
-                issueDate={new Date(previewEstimate.created_at).toLocaleDateString()}
-                dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Unified Document Viewer for Estimates */}
+      {previewEstimate && (
+        <UnifiedDocumentViewer
+          open={showPreview}
+          onOpenChange={handlePreviewClose}
+          document={previewEstimate}
+          documentType="estimate"
+          jobId={jobId}
+          onConvertToInvoice={handleConvertToInvoice}
+          onDocumentUpdated={refreshEstimates}
+        />
+      )}
 
       {sendingEstimate && (
         <UniversalSendDialog

@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
-import { UnifiedDocumentViewer } from "./dialogs/UnifiedDocumentViewer";
 import { useJobs } from "@/hooks/useJobs";
-import { useEstimates, Estimate } from "@/hooks/useEstimates";
+import { useEstimates } from "@/hooks/useEstimates";
 import { toast } from "sonner";
 
 interface JobEstimatesTabProps {
@@ -17,11 +16,9 @@ interface JobEstimatesTabProps {
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showViewer, setShowViewer] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   
   const { jobs } = useJobs();
-  const { convertEstimateToInvoice, refreshEstimates } = useEstimates(jobId);
+  const { refreshEstimates } = useEstimates(jobId);
   
   const job = jobs.find(j => j.id === jobId);
 
@@ -30,7 +27,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
     setShowCreateForm(true);
   };
 
-  const handleEstimateCreated = (estimate?: Estimate) => {
+  const handleEstimateCreated = () => {
     console.log('Estimate created, refreshing list');
     setShowCreateForm(false);
     refreshEstimates();
@@ -38,29 +35,6 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       onEstimateConverted();
     }
     toast.success('Estimate created successfully!');
-  };
-
-  const handleViewEstimate = (estimate: Estimate) => {
-    console.log('Viewing estimate:', estimate.id);
-    setSelectedEstimate(estimate);
-    setShowViewer(true);
-  };
-
-  const handleConvertToInvoice = async (estimate: Estimate) => {
-    console.log('Converting estimate to invoice:', estimate.id);
-    const success = await convertEstimateToInvoice(estimate.id);
-    if (success && onEstimateConverted) {
-      onEstimateConverted();
-      toast.success("Estimate converted to invoice!");
-    }
-    setShowViewer(false);
-  };
-
-  const handleDocumentUpdated = () => {
-    refreshEstimates();
-    if (onEstimateConverted) {
-      onEstimateConverted();
-    }
   };
 
   if (!job) {
@@ -81,11 +55,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
 
           <EstimatesList
             jobId={jobId}
-            onEstimateConverted={() => {
-              refreshEstimates();
-              if (onEstimateConverted) onEstimateConverted();
-            }}
-            onViewEstimate={handleViewEstimate}
+            onEstimateConverted={onEstimateConverted}
           />
         </CardContent>
       </Card>
@@ -98,19 +68,6 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         jobId={jobId}
         onDocumentCreated={handleEstimateCreated}
       />
-
-      {/* Unified Document Viewer */}
-      {selectedEstimate && (
-        <UnifiedDocumentViewer
-          open={showViewer}
-          onOpenChange={setShowViewer}
-          document={selectedEstimate}
-          documentType="estimate"
-          jobId={jobId}
-          onConvertToInvoice={handleConvertToInvoice}
-          onDocumentUpdated={handleDocumentUpdated}
-        />
-      )}
     </>
   );
 };

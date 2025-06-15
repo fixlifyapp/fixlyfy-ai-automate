@@ -8,7 +8,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
 import { UniversalSendDialog } from "../dialogs/shared/UniversalSendDialog";
-import { InvoicePreviewWindow } from "../dialogs/InvoicePreviewWindow";
+import { UnifiedDocumentViewer } from "../dialogs/UnifiedDocumentViewer";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -144,10 +144,14 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     setShowPaymentDialog(false);
     setSelectedInvoice(null);
     
-    // Force refresh invoices immediately
     refreshInvoices();
     
     toast.success("Payment recorded successfully!");
+  };
+
+  const handleViewerClosed = () => {
+    setShowPreviewWindow(false);
+    setSelectedInvoice(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -373,7 +377,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         </CardContent>
       </Card>
 
-      {/* Dialogs - Only UnifiedPaymentDialog for payments */}
+      {/* Dialogs */}
       <SteppedInvoiceBuilder
         open={showInvoiceBuilder}
         onOpenChange={setShowInvoiceBuilder}
@@ -412,11 +416,14 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
             onPaymentAdded={handlePaymentSuccess}
           />
 
-          <InvoicePreviewWindow
+          {/* Unified Document Viewer for Invoices */}
+          <UnifiedDocumentViewer
             open={showPreviewWindow}
-            onOpenChange={setShowPreviewWindow}
-            invoice={selectedInvoice}
+            onOpenChange={handleViewerClosed}
+            document={selectedInvoice}
+            documentType="invoice"
             jobId={jobId}
+            onDocumentUpdated={refreshInvoices}
           />
         </>
       )}
