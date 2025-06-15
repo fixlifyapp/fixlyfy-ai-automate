@@ -8,7 +8,7 @@ import {
   Edit
 } from 'lucide-react';
 import { LineItem, Product } from '../../builder/types';
-import { ProductCatalog } from '../../builder/ProductCatalog';
+import { LazyProductCatalog } from '../../builder/LazyProductCatalog';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CustomItemForm } from './components/CustomItemForm';
@@ -96,7 +96,7 @@ export const LineItemsManager = ({
 
             <TabsContent value="products" className="mt-4">
               <div className="border rounded-lg p-4">
-                <ProductCatalog onAddProduct={handleProductSelect} />
+                <LazyProductCatalog onAddProduct={handleProductSelect} />
               </div>
             </TabsContent>
           </Tabs>
