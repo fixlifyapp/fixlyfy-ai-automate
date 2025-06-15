@@ -4,10 +4,10 @@ export interface LineItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  ourPrice?: number;
   taxable: boolean;
   total: number;
   discount?: number;
-  ourPrice?: number;
   name?: string;
   price?: number;
 }

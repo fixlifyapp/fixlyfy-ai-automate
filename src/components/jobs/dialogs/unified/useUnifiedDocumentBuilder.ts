@@ -109,9 +109,9 @@ export const useUnifiedDocumentBuilder = ({
       description: product.name,
       quantity: 1,
       unitPrice: product.price,
-      taxable: true,
+      ourPrice: product.ourPrice || product.ourprice || product.cost || 0,
+      taxable: product.taxable !== undefined ? product.taxable : true,
       discount: 0,
-      ourPrice: product.cost || 0,
       name: product.name,
       price: product.price,
       total: product.price

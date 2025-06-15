@@ -69,6 +69,7 @@ export const UnifiedDocumentBuilder = ({
   const [newItemDescription, setNewItemDescription] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemPrice, setNewItemPrice] = useState(0);
+  const [newItemOurPrice, setNewItemOurPrice] = useState(0);
   const [newItemTaxable, setNewItemTaxable] = useState(true);
 
   const handleAddLineItem = () => {
@@ -82,9 +83,9 @@ export const UnifiedDocumentBuilder = ({
       description: newItemDescription,
       quantity: newItemQuantity,
       unitPrice: newItemPrice,
+      ourPrice: newItemOurPrice,
       taxable: newItemTaxable,
       discount: 0,
-      ourPrice: 0,
       name: newItemDescription,
       price: newItemPrice,
       total: newItemQuantity * newItemPrice
@@ -96,6 +97,7 @@ export const UnifiedDocumentBuilder = ({
     setNewItemDescription('');
     setNewItemQuantity(1);
     setNewItemPrice(0);
+    setNewItemOurPrice(0);
     setNewItemTaxable(true);
     
     console.log('Added new line item:', newItem);
@@ -174,7 +176,7 @@ export const UnifiedDocumentBuilder = ({
 
             {/* Add New Item Form */}
             <div className="grid grid-cols-12 gap-3 p-4 bg-gray-50 rounded-lg">
-              <div className="col-span-5">
+              <div className="col-span-4">
                 <Label htmlFor="description">Description</Label>
                 <Input
                   id="description"
@@ -183,7 +185,7 @@ export const UnifiedDocumentBuilder = ({
                   onChange={(e) => setNewItemDescription(e.target.value)}
                 />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <Label htmlFor="quantity">Qty</Label>
                 <Input
                   id="quantity"
@@ -194,7 +196,7 @@ export const UnifiedDocumentBuilder = ({
                 />
               </div>
               <div className="col-span-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="price">Customer Price</Label>
                 <Input
                   id="price"
                   type="number"
@@ -202,6 +204,18 @@ export const UnifiedDocumentBuilder = ({
                   step="0.01"
                   value={newItemPrice}
                   onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="ourPrice">Our Price</Label>
+                <Input
+                  id="ourPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newItemOurPrice}
+                  onChange={(e) => setNewItemOurPrice(parseFloat(e.target.value) || 0)}
+                  className="bg-yellow-50"
                 />
               </div>
               <div className="col-span-2">
@@ -231,7 +245,8 @@ export const UnifiedDocumentBuilder = ({
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Description</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Qty</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Unit Price</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Customer Price</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Our Price</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Taxable</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Actions</th>
@@ -266,6 +281,16 @@ export const UnifiedDocumentBuilder = ({
                             className="w-24 text-right"
                           />
                         </td>
+                        <td className="px-4 py-3 text-right">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.ourPrice || 0}
+                            onChange={(e) => handleUpdateLineItem(item.id, 'ourPrice', parseFloat(e.target.value) || 0)}
+                            className="w-24 text-right bg-yellow-50"
+                          />
+                        </td>
                         <td className="px-4 py-3 text-center">
                           <Select 
                             value={item.taxable.toString()} 
@@ -281,7 +306,14 @@ export const UnifiedDocumentBuilder = ({
                           </Select>
                         </td>
                         <td className="px-4 py-3 text-right font-medium">
-                          {formatCurrency(item.quantity * item.unitPrice)}
+                          <div>
+                            <div>{formatCurrency(item.quantity * item.unitPrice)}</div>
+                            {item.ourPrice && item.ourPrice > 0 && (
+                              <div className="text-xs text-green-600">
+                                M: {formatCurrency((item.unitPrice - item.ourPrice) * item.quantity)}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Button
@@ -308,20 +340,8 @@ export const UnifiedDocumentBuilder = ({
                 <span>Subtotal:</span>
                 <span>{formatCurrency(calculateSubtotal())}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span>Tax:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={taxRate}
-                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                    className="w-16 h-6 text-xs"
-                  />
-                  <span className="text-xs">%</span>
-                </div>
+              <div className="flex justify-between">
+                <span>Tax (13%):</span>
                 <span>{formatCurrency(calculateTotalTax())}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg border-t pt-2">

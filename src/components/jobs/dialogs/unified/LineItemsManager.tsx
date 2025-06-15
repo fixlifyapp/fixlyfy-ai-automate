@@ -56,7 +56,21 @@ export const LineItemsManager = ({
 
   const handleProductSelect = (product: Product) => {
     console.log('LineItemsManager: Adding product:', product);
-    onAddProduct(product);
+    
+    // Create line item with product data including ourPrice
+    const lineItem: LineItem = {
+      id: `temp-${Date.now()}`,
+      description: product.name,
+      quantity: 1,
+      unitPrice: product.price,
+      ourPrice: product.ourPrice || product.ourprice || product.cost || 0,
+      taxable: product.taxable !== undefined ? product.taxable : true,
+      total: product.price,
+      name: product.name,
+      price: product.price
+    };
+    
+    handleAddLineItem(lineItem);
     toast.success(`${product.name} added to ${documentType}`);
   };
 
