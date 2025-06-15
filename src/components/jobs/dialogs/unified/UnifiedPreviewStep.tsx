@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Send, CreditCard, ArrowRight } from "lucide-react";
@@ -120,7 +119,7 @@ export const UnifiedPreviewStep = ({
     
     // Fallback: calculate from items
     if (Array.isArray(document.items)) {
-      return document.items.reduce((sum: number, item: any) => {
+      return (document.items as any[]).reduce((sum: number, item: any) => {
         const quantity = item.quantity || 1;
         const unitPrice = item.unitPrice || 0;
         return sum + (quantity * unitPrice);
