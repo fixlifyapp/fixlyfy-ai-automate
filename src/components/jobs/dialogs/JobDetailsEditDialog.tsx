@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,13 +14,16 @@ interface JobDetailsEditDialogProps {
   onOpenChange: (open: boolean) => void;
   jobId: string;
   onSuccess?: () => void;
+  initialDescription?: string; // Added for backward compatibility
+  onSave?: (description: string) => void; // Added for backward compatibility
 }
 
 export const JobDetailsEditDialog = ({
   open,
   onOpenChange,
   jobId,
-  onSuccess
+  onSuccess,
+  onSave
 }: JobDetailsEditDialogProps) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -99,7 +103,10 @@ export const JobDetailsEditDialog = ({
       }
 
       toast.success('Job details updated successfully');
+      
+      // Call both callbacks for backward compatibility
       onSuccess?.();
+      onSave?.(formData.description);
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating job details:', error);

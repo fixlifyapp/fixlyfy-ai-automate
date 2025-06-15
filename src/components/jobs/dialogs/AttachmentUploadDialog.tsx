@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,13 +12,15 @@ interface AttachmentUploadDialogProps {
   onOpenChange: (open: boolean) => void;
   jobId: string;
   onSuccess?: () => void;
+  onUploadSuccess?: () => void; // Added for backward compatibility
 }
 
 export const AttachmentUploadDialog = ({
   open,
   onOpenChange,
   jobId,
-  onSuccess
+  onSuccess,
+  onUploadSuccess
 }: AttachmentUploadDialogProps) => {
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -72,6 +75,7 @@ export const AttachmentUploadDialog = ({
 
       toast.success(`${selectedFiles.length} file(s) uploaded successfully`);
       onSuccess?.();
+      onUploadSuccess?.(); // Call both for backward compatibility
       onOpenChange(false);
       setSelectedFiles([]);
     } catch (error) {

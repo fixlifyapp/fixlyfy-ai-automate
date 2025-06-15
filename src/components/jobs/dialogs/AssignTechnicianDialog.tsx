@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,7 +10,8 @@ import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
 interface AssignTechnicianDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  jobId: string;
+  jobId?: string;
+  selectedJobs?: string[]; // Added for backward compatibility
   currentTechnicianId?: string;
   currentTechnicianName?: string;
   onSuccess?: () => void;
@@ -19,6 +21,7 @@ export const AssignTechnicianDialog = ({
   open,
   onOpenChange,
   jobId,
+  selectedJobs,
   currentTechnicianId,
   currentTechnicianName,
   onSuccess
@@ -59,27 +62,37 @@ export const AssignTechnicianDialog = ({
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('jobs')
-        .update({ 
-          technician_id: selectedTechnicianId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId);
-
-      if (error) throw error;
-
-      // Log technician change to job history
-      const newTechnician = technicians.find(t => t.id === selectedTechnicianId);
-      if (newTechnician) {
-        await logTechnicianChange(
-          jobId,
-          currentTechnicianName || 'Unassigned',
-          newTechnician.name
-        );
+      // Handle both single job and multiple jobs
+      const jobsToUpdate = selectedJobs && selectedJobs.length > 0 ? selectedJobs : [jobId].filter(Boolean);
+      
+      if (jobsToUpdate.length === 0) {
+        throw new Error('No jobs to update');
       }
 
-      toast.success('Technician assigned successfully');
+      // Update all selected jobs
+      for (const job of jobsToUpdate) {
+        const { error } = await supabase
+          .from('jobs')
+          .update({ 
+            technician_id: selectedTechnicianId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', job);
+
+        if (error) throw error;
+
+        // Log technician change to job history
+        const newTechnician = technicians.find(t => t.id === selectedTechnicianId);
+        if (newTechnician) {
+          await logTechnicianChange(
+            job,
+            currentTechnicianName || 'Unassigned',
+            newTechnician.name
+          );
+        }
+      }
+
+      toast.success(`Technician assigned to ${jobsToUpdate.length} job(s) successfully`);
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {

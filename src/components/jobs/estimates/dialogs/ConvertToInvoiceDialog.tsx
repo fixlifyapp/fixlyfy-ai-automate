@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,11 +26,11 @@ export const ConvertToInvoiceDialog = ({
     setIsConverting(true);
     try {
       // Get next invoice number
-      const { data: counter } = await supabase.rpc('get_next_sequence_number', {
-        entity_type: 'invoice'
+      const { data: counter } = await supabase.rpc('generate_next_id', {
+        p_entity_type: 'invoice'
       });
 
-      const invoiceNumber = counter?.toString() || '1';
+      const invoiceNumber = counter || '1';
 
       // Create invoice from estimate
       const { data: invoice, error } = await supabase
