@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CreditCard, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { usePaymentActions } from "@/hooks/usePaymentActions";
+import { roundToCurrency } from "@/lib/utils";
 
 interface UnifiedPaymentDialogProps {
   isOpen: boolean;
@@ -46,7 +46,10 @@ export const UnifiedPaymentDialog = ({
     }
   });
 
-  const remainingBalance = (invoice.balance ?? (invoice.total - (invoice.amount_paid ?? 0)));
+  // Use proper currency rounding for all calculations
+  const remainingBalance = roundToCurrency(
+    invoice.balance ?? (invoice.total - (invoice.amount_paid ?? 0))
+  );
   const maxPayment = Math.max(0, remainingBalance);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,14 +61,16 @@ export const UnifiedPaymentDialog = ({
       return;
     }
     
-    const paymentAmount = parseFloat(amount);
+    const paymentAmount = roundToCurrency(parseFloat(amount));
     
     if (!paymentAmount || paymentAmount <= 0) {
       toast.error("Please enter a valid payment amount");
       return;
     }
     
-    if (paymentAmount > maxPayment) {
+    // Use a small tolerance for floating-point comparison (1 cent)
+    const tolerance = 0.01;
+    if (paymentAmount > (maxPayment + tolerance)) {
       toast.error(`Payment amount cannot exceed remaining balance of $${maxPayment.toFixed(2)}`);
       return;
     }
@@ -145,16 +150,19 @@ export const UnifiedPaymentDialog = ({
   const handleQuickAmount = (percentage: number) => {
     if (isSubmitting || isProcessing) return;
     
-    let quickAmount: string;
+    let quickAmount: number;
     
     // For 100%, use the exact maxPayment to avoid precision issues
     if (percentage === 100) {
-      quickAmount = maxPayment.toFixed(2);
+      quickAmount = maxPayment;
     } else {
-      quickAmount = (remainingBalance * percentage / 100).toFixed(2);
+      quickAmount = roundToCurrency((remainingBalance * percentage) / 100);
     }
     
-    setAmount(quickAmount);
+    // Ensure we don't exceed the max payment due to rounding
+    quickAmount = Math.min(quickAmount, maxPayment);
+    
+    setAmount(quickAmount.toFixed(2));
   };
 
   const isFormDisabled = isSubmitting || isProcessing;
@@ -175,10 +183,10 @@ export const UnifiedPaymentDialog = ({
               <strong>Invoice:</strong> #{invoice.invoice_number}
             </p>
             <p className="text-sm text-blue-800">
-              <strong>Total:</strong> ${invoice.total.toFixed(2)}
+              <strong>Total:</strong> ${roundToCurrency(invoice.total).toFixed(2)}
             </p>
             <p className="text-sm text-blue-800">
-              <strong>Paid:</strong> ${(invoice.amount_paid ?? 0).toFixed(2)}
+              <strong>Paid:</strong> ${roundToCurrency(invoice.amount_paid ?? 0).toFixed(2)}
             </p>
             <p className="text-sm font-semibold text-blue-800">
               <strong>Remaining:</strong> ${remainingBalance.toFixed(2)}
