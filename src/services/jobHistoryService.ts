@@ -79,17 +79,26 @@ export const recordPayment = async (
   reference?: string
 ) => {
   try {
+    console.log('Recording payment in job history:', {
+      jobId,
+      amount,
+      method,
+      userName,
+      reference
+    });
+
     const historyItem = {
       job_id: jobId,
       type: 'payment',
       title: 'Payment Received',
-      description: `Payment of $${amount.toFixed(2)} received via ${method}`,
+      description: `Payment of $${amount.toFixed(2)} received via ${method}${reference ? ` (Ref: ${reference})` : ''}`,
       user_id: userId,
-      user_name: userName,
+      user_name: userName || 'System',
       meta: {
         amount,
         method,
-        reference
+        reference,
+        timestamp: new Date().toISOString()
       },
       visibility: 'restricted'
     };
@@ -100,8 +109,12 @@ export const recordPayment = async (
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error inserting payment history:', error);
+      throw error;
+    }
     
+    console.log('Payment history record created successfully:', data);
     return data;
   } catch (error) {
     console.error('Error recording payment:', error);

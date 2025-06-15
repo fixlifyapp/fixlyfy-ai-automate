@@ -73,7 +73,7 @@ export const usePaymentForm = ({ invoice, jobId, onPaymentAdded, onClose }: UseP
     }, 10000); // 10 second timeout
 
     try {
-      console.log('Submitting payment for invoice:', invoice.id, 'amount:', paymentAmount);
+      console.log('Submitting payment for invoice:', invoice.id, 'amount:', paymentAmount, 'job:', jobId);
       
       const success = await addPayment({
         invoiceId: invoice.id,

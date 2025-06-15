@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,6 +19,8 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
   const addPayment = async (paymentData: PaymentData): Promise<boolean> => {
     setIsProcessing(true);
     try {
+      console.log('Starting payment recording process for job:', jobId);
+      
       // Generate payment number
       const { data: paymentNumber } = await supabase.rpc('generate_next_id', {
         p_entity_type: 'payment'
@@ -68,13 +71,21 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
 
       if (updateError) throw updateError;
 
-      // Log the payment
+      // Log the payment in job history - this is the critical part for partial payments
+      console.log('Logging payment to job history:', {
+        jobId,
+        amount: paymentData.amount,
+        method: paymentData.method,
+        isPartial: newBalance > 0
+      });
+
       await logPaymentReceived(
         paymentData.amount, 
         paymentData.method as any, 
         paymentData.reference
       );
 
+      console.log('Payment successfully recorded and logged to history');
       toast.success('Payment recorded successfully!');
       if (onSuccess) onSuccess();
       return true;
