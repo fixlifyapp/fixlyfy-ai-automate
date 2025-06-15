@@ -41,7 +41,7 @@ export const SteppedInvoiceBuilder = ({
 }: SteppedInvoiceBuilderProps) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
   const [isCompleting, setIsCompleting] = useState(false);
-  const [savedInvoice, setSavedInvoice] = useState<any>(null);
+  const [savedInvoice, setSavedInvoice] = useState<Invoice | null>(null);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
   const [invoiceCreated, setInvoiceCreated] = useState(false);
@@ -84,6 +84,8 @@ export const SteppedInvoiceBuilder = ({
         setSavedInvoice(existingInvoice);
       } else if (estimateToConvert) {
         // The unified hook will handle estimate conversion
+        setInvoiceCreated(false);
+        setSavedInvoice(null);
       }
       setCurrentStep("items");
       setSelectedUpsells([]);
@@ -103,7 +105,7 @@ export const SteppedInvoiceBuilder = ({
       const invoice = await saveDocumentChanges();
       
       if (invoice) {
-        setSavedInvoice(invoice);
+        setSavedInvoice(invoice as Invoice);
         setInvoiceCreated(true);
         console.log("✅ Invoice saved successfully:", invoice.id);
         toast.success("Invoice saved successfully!");
@@ -179,7 +181,7 @@ export const SteppedInvoiceBuilder = ({
         onOpenChange(false);
         
         if (onInvoiceCreated) {
-          onInvoiceCreated(invoice);
+          onInvoiceCreated(invoice as Invoice);
         }
       }
     } catch (error) {
@@ -197,6 +199,12 @@ export const SteppedInvoiceBuilder = ({
       };
     }
     return { name: '', email: '', phone: '' };
+  };
+
+  // Get the current invoice ID for the send dialog
+  const getCurrentInvoiceId = () => {
+    // Always prefer savedInvoice (newly created) over existingInvoice
+    return savedInvoice?.id || existingInvoice?.id || '';
   };
 
   const steps = [
@@ -331,7 +339,7 @@ export const SteppedInvoiceBuilder = ({
         isOpen={currentStep === "send"}
         onClose={() => onOpenChange(false)}
         documentType="invoice"
-        documentId={savedInvoice?.id || existingInvoice?.id || ''}
+        documentId={getCurrentInvoiceId()}
         documentNumber={documentNumber}
         total={calculateGrandTotal()}
         contactInfo={getClientInfo()}
