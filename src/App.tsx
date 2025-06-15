@@ -1,22 +1,22 @@
-
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { AppProviders } from './components/ui/AppProviders';
-import DashboardPage from './pages/Dashboard';
+import { AppProviders } from './providers';
+import DashboardPage from './pages/DashboardPage';
 import JobsPage from './pages/JobsPage';
 import ClientsPage from './pages/ClientsPage';
 import SettingsPage from './pages/SettingsPage';
 import InvoicesPage from './pages/InvoicesPage';
 import EstimatesPage from './pages/EstimatesPage';
-import TeamPage from './pages/TeamManagementPage';
-import LoginPage from './pages/AuthPage';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import TeamPage from './pages/TeamPage';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
-import ClientDetailsPage from './pages/ClientDetailPage';
+import ClientDetailsPage from './pages/ClientDetailsPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
 import EstimateViewPage from './pages/EstimateViewPage';
 import PortalLoginPage from './pages/portal/PortalLoginPage';
-import SecureDocumentViewer from "./pages/SecureDocumentViewer";
+import SecureDocumentViewer from "@/pages/SecureDocumentViewer";
 
 function App() {
   return (
