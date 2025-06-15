@@ -13,7 +13,7 @@ interface UnifiedDocumentPreviewProps {
   documentType: DocumentType;
   documentNumber: string;
   lineItems: LineItem[];
-  taxRate?: number; // Make optional since we'll use locked rate
+  taxRate?: number;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
@@ -44,6 +44,9 @@ export const UnifiedDocumentPreview = ({
   console.log('JobId prop received:', jobId);
   console.log('ClientInfo prop received:', clientInfo);
   console.log('Document type:', documentType);
+  console.log('Line items received:', lineItems);
+  console.log('Issue date:', issueDate);
+  console.log('Due date:', dueDate);
 
   const { companyInfo, enhancedClientInfo, jobAddress, loading } = useDocumentPreviewData({
     clientInfo,
@@ -54,6 +57,7 @@ export const UnifiedDocumentPreview = ({
 
   console.log('Enhanced client info from hook:', enhancedClientInfo);
   console.log('Job address from hook:', jobAddress);
+  console.log('Company info from hook:', companyInfo);
 
   if (loading) {
     return (
@@ -91,10 +95,22 @@ export const UnifiedDocumentPreview = ({
         companyInfo={companyInfo}
       />
 
-      <DocumentLineItemsTable
-        documentType={documentType}
-        lineItems={lineItems}
-      />
+      {/* Line Items Section */}
+      {lineItems && lineItems.length > 0 ? (
+        <DocumentLineItemsTable
+          documentType={documentType}
+          lineItems={lineItems}
+        />
+      ) : (
+        <div className="px-8 py-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
+          </h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+            <p className="text-gray-500">No items found for this {documentType}</p>
+          </div>
+        </div>
+      )}
 
       <DocumentTotalsSection
         documentType={documentType}

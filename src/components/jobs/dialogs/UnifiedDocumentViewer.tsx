@@ -59,6 +59,14 @@ export const UnifiedDocumentViewer = ({
     onDocumentUpdated
   });
 
+  console.log('UnifiedDocumentViewer Debug:', {
+    documentType,
+    documentNumber,
+    lineItems: lineItems?.length || 0,
+    document,
+    loading
+  });
+
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,6 +80,28 @@ export const UnifiedDocumentViewer = ({
   }
 
   const showConvertButton = documentType === "estimate" && !!onConvertToInvoice;
+
+  // Format dates to show 24-hour format with date
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
+  const issueDate = documentType === "invoice" 
+    ? formatDateTime((document as Invoice).issue_date || (document as Invoice).created_at)
+    : formatDateTime((document as Estimate).created_at);
+
+  const dueDate = documentType === "invoice" 
+    ? formatDateTime((document as Invoice).due_date)
+    : formatDateTime((document as Estimate).valid_until);
 
   return (
     <>
@@ -97,14 +127,8 @@ export const UnifiedDocumentViewer = ({
             notes={document.notes || ''}
             clientInfo={clientInfo}
             jobId={jobId}
-            issueDate={documentType === "invoice" 
-              ? (document as Invoice).issue_date 
-              : (document as Estimate).created_at
-            }
-            dueDate={documentType === "invoice" 
-              ? (document as Invoice).due_date 
-              : (document as Estimate).valid_until
-            }
+            issueDate={issueDate}
+            dueDate={dueDate}
           />
         </DialogContent>
       </Dialog>

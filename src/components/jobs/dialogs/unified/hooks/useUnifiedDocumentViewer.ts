@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Invoice } from "@/hooks/useInvoices";
 import { Estimate } from "@/hooks/useEstimates";
 import { useJobData } from "./useJobData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseUnifiedDocumentViewerProps {
   document: Invoice | Estimate;
@@ -11,6 +12,9 @@ interface UseUnifiedDocumentViewerProps {
   onConvertToInvoice?: (estimate: Estimate) => void;
   onDocumentUpdated?: () => void;
 }
+
+// Lock tax rate to 13%
+const LOCKED_TAX_RATE = 13;
 
 export const useUnifiedDocumentViewer = ({
   document,
@@ -22,24 +26,81 @@ export const useUnifiedDocumentViewer = ({
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { clientInfo, jobAddress, loading } = useJobData(jobId);
-  
-  // Calculate line items and totals
-  const lineItems = Array.isArray(document.items) ? document.items : [];
-  
-  // Handle tax rate properly for both invoice and estimate
-  const taxRate = documentType === "estimate" 
-    ? (document as Estimate).tax_rate || 0
-    : (document as Invoice).tax_rate || 0;
-  
+  const { clientInfo, jobAddress } = useJobData(jobId);
+
+  // Fetch line items from database
+  useEffect(() => {
+    const fetchLineItems = async () => {
+      if (!document?.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Fetching line items for document:', document.id, 'type:', documentType);
+        
+        const { data: items, error } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_type', documentType)
+          .eq('parent_id', document.id);
+
+        if (error) {
+          console.error('Error fetching line items:', error);
+        } else {
+          console.log('Fetched line items:', items);
+          // Transform database items to the expected format
+          const transformedItems = items?.map(item => ({
+            id: item.id,
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unitPrice: Number(item.unit_price) || 0,
+            taxable: item.taxable !== false,
+            total: (item.quantity || 1) * (Number(item.unit_price) || 0),
+            name: item.description || '',
+            price: Number(item.unit_price) || 0
+          })) || [];
+          
+          setLineItems(transformedItems);
+        }
+      } catch (error) {
+        console.error('Error in fetchLineItems:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLineItems();
+  }, [document?.id, documentType]);
+
+  // Fallback to document.items if no line items found in database
+  useEffect(() => {
+    if (!loading && lineItems.length === 0 && document.items) {
+      console.log('Using fallback items from document:', document.items);
+      const fallbackItems = Array.isArray(document.items) ? document.items : [];
+      setLineItems(fallbackItems.map(item => ({
+        ...item,
+        unitPrice: item.unitPrice || item.price || 0,
+        total: (item.quantity || 1) * (item.unitPrice || item.price || 0)
+      })));
+    }
+  }, [loading, lineItems.length, document.items]);
+
   const calculateSubtotal = () => {
     return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   };
 
   const calculateTotalTax = () => {
-    const subtotal = calculateSubtotal();
-    return subtotal * (taxRate / 100);
+    const taxableTotal = lineItems.reduce((total, item) => {
+      if (item.taxable) {
+        return total + (item.quantity * item.unitPrice);
+      }
+      return total;
+    }, 0);
+    return (taxableTotal * LOCKED_TAX_RATE) / 100;
   };
 
   const calculateGrandTotal = () => {
@@ -107,7 +168,7 @@ export const useUnifiedDocumentViewer = ({
     jobAddress,
     loading,
     lineItems,
-    taxRate,
+    taxRate: LOCKED_TAX_RATE,
     documentNumber,
     calculateSubtotal,
     calculateTotalTax,
