@@ -249,7 +249,7 @@ export const SteppedInvoiceBuilder = ({
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex flex-wrap items-center gap-2">
+            <DialogTitle className="flex items-center gap-2">
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
                 Step {currentStepNumber} of 3
               </span>
@@ -257,9 +257,9 @@ export const SteppedInvoiceBuilder = ({
               {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
             </DialogTitle>
             
-            <div className="flex items-center justify-start sm:justify-center space-x-4 py-4 overflow-x-auto">
+            <div className="flex items-center justify-center space-x-4 py-4">
               {steps.map((step, index) => (
-                <div key={step.number} className="flex items-center flex-shrink-0">
+                <div key={step.number} className="flex items-center">
                   <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                     currentStepNumber === step.number
                       ? "border-primary bg-primary text-primary-foreground"

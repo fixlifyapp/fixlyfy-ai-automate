@@ -51,21 +51,20 @@ export const UnifiedItemsStep = ({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-1 sm:px-0">
+    <div className="space-y-6">
       {/* Document Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base sm:text-lg font-semibold break-words">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">
             {documentType === "estimate" ? "Estimate" : "Invoice"} Items
           </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground break-words">
+          <p className="text-sm text-muted-foreground">
             Add line items and configure pricing for this {documentType}
           </p>
         </div>
         <Button 
           onClick={() => setShowProductDialog(true)}
-          className="gap-2 w-full sm:w-auto text-sm"
-          size="sm"
+          className="gap-2"
         >
           <Plus className="h-4 w-4" />
           Add Product
@@ -74,20 +73,20 @@ export const UnifiedItemsStep = ({
 
       {/* Line Items Table */}
       <Card>
-        <CardHeader className="pb-3 sm:pb-6">
-          <CardTitle className="text-sm sm:text-base">Line Items</CardTitle>
+        <CardHeader>
+          <CardTitle>Line Items</CardTitle>
         </CardHeader>
-        <CardContent className="p-2 sm:p-6">
+        <CardContent>
           <DocumentLineItemsTable
             documentType={documentType}
             lineItems={lineItems}
           />
           
           {lineItems.length === 0 && (
-            <div className="text-center py-6 sm:py-8 text-muted-foreground">
-              <Plus className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4" />
-              <p className="text-sm sm:text-lg font-medium">No items added yet</p>
-              <p className="text-xs sm:text-sm">Add products to get started</p>
+            <div className="text-center py-8 text-muted-foreground">
+              <Plus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-medium">No items added yet</p>
+              <p className="text-sm">Add products to get started</p>
             </div>
           )}
         </CardContent>
@@ -110,11 +109,11 @@ export const UnifiedItemsStep = ({
 
       {/* Product Selection Dialog */}
       <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="text-sm sm:text-base">Select Products</DialogTitle>
+            <DialogTitle>Select Products</DialogTitle>
           </DialogHeader>
-          <div className="overflow-auto max-h-[65vh] sm:max-h-[70vh] p-2 sm:p-4">
+          <div className="overflow-auto max-h-[70vh] p-4">
             <ProductCatalog
               onAddProduct={handleProductSelect}
             />
