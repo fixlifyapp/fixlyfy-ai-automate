@@ -636,85 +636,6 @@ export type Database = {
         }
         Relationships: []
       }
-      client_portal_sessions: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          id: string
-          ip_address: string | null
-          last_accessed_at: string | null
-          session_token: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          ip_address?: string | null
-          last_accessed_at?: string | null
-          session_token: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          ip_address?: string | null
-          last_accessed_at?: string | null
-          session_token?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_portal_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "client_portal_users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      client_portal_users: {
-        Row: {
-          client_id: string | null
-          created_at: string | null
-          email: string
-          id: string
-          is_active: boolean | null
-          last_login_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          client_id?: string | null
-          created_at?: string | null
-          email: string
-          id?: string
-          is_active?: boolean | null
-          last_login_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          client_id?: string | null
-          created_at?: string | null
-          email?: string
-          id?: string
-          is_active?: boolean | null
-          last_login_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_portal_users_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       client_properties: {
         Row: {
           address: string | null
@@ -2563,15 +2484,7 @@ export type Database = {
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "portal_access_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "client_portal_users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       products: {
         Row: {
@@ -2800,6 +2713,39 @@ export type Database = {
           last_accessed_at?: string | null
           session_token?: string
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      secure_document_access: {
+        Row: {
+          access_token: string
+          accessed_at: string | null
+          client_email: string
+          created_at: string
+          document_id: string
+          document_type: string
+          expires_at: string
+          id: string
+        }
+        Insert: {
+          access_token: string
+          accessed_at?: string | null
+          client_email: string
+          created_at?: string
+          document_id: string
+          document_type: string
+          expires_at: string
+          id?: string
+        }
+        Update: {
+          access_token?: string
+          accessed_at?: string | null
+          client_email?: string
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          expires_at?: string
+          id?: string
         }
         Relationships: []
       }
@@ -3448,12 +3394,17 @@ export type Database = {
         }
         Returns: boolean
       }
-      generate_client_login_token: {
-        Args: { p_email: string; p_expiry_hours?: number }
-        Returns: string
-      }
       generate_next_id: {
         Args: { p_entity_type: string }
+        Returns: string
+      }
+      generate_secure_document_access: {
+        Args: {
+          p_document_type: string
+          p_document_id: string
+          p_client_email: string
+          p_hours_valid?: number
+        }
         Returns: string
       }
       get_popular_warranties_by_job_type: {
@@ -3513,24 +3464,13 @@ export type Database = {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
       }
-      validate_client_session: {
-        Args: { p_session_token: string }
-        Returns: {
-          client_id: string
-          user_id: string
-          client_name: string
-          client_email: string
-        }[]
-      }
-      verify_client_login_token: {
+      validate_document_access: {
         Args: { p_token: string }
         Returns: {
-          session_token: string
-          client_id: string
-          user_id: string
-          client_name: string
+          document_type: string
+          document_id: string
           client_email: string
-          expires_at: string
+          is_valid: boolean
         }[]
       }
     }

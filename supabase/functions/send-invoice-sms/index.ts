@@ -116,42 +116,41 @@ serve(async (req) => {
 
     console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
 
-    // Generate client portal login token and create portal link
-    let portalLink = '';
+    // Generate secure document access token
+    let viewLink = '';
     if (client?.email) {
       try {
-        console.log('Generating portal link for client email:', client.email);
+        console.log('Generating secure access token for client email:', client.email);
         
-        // Call the unified function
-        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-          p_email: client.email,
-          p_expiry_hours: 24
+        const { data: accessToken, error: tokenError } = await supabaseAdmin.rpc('generate_secure_document_access', {
+          p_document_type: 'invoice',
+          p_document_id: invoice.id,
+          p_client_email: client.email,
+          p_hours_valid: 72
         });
 
-        if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/invoices?id=${invoice.id}`;
-          console.log('Portal link generated for SMS:', portalLink.substring(0, 60) + '...');
+        if (!tokenError && accessToken) {
+          viewLink = `https://hub.fixlify.app/view/${accessToken}`;
+          console.log('Secure access link generated:', viewLink.substring(0, 60) + '...');
         } else {
-          console.error('Failed to generate portal login token:', tokenError);
+          console.error('Failed to generate secure access token:', tokenError);
         }
       } catch (error) {
-        console.warn('Failed to generate portal login token:', error);
+        console.warn('Failed to generate secure access token:', error);
       }
     }
 
-    // Create SMS message with portal link
+    // Create SMS message with secure view link
     const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
     
     let smsMessage;
     if (message) {
       smsMessage = message;
     } else {
-      const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
-      
-      if (portalLink) {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Pay online: ${portalLink}`;
+      if (viewLink) {
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Pay securely: ${viewLink}`;
       } else {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. View: ${invoiceLink}`;
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Contact us for payment.`;
       }
     }
 
@@ -194,7 +193,7 @@ serve(async (req) => {
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLink
+          portal_link_included: !!viewLink
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
@@ -207,7 +206,7 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: telnyxResult.data?.id,
-        portalLinkIncluded: !!portalLink,
+        secureViewLinkIncluded: !!viewLink,
         smsContent: smsMessage
       }),
       {

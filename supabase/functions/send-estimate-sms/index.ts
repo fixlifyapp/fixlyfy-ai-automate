@@ -116,40 +116,39 @@ serve(async (req) => {
 
     console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
 
-    // Generate client portal login token and create portal link
-    let portalLink = '';
+    // Generate secure document access token
+    let viewLink = '';
     if (client?.email) {
       try {
-        console.log('Generating portal link for client email:', client.email);
+        console.log('Generating secure access token for client email:', client.email);
         
-        // Call the unified function
-        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-          p_email: client.email,
-          p_expiry_hours: 24
+        const { data: accessToken, error: tokenError } = await supabaseAdmin.rpc('generate_secure_document_access', {
+          p_document_type: 'estimate',
+          p_document_id: estimate.id,
+          p_client_email: client.email,
+          p_hours_valid: 72
         });
 
-        if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/estimates?id=${estimate.id}`;
-          console.log('Portal link generated for SMS:', portalLink.substring(0, 60) + '...');
+        if (!tokenError && accessToken) {
+          viewLink = `https://hub.fixlify.app/view/${accessToken}`;
+          console.log('Secure access link generated:', viewLink.substring(0, 60) + '...');
         } else {
-          console.error('Failed to generate portal login token:', tokenError);
+          console.error('Failed to generate secure access token:', tokenError);
         }
       } catch (error) {
-        console.warn('Failed to generate portal login token:', error);
+        console.warn('Failed to generate secure access token:', error);
       }
     }
 
-    // Create SMS message with portal link
+    // Create SMS message with secure view link
     let smsMessage;
     if (message) {
       smsMessage = message;
     } else {
-      const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.id}`;
-      
-      if (portalLink) {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} from ${companyName} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. View in Client Portal: ${portalLink}`;
+      if (viewLink) {
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} from ${companyName} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. View securely: ${viewLink}`;
       } else {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} from ${companyName} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. View: ${estimateLink}`;
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} from ${companyName} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Contact us for details.`;
       }
     }
 
@@ -191,7 +190,7 @@ serve(async (req) => {
           estimate_number: estimate.estimate_number,
           client_name: client?.name,
           client_phone: client?.phone,
-          portal_link_included: !!portalLink
+          portal_link_included: !!viewLink
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
@@ -204,7 +203,7 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: telnyxResult.data?.id,
-        portalLinkIncluded: !!portalLink,
+        secureViewLinkIncluded: !!viewLink,
         smsContent: smsMessage
       }),
       {
