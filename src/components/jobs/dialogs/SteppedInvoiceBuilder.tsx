@@ -70,7 +70,7 @@ export const SteppedInvoiceBuilder = ({
     saveDocumentChanges
   } = useUnifiedDocumentBuilder({
     documentType: "invoice",
-    existingDocument: existingInvoice,
+    existingDocument: existingInvoice || estimateToConvert,
     jobId,
     open,
     onSyncToInvoice: undefined
