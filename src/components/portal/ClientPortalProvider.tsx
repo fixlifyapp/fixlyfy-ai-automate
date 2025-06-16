@@ -109,7 +109,7 @@ export function ClientPortalProvider({
     setSession(null);
     setData(null);
     setIsAuthenticated(false);
-    // Redirect to the portal login page
+    // Redirect to the portal login page instead of /auth
     window.location.href = '/client-portal';
   };
 

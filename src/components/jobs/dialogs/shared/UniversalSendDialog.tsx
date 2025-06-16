@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -117,19 +118,33 @@ export const UniversalSendDialog = ({
         toast.success(`${documentType === "estimate" ? "Estimate" : "Invoice"} sent via email successfully!`);
         
       } else {
-        // Call SMS sending edge function
-        const functionName = documentType === "estimate" ? "send-estimate-sms" : "send-invoice-sms";
+        // Use telnyx-sms for both estimates and invoices
+        console.log("Calling telnyx-sms function for SMS...");
         
-        const { data, error } = await supabase.functions.invoke(functionName, {
+        // Get document details for client_id
+        const tableName = documentType === "estimate" ? "estimates" : "invoices";
+        const { data: document } = await supabase
+          .from(tableName)
+          .select('job_id, jobs!inner(client_id)')
+          .eq('id', documentId)
+          .single();
+
+        const clientId = document?.jobs?.client_id;
+        
+        const smsMessage = customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`;
+        
+        const { data, error } = await supabase.functions.invoke('telnyx-sms', {
           body: {
-            [`${documentType}Id`]: documentId,
             recipientPhone: sendTo,
-            message: customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`
+            message: smsMessage,
+            [`${documentType}Id`]: documentId,
+            client_id: clientId,
+            job_id: document?.job_id
           }
         });
 
         if (error) {
-          console.error(`❌ Error from ${functionName}:`, error);
+          console.error(`❌ Error from telnyx-sms:`, error);
           throw new Error(error.message || `Failed to send ${documentType} via SMS`);
         }
 

@@ -26,6 +26,11 @@ export default function ClientPortalPage() {
     );
   }
 
+  // If no token is provided, show the login page
+  if (!token) {
+    return <ClientPortalLogin />;
+  }
+
   return (
     <ClientPortalProvider token={token}>
       <div className="min-h-screen bg-gray-50">
