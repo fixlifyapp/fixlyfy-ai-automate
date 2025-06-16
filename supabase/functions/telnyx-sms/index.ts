@@ -1,10 +1,19 @@
 
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface SMSRequest {
+  recipientPhone: string;
+  message: string;
+  client_id?: string;
+  job_id?: string;
+  estimateId?: string;
+  invoiceId?: string;
 }
 
 serve(async (req) => {
@@ -13,128 +22,91 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    console.log('📱 SMS request received');
+    
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header provided');
+    }
+
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the authorization header to determine the user
-    const authHeader = req.headers.get('Authorization')
-    console.log('Authorization header present:', !!authHeader)
-    
-    // Verify the user token
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
-      authHeader?.replace('Bearer ', '') || ''
-    )
-    
-    if (authError || !user) {
-      console.error('Authentication error:', authError)
-      throw new Error('Authentication required')
-    }
-    
-    console.log('Authenticated user:', user.id)
-
-    const requestBody = await req.json()
-    const { to, body, client_id, job_id, estimateId, recipientPhone, message } = requestBody
-    
-    // Handle both regular SMS and estimate SMS
-    const phoneNumber = to || recipientPhone
-    const messageBody = body || message
-    const isEstimate = !!estimateId
-    
-    console.log('Sending SMS via Telnyx:', { 
-      phoneNumber, 
-      messageBody: messageBody?.substring(0, 50) + '...', 
-      client_id, 
-      job_id, 
-      isEstimate,
-      estimateId 
-    })
-
-    // Validate inputs
-    if (!phoneNumber || !messageBody) {
-      throw new Error('Phone number and message body are required')
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !userData.user) {
+      throw new Error('Failed to authenticate user');
     }
 
-    // Clean and validate phone number
-    const cleanPhone = phoneNumber.replace(/\D/g, '')
-    if (cleanPhone.length < 10) {
-      throw new Error('Valid phone number is required')
+    const requestBody: SMSRequest = await req.json();
+    console.log('SMS request body:', requestBody);
+    
+    const { recipientPhone, message, client_id, estimateId, invoiceId } = requestBody;
+
+    if (!recipientPhone || !message) {
+      throw new Error('Missing required fields: recipientPhone and message');
     }
 
-    // Format phone number for Telnyx
-    const formattedPhone = cleanPhone.length === 10 ? `+1${cleanPhone}` : `+${cleanPhone}`
-
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
-    if (!telnyxApiKey) {
-      console.error('TELNYX_API_KEY not configured')
-      throw new Error('SMS service not configured. Please contact support.')
-    }
-
-    // Get user's active phone number from telnyx_phone_numbers
-    console.log('Fetching user phone numbers for user:', user.id)
-    const { data: phoneNumbers, error: phoneError } = await supabaseClient
+    // Get active phone number for this user
+    const { data: phoneNumbers, error: phoneError } = await supabaseAdmin
       .from('telnyx_phone_numbers')
-      .select('phone_number, status')
-      .eq('user_id', user.id)
+      .select('*')
+      .eq('user_id', userData.user.id)
       .eq('status', 'active')
-      .limit(1)
+      .limit(1);
 
-    if (phoneError) {
-      console.error('Error fetching phone numbers:', phoneError)
-      throw new Error('Failed to fetch phone numbers')
+    if (phoneError || !phoneNumbers || phoneNumbers.length === 0) {
+      throw new Error('No active phone number found for user');
     }
 
-    console.log('Found phone numbers:', phoneNumbers)
+    const fromPhone = phoneNumbers[0].phone_number;
+    console.log('Using phone number:', fromPhone);
 
-    if (!phoneNumbers || phoneNumbers.length === 0) {
-      console.error('No active phone numbers found for user:', user.id)
-      throw new Error('No active phone numbers configured. Please purchase a phone number first.')
-    }
-
-    const fromPhone = phoneNumbers[0].phone_number
-    console.log('Using sender phone number:', fromPhone)
-
-    // Ensure the phone number is properly formatted
-    let formattedFromPhone = fromPhone
-    if (!fromPhone.startsWith('+')) {
-      const cleanFromPhone = fromPhone.replace(/\D/g, '')
-      formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`
-    }
-
-    // Handle estimate-specific logic
-    let finalMessage = messageBody
-    if (isEstimate && estimateId && client_id) {
-      console.log('Processing estimate SMS - generating portal link')
-      
-      // Generate portal access token for estimate with better error handling
+    // Generate portal link if we have estimate or invoice data
+    let finalMessage = message;
+    if ((estimateId || invoiceId) && client_id) {
       try {
-        const { data: tokenData, error: tokenError } = await supabaseClient.rpc('generate_client_portal_access', {
+        console.log('Generating portal link for client:', client_id);
+        
+        const documentType = estimateId ? 'estimate' : 'invoice';
+        const documentId = estimateId || invoiceId;
+        
+        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
           p_client_id: client_id,
-          p_document_type: 'estimate',
-          p_document_id: estimateId,
+          p_document_type: documentType,
+          p_document_id: documentId,
           p_hours_valid: 72
         });
 
         if (!tokenError && tokenData) {
           const portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
-          finalMessage = `${messageBody}\n\nView your estimate securely: ${portalLink}`;
-          console.log('Portal link generated and added to message');
+          finalMessage = `${message} View details: ${portalLink}`;
+          console.log('Portal link added to SMS message');
         } else {
-          console.error('Failed to generate portal access token:', tokenError);
-          // Continue without portal link - don't fail the SMS
-          console.log('Continuing SMS send without portal link');
+          console.error('Failed to generate portal token:', tokenError);
         }
       } catch (error) {
-        console.warn('Portal access token generation failed:', error);
-        // Continue without portal link - don't fail the SMS
-        console.log('Continuing SMS send without portal link due to error');
+        console.warn('Failed to generate portal link for SMS:', error);
       }
     }
 
-    console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedPhone)
+    // Format phone numbers
+    const cleanFromPhone = fromPhone.replace(/\D/g, '');
+    const cleanToPhone = recipientPhone.replace(/\D/g, '');
+    const formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`;
+    const formattedToPhone = cleanToPhone.length === 10 ? `+1${cleanToPhone}` : `+${cleanToPhone}`;
 
-    const response = await fetch('https://api.telnyx.com/v2/messages', {
+    console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
+
+    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
+    if (!telnyxApiKey) {
+      throw new Error('Telnyx API key not configured');
+    }
+
+    // Send SMS via Telnyx
+    const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${telnyxApiKey}`,
@@ -142,119 +114,48 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: formattedFromPhone,
-        to: formattedPhone,
+        to: formattedToPhone,
         text: finalMessage
       })
-    })
+    });
 
-    const result = await response.json()
-    
-    if (!response.ok) {
-      console.error('Telnyx API error:', result)
-      throw new Error(result.errors?.[0]?.detail || 'Failed to send SMS via Telnyx')
+    const telnyxResult = await telnyxResponse.json();
+
+    if (!telnyxResponse.ok) {
+      console.error('Telnyx API error:', telnyxResult);
+      throw new Error(telnyxResult.errors?.[0]?.detail || 'Failed to send SMS via Telnyx');
     }
 
-    console.log('SMS sent successfully via Telnyx:', result)
+    console.log('SMS sent successfully:', telnyxResult);
 
-    // Store the message in the database if we have conversation context
-    if (client_id) {
-      console.log('Storing message in database for client:', client_id)
-      
-      // Try to find or create a conversation
-      let conversationId = null
-      
-      const { data: existingConversation } = await supabaseClient
-        .from('conversations')
-        .select('id')
-        .eq('client_id', client_id)
-        .eq('status', 'active')
-        .limit(1)
-        .maybeSingle()
-
-      if (existingConversation) {
-        conversationId = existingConversation.id
-        console.log('Using existing conversation:', conversationId)
-      } else {
-        console.log('Creating new conversation for client:', client_id)
-        const { data: newConversation, error: convError } = await supabaseClient
-          .from('conversations')
-          .insert({
-            client_id: client_id,
-            job_id: job_id || null,
-            status: 'active',
-            last_message_at: new Date().toISOString()
-          })
-          .select('id')
-          .single()
-
-        if (!convError && newConversation) {
-          conversationId = newConversation.id
-          console.log('Created new conversation:', conversationId)
-        }
-      }
-
-      // Store the message
-      if (conversationId) {
-        const { error: msgError } = await supabaseClient
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            body: finalMessage,
-            direction: 'outbound',
-            sender: 'System',
-            recipient: formattedPhone,
-            status: 'delivered',
-            message_sid: result.data?.id || 'telnyx-' + Date.now()
-          })
-
-        if (msgError) {
-          console.error('Error storing message:', msgError)
-          // Don't throw error here, message was sent successfully
-        } else {
-          console.log('Message stored successfully')
-        }
-
-        // Update conversation timestamp to trigger real-time updates
-        const { error: updateError } = await supabaseClient
-          .from('conversations')
-          .update({ 
-            last_message_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', conversationId)
-
-        if (updateError) {
-          console.error('Error updating conversation timestamp:', updateError)
-        } else {
-          console.log('Conversation timestamp updated for real-time sync')
-        }
-      }
-    }
-
-    // Log estimate communication if this is an estimate SMS
-    if (isEstimate && estimateId) {
+    // Log SMS communication if it's for an estimate or invoice
+    if (estimateId || invoiceId) {
       try {
-        await supabaseClient
-          .from('estimate_communications')
+        const tableName = estimateId ? 'estimate_communications' : 'invoice_communications';
+        const idField = estimateId ? 'estimate_id' : 'invoice_id';
+        const documentId = estimateId || invoiceId;
+        
+        await supabaseAdmin
+          .from(tableName)
           .insert({
-            estimate_id: estimateId,
+            [idField]: documentId,
             communication_type: 'sms',
-            recipient: formattedPhone,
+            recipient: recipientPhone,
             content: finalMessage,
             status: 'sent',
-            provider_message_id: result.data?.id
+            provider_message_id: telnyxResult.data?.id
           });
-        console.log('Estimate communication logged');
       } catch (logError) {
-        console.warn('Failed to log estimate communication:', logError);
+        console.warn('Failed to log SMS communication:', logError);
       }
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data: result,
-        message: 'Message sent successfully'
+        message: 'SMS sent successfully',
+        messageId: telnyxResult.data?.id,
+        portalLinkIncluded: finalMessage !== message
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -262,11 +163,11 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error sending SMS:', error)
+    console.error('Error sending SMS:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to send message'
+        error: error.message 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

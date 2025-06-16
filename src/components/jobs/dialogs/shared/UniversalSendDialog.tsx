@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -124,16 +125,21 @@ export const UniversalSendDialog = ({
         const tableName = documentType === "estimate" ? "estimates" : "invoices";
         const { data: document } = await supabase
           .from(tableName)
-          .select('job_id, jobs!inner(client_id)')
+          .select('job_id, client_id, jobs!inner(client_id)')
           .eq('id', documentId)
           .single();
 
-        const clientId = document?.jobs?.client_id;
+        // Use client_id from document or fallback to jobs relationship
+        const clientId = document?.client_id || document?.jobs?.client_id;
         const jobId = document?.job_id;
+        
+        if (!clientId) {
+          throw new Error('Unable to find client information for this document');
+        }
         
         const smsMessage = customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`;
         
-        // Pass the correct parameters for estimate SMS
+        // Pass the correct parameters for SMS
         const smsBody: any = {
           recipientPhone: sendTo,
           message: smsMessage,
@@ -141,7 +147,7 @@ export const UniversalSendDialog = ({
           job_id: jobId
         };
 
-        // Add estimate-specific parameters
+        // Add document-specific parameters
         if (documentType === "estimate") {
           smsBody.estimateId = documentId;
         } else {

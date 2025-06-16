@@ -163,9 +163,16 @@ serve(async (req) => {
     }
 
     console.log('send-estimate - Found estimate:', estimate.estimate_number);
+    console.log('send-estimate - Client data:', estimate.jobs?.clients);
     
     const job = estimate.jobs;
     const client = job?.clients;
+
+    // Verify we have client data
+    if (!client?.id) {
+      console.error('send-estimate - No client data found for estimate:', estimateId);
+      throw new Error('Client information not found for this estimate');
+    }
 
     const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
@@ -179,28 +186,27 @@ serve(async (req) => {
 
     console.log('send-estimate - Company settings found:', !!companySettings);
 
-    // Generate client portal access token using the correct function
+    // Generate client portal access token using the fixed function
     let portalLink = '';
-    if (client?.id) {
-      try {
-        console.log('Generating portal link for client ID:', client.id);
-        
-        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
-          p_client_id: client.id,
-          p_document_type: 'estimate',
-          p_document_id: estimate.id,
-          p_hours_valid: 72
-        });
+    try {
+      console.log('Generating portal link for client ID:', client.id);
+      console.log('Estimate ID for portal:', estimate.id);
+      
+      const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
+        p_client_id: client.id,
+        p_document_type: 'estimate',
+        p_document_id: estimate.id,
+        p_hours_valid: 72
+      });
 
-        if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
-          console.log('Portal link generated for client portal');
-        } else {
-          console.error('Failed to generate portal access token:', tokenError);
-        }
-      } catch (error) {
-        console.warn('Failed to generate portal access token:', error);
+      if (!tokenError && tokenData) {
+        portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
+        console.log('Portal link generated successfully for client portal');
+      } else {
+        console.error('Failed to generate portal access token:', tokenError);
       }
+    } catch (error) {
+      console.warn('Failed to generate portal access token:', error);
     }
 
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
@@ -212,7 +218,10 @@ serve(async (req) => {
     
     if (customMessage) {
       subject = `Estimate ${estimate.estimate_number} from ${companyName}`;
-      emailBody = customMessage;
+      // Include portal link in custom message if available
+      emailBody = portalLink 
+        ? `${customMessage}\n\nView your estimate online: ${portalLink}`
+        : customMessage;
     } else {
       subject = `Your Estimate ${estimate.estimate_number} is Ready`;
       emailBody = createEstimateEmailTemplate({
@@ -239,6 +248,7 @@ serve(async (req) => {
     console.log('send-estimate - FROM:', fromEmail);
     console.log('send-estimate - TO:', recipientEmail);
     console.log('send-estimate - SUBJECT:', subject);
+    console.log('send-estimate - Portal link included:', !!portalLink);
 
     const formData = new FormData();
     formData.append('from', fromEmail);
