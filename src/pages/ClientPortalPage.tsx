@@ -4,28 +4,24 @@ import { useSearchParams } from 'react-router-dom';
 import { ClientPortalDashboard } from '@/components/portal/ClientPortalDashboard';
 import { ClientPortalLogin } from '@/components/portal/ClientPortalLogin';
 import { ClientPortalProvider } from '@/components/portal/ClientPortalProvider';
-import { PageLayout } from '@/components/layout/PageLayout';
 
 export default function ClientPortalPage() {
   const [searchParams] = useSearchParams();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const token = searchParams.get('token');
 
   useEffect(() => {
-    if (token) {
-      // Token will be validated in the provider
-      setIsLoading(false);
-    } else {
-      setIsAuthenticated(false);
-      setIsLoading(false);
-    }
-  }, [token]);
+    // Always show loading initially to validate token
+    setIsLoading(false);
+  }, []);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-12 w-12 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your portal...</p>
+        </div>
       </div>
     );
   }
@@ -33,11 +29,7 @@ export default function ClientPortalPage() {
   return (
     <ClientPortalProvider token={token}>
       <div className="min-h-screen bg-gray-50">
-        {isAuthenticated ? (
-          <ClientPortalDashboard />
-        ) : (
-          <ClientPortalLogin />
-        )}
+        <ClientPortalDashboard />
       </div>
     </ClientPortalProvider>
   );

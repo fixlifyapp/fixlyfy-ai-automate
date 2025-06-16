@@ -26,9 +26,8 @@ export const generatePortalLink = async (
       throw error
     }
 
-    // Return the portal URL with token
-    const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('//', '//portal.') || 'https://portal.your-domain.com'
-    return `${baseUrl}/portal?token=${token}`
+    // Return the clean portal URL with token
+    return `https://hub.fixlify.app/client-portal?token=${token}`
 
   } catch (error) {
     console.error('Error in generatePortalLink:', error)

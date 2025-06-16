@@ -52,8 +52,8 @@ function App() {
           {/* Authentication */}
           <Route path="/auth" element={<LoginPage />} />
           
-          {/* Client Portal - Public Route */}
-          <Route path="/portal" element={<ClientPortalPage />} />
+          {/* Client Portal - Public Route with clean URL */}
+          <Route path="/client-portal" element={<ClientPortalPage />} />
           
           {/* Main Dashboard Routes */}
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

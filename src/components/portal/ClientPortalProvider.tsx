@@ -51,21 +51,31 @@ export function ClientPortalProvider({
     try {
       setIsLoading(true);
       
+      // Call the portal-auth edge function with the token as a URL parameter
       const { data: authData, error } = await supabase.functions.invoke('portal-auth', {
+        method: 'GET',
+      });
+
+      // Since we need to pass the token as a URL parameter, we'll construct the URL manually
+      const authUrl = `${supabase.supabaseUrl}/functions/v1/portal-auth?token=${encodeURIComponent(loginToken)}`;
+      
+      const authResponse = await fetch(authUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.supabaseKey}`,
         },
-        body: JSON.stringify({ token: loginToken })
       });
 
-      if (error || !authData?.success) {
-        console.error('Portal auth error:', error || authData?.error);
-        toast.error('Invalid or expired link');
+      const authResult = await authResponse.json();
+
+      if (!authResponse.ok || !authResult?.success) {
+        console.error('Portal auth error:', authResult?.error);
+        toast.error('Invalid or expired access link');
         return false;
       }
 
-      setSession(authData.session);
+      setSession(authResult.session);
       setIsAuthenticated(true);
       
       // Load dashboard data
@@ -104,8 +114,8 @@ export function ClientPortalProvider({
     setSession(null);
     setData(null);
     setIsAuthenticated(false);
-    // Redirect to a public page or show login form
-    window.location.href = '/';
+    // Redirect to the portal login page
+    window.location.href = '/client-portal';
   };
 
   const refreshData = async () => {
