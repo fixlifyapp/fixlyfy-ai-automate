@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, Bot, CheckCircle, AlertCircle, Loader2, ExternalLink, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 export const SetupAIDispatcher = () => {
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -25,20 +24,13 @@ export const SetupAIDispatcher = () => {
         setSetupComplete(true);
         setWebhookUrl(data.webhook_url);
         setConnectInstanceArn(data.connect_instance_arn);
-        toast({
-          title: "AI Dispatcher Setup Complete!",
-          description: `Phone number ${data.phone_number} is now configured with AI assistance.`,
-        });
+        toast.success(`AI Dispatcher Setup Complete! Phone number ${data.phone_number} is now configured with AI assistance.`);
       } else {
         throw new Error(data.error || 'Setup failed');
       }
     } catch (error) {
       console.error('Setup error:', error);
-      toast({
-        title: "Setup Failed",
-        description: "Failed to set up AI dispatcher. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Setup Failed - Failed to set up AI dispatcher. Please try again.");
     } finally {
       setIsSettingUp(false);
     }
@@ -46,10 +38,7 @@ export const SetupAIDispatcher = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: "URL copied to clipboard",
-    });
+    toast.success("Copied! URL copied to clipboard");
   };
 
   return (

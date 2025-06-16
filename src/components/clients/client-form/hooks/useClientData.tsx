@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
 export const useClientData = (clientId?: string) => {
-  const { toast } = useToast();
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

@@ -16,7 +16,6 @@ export interface ClientPayment {
 }
 
 export const useClientPayments = (clientId?: string) => {
-  const { toast } = useToast();
   const [payments, setPayments] = useState<ClientPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalRevenue, setTotalRevenue] = useState(0);
