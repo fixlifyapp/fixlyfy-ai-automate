@@ -11,12 +11,17 @@ import EstimatesPage from './pages/EstimatesPage';
 import TeamPage from './pages/TeamManagementPage';
 import LoginPage from './pages/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailPage';
-import InvoiceViewPage from './pages/InvoiceViewPage';
 import EstimateViewPage from './pages/EstimateViewPage';
-import PortalLoginPage from './pages/portal/PortalLoginPage';
-import SecureDocumentViewer from "./pages/SecureDocumentViewer";
+import SchedulePage from './pages/SchedulePage';
+import FinancePage from './pages/FinancePage';
+import ConnectCenterPage from './pages/ConnectCenterPage';
+import AiCenterPage from './pages/AiCenterPage';
+import AutomationsPage from './pages/AutomationsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import ProfileCompanyPage from './pages/ProfileCompanyPage';
 
 function App() {
   return (
@@ -24,7 +29,7 @@ function App() {
       <Toaster />
       <AppProviders>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth" element={<LoginPage />} />
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><JobsPage /></ProtectedRoute>} />
@@ -32,16 +37,17 @@ function App() {
           <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailsPage /></ProtectedRoute>} />
           <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
-          <Route path="/invoices/view/:id" element={<ProtectedRoute><InvoiceViewPage /></ProtectedRoute>} />
           <Route path="/estimates" element={<ProtectedRoute><EstimatesPage /></ProtectedRoute>} />
           <Route path="/estimate/view/:id" element={<ProtectedRoute><EstimateViewPage /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          <Route path="/portal/login" element={<PortalLoginPage />} />
-          
-          {/* Secure document viewer - no authentication required */}
-          <Route path="/view/:token" element={<SecureDocumentViewer />} />
-          
+          <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+          <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
+          <Route path="/connect" element={<ProtectedRoute><ConnectCenterPage /></ProtectedRoute>} />
+          <Route path="/ai-center" element={<ProtectedRoute><AiCenterPage /></ProtectedRoute>} />
+          <Route path="/automations" element={<ProtectedRoute><AutomationsPage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/profile-company" element={<ProtectedRoute><ProfileCompanyPage /></ProtectedRoute>} />
         </Routes>
       </AppProviders>
     </Router>

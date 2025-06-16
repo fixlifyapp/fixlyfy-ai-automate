@@ -2716,39 +2716,6 @@ export type Database = {
         }
         Relationships: []
       }
-      secure_document_access: {
-        Row: {
-          access_token: string
-          accessed_at: string | null
-          client_email: string
-          created_at: string
-          document_id: string
-          document_type: string
-          expires_at: string
-          id: string
-        }
-        Insert: {
-          access_token: string
-          accessed_at?: string | null
-          client_email: string
-          created_at?: string
-          document_id: string
-          document_type: string
-          expires_at: string
-          id?: string
-        }
-        Update: {
-          access_token?: string
-          accessed_at?: string | null
-          client_email?: string
-          created_at?: string
-          document_id?: string
-          document_type?: string
-          expires_at?: string
-          id?: string
-        }
-        Relationships: []
-      }
       security_audit_log: {
         Row: {
           action: string
@@ -3398,15 +3365,6 @@ export type Database = {
         Args: { p_entity_type: string }
         Returns: string
       }
-      generate_secure_document_access: {
-        Args: {
-          p_document_type: string
-          p_document_id: string
-          p_client_email: string
-          p_hours_valid?: number
-        }
-        Returns: string
-      }
       get_popular_warranties_by_job_type: {
         Args: { p_job_type: string; p_limit?: number }
         Returns: {
@@ -3463,15 +3421,6 @@ export type Database = {
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
-      }
-      validate_document_access: {
-        Args: { p_token: string }
-        Returns: {
-          document_type: string
-          document_id: string
-          client_email: string
-          is_valid: boolean
-        }[]
       }
     }
     Enums: {
