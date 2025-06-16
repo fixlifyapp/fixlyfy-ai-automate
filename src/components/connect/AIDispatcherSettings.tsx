@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 interface AIDispatcherSettingsProps {
   open: boolean;
@@ -112,11 +111,7 @@ export const AIDispatcherSettings = ({ open, onOpenChange, phoneNumberId, phoneN
       }
     } catch (error) {
       console.error('Error loading AI config:', error);
-      toast({
-        title: "Configuration Error",
-        description: "Failed to load AI configuration. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to load AI configuration. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -136,19 +131,12 @@ export const AIDispatcherSettings = ({ open, onOpenChange, phoneNumberId, phoneN
         throw error;
       }
 
-      toast({
-        title: "Settings Saved Successfully",
-        description: `AI Dispatcher configuration updated for ${phoneNumber}`,
-      });
+      toast.success(`AI Dispatcher configuration updated for ${phoneNumber}`);
 
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving AI config:', error);
-      toast({
-        title: "Save Failed",
-        description: "Failed to save AI configuration. Please check your connection and try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save AI configuration. Please check your connection and try again.");
     } finally {
       setSaving(false);
     }

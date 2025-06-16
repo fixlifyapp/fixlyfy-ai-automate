@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { ReportsFilters } from "./ReportsFilters";
 import { ReportsTable } from "./ReportsTable";
 
@@ -25,7 +24,6 @@ export const ReportsList = () => {
   });
   
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     // Auto-run report when filters change
@@ -57,11 +55,7 @@ export const ReportsList = () => {
       setReportData(sampleData);
     } catch (error) {
       console.error('Error running filtered report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to run report with filters.",
-        variant: "destructive",
-      });
+      toast.error("Failed to run report with filters.");
     } finally {
       setReportLoading(false);
     }
@@ -72,10 +66,7 @@ export const ReportsList = () => {
   };
 
   const handleExport = () => {
-    toast({
-      title: "Export Started",
-      description: "Your report is being exported...",
-    });
+    toast.success("Your report is being exported...");
   };
 
   const handleSearch = (query: string) => {

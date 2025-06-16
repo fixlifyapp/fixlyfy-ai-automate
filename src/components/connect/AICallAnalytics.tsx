@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { formatDistanceToNow } from "date-fns";
 
 interface AIAnalytics {
@@ -90,11 +89,7 @@ export const AICallAnalytics = () => {
           customerSatisfactionAverage: 0,
           recentCalls: []
         });
-        toast({
-          title: "Analytics Unavailable",
-          description: "AI call analytics are currently unavailable. Data will be displayed when available.",
-          variant: "default"
-        });
+        toast.info("AI call analytics are currently unavailable. Data will be displayed when available.");
       } else {
         setAnalytics(data?.analytics || {
           totalCalls: 0,
@@ -120,11 +115,7 @@ export const AICallAnalytics = () => {
         customerSatisfactionAverage: 0,
         recentCalls: []
       });
-      toast({
-        title: "Analytics Unavailable",
-        description: "AI call analytics are currently unavailable. Please try again later.",
-        variant: "default"
-      });
+      toast.error("AI call analytics are currently unavailable. Please try again later.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -133,10 +124,7 @@ export const AICallAnalytics = () => {
 
   const handleRefresh = () => {
     fetchAnalytics(true);
-    toast({
-      title: "Refreshing Analytics",
-      description: "Loading the latest AI call data...",
-    });
+    toast.info("Loading the latest AI call data...");
   };
 
   const formatDuration = (seconds: number) => {

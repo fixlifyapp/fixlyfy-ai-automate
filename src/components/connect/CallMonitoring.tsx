@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Phone, Clock, User, MessageSquare, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 interface CallLog {
   id: string;
@@ -56,11 +55,7 @@ export const CallMonitoring = () => {
       setCalls(data || []);
     } catch (error) {
       console.error('Error loading call logs:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load call logs",
-        variant: "destructive"
-      });
+      toast.error("Failed to load call logs");
     } finally {
       setLoading(false);
     }

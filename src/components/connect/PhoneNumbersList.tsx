@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneNumber } from "@/types/database";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { AIDispatcherSettings } from "./AIDispatcherSettings";
 
 export const PhoneNumbersList = () => {
@@ -65,11 +64,7 @@ export const PhoneNumbersList = () => {
       setPhoneNumbers(transformedData);
     } catch (error) {
       console.error('Error fetching phone numbers:', error);
-      toast({
-        title: "Error Loading Phone Numbers",
-        description: "We couldn't load your phone numbers. Please try refreshing the page.",
-        variant: "destructive"
-      });
+      toast.error("We couldn't load your phone numbers. Please try refreshing the page.");
     } finally {
       setIsLoading(false);
     }
@@ -117,13 +112,11 @@ export const PhoneNumbersList = () => {
           : pn
       ));
 
-      toast({
-        title: newStatus ? "AI Dispatcher Enabled" : "AI Dispatcher Disabled",
-        description: newStatus 
-          ? `AI is now handling calls for ${formatPhoneNumber(phoneNumber.phone_number)}` 
-          : `AI dispatcher has been disabled for ${formatPhoneNumber(phoneNumber.phone_number)}`,
-        variant: "default"
-      });
+      if (newStatus) {
+        toast.success(`AI is now handling calls for ${formatPhoneNumber(phoneNumber.phone_number)}`);
+      } else {
+        toast.success(`AI dispatcher has been disabled for ${formatPhoneNumber(phoneNumber.phone_number)}`);
+      }
 
       // If enabling AI for the first time, open settings dialog
       if (newStatus) {
@@ -133,11 +126,7 @@ export const PhoneNumbersList = () => {
 
     } catch (error) {
       console.error('Error toggling AI dispatcher:', error);
-      toast({
-        title: "Configuration Error",
-        description: "Failed to update AI Dispatcher settings. Please check your connection and try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to update AI Dispatcher settings. Please check your connection and try again.");
     } finally {
       setAiToggleLoading(null);
     }
