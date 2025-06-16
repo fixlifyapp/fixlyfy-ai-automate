@@ -128,10 +128,10 @@ serve(async (req) => {
       throw new Error('Failed to authenticate user');
     }
 
-    console.log('send-estimate - Authenticated user ID:', userData.user.id);
+    console.log('✅ User authenticated:', userData.user.id);
 
     const requestBody = await req.json()
-    console.log('Request body:', requestBody);
+    console.log('📥 Request body:', requestBody);
     
     const { estimateId, recipientEmail, customMessage } = requestBody;
 
@@ -139,11 +139,7 @@ serve(async (req) => {
       throw new Error('Missing required fields: estimateId and recipientEmail');
     }
 
-    console.log('send-estimate - Request details:', {
-      estimateId,
-      sendMethod: 'email',
-      recipientEmail
-    });
+    console.log('📋 Processing estimate email:', { estimateId, recipientEmail });
 
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
@@ -158,21 +154,22 @@ serve(async (req) => {
       .single();
 
     if (estimateError || !estimate) {
-      console.error('Estimate lookup error:', estimateError);
+      console.error('❌ Estimate lookup error:', estimateError);
       throw new Error('Estimate not found');
     }
 
-    console.log('send-estimate - Found estimate:', estimate.estimate_number);
-    console.log('send-estimate - Client data:', estimate.jobs?.clients);
+    console.log('📄 Found estimate:', estimate.estimate_number);
     
     const job = estimate.jobs;
     const client = job?.clients;
 
     // Verify we have client data
     if (!client?.id) {
-      console.error('send-estimate - No client data found for estimate:', estimateId);
+      console.error('❌ No client data found for estimate:', estimateId);
       throw new Error('Client information not found for this estimate');
     }
+
+    console.log('👤 Client found:', client.name, client.email);
 
     const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
@@ -181,16 +178,18 @@ serve(async (req) => {
       .maybeSingle();
 
     if (settingsError) {
-      console.error('send-estimate - Error fetching company settings:', settingsError);
+      console.error('⚠️ Error fetching company settings:', settingsError);
     }
 
-    console.log('send-estimate - Company settings found:', !!companySettings);
+    console.log('🏢 Company settings loaded:', !!companySettings);
 
     // Generate client portal access token using the fixed function
     let portalLink = '';
+    let portalLinkGenerated = false;
+    
     try {
-      console.log('Generating portal link for client ID:', client.id);
-      console.log('Estimate ID for portal:', estimate.id);
+      console.log('🔗 Generating portal link for client ID:', client.id);
+      console.log('📄 Estimate ID for portal:', estimate.id);
       
       const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
         p_client_id: client.id,
@@ -199,14 +198,17 @@ serve(async (req) => {
         p_hours_valid: 72
       });
 
-      if (!tokenError && tokenData) {
+      if (tokenError) {
+        console.error('❌ Portal token generation error:', tokenError);
+      } else if (tokenData) {
         portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
-        console.log('Portal link generated successfully for client portal');
+        portalLinkGenerated = true;
+        console.log('✅ Portal link generated successfully');
       } else {
-        console.error('Failed to generate portal access token:', tokenError);
+        console.warn('⚠️ Portal token generation returned no data');
       }
     } catch (error) {
-      console.warn('Failed to generate portal access token:', error);
+      console.error('💥 Portal access token generation failed:', error);
     }
 
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
@@ -240,15 +242,15 @@ serve(async (req) => {
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
-      console.error('send-estimate - Mailgun API key not found in environment variables');
+      console.error('❌ Mailgun API key not found');
       throw new Error('Mailgun API key not configured');
     }
 
-    console.log('send-estimate - Sending email via Mailgun');
-    console.log('send-estimate - FROM:', fromEmail);
-    console.log('send-estimate - TO:', recipientEmail);
-    console.log('send-estimate - SUBJECT:', subject);
-    console.log('send-estimate - Portal link included:', !!portalLink);
+    console.log('📨 Sending email via Mailgun');
+    console.log('📧 FROM:', fromEmail);
+    console.log('📧 TO:', recipientEmail);
+    console.log('📧 SUBJECT:', subject);
+    console.log('🔗 Portal link included:', portalLinkGenerated);
 
     const formData = new FormData();
     formData.append('from', fromEmail);
@@ -276,11 +278,10 @@ serve(async (req) => {
     });
 
     const responseText = await mailgunResponse.text();
-    console.log('send-estimate - Mailgun response status:', mailgunResponse.status);
-    console.log('send-estimate - Mailgun response body:', responseText);
+    console.log('📨 Mailgun response status:', mailgunResponse.status);
 
     if (!mailgunResponse.ok) {
-      console.error("send-estimate - Mailgun send error:", responseText);
+      console.error("❌ Mailgun send error:", responseText);
       throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${responseText}`);
     }
 
@@ -288,11 +289,11 @@ serve(async (req) => {
     try {
       mailgunResult = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('send-estimate - Error parsing Mailgun response:', parseError);
+      console.error('❌ Error parsing Mailgun response:', parseError);
       throw new Error('Invalid response from Mailgun API');
     }
 
-    console.log('send-estimate - Email sent successfully via Mailgun:', mailgunResult);
+    console.log('✅ Email sent successfully via Mailgun:', mailgunResult);
 
     // Log email communication
     try {
@@ -311,18 +312,20 @@ serve(async (req) => {
           client_phone: client?.phone,
           provider_message_id: mailgunResult.id
         });
+      
+      console.log('📊 Communication logged successfully');
     } catch (logError) {
-      console.warn('Failed to log communication:', logError);
+      console.warn('⚠️ Failed to log communication:', logError);
     }
 
-    console.log('Email sent successfully');
+    console.log('🎉 Email process completed successfully');
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Email sent successfully',
         messageId: mailgunResult.id,
-        portalLinkIncluded: !!portalLink
+        portalLinkIncluded: portalLinkGenerated
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -330,7 +333,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('💥 Error sending email:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

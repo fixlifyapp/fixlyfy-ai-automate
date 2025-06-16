@@ -66,12 +66,16 @@ serve(async (req) => {
 
     // Generate portal link if we have estimate or invoice data
     let finalMessage = message;
+    let portalLinkGenerated = false;
+    
     if ((estimateId || invoiceId) && client_id) {
       try {
-        console.log('Generating portal link for client:', client_id);
+        console.log('🔗 Generating portal link for client:', client_id);
         
         const documentType = estimateId ? 'estimate' : 'invoice';
         const documentId = estimateId || invoiceId;
+        
+        console.log('📄 Document details:', { documentType, documentId, client_id });
         
         const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
           p_client_id: client_id,
@@ -80,15 +84,18 @@ serve(async (req) => {
           p_hours_valid: 72
         });
 
-        if (!tokenError && tokenData) {
+        if (tokenError) {
+          console.error('❌ Portal token generation error:', tokenError);
+        } else if (tokenData) {
           const portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
           finalMessage = `${message} View details: ${portalLink}`;
-          console.log('Portal link added to SMS message');
+          portalLinkGenerated = true;
+          console.log('✅ Portal link generated and added to SMS');
         } else {
-          console.error('Failed to generate portal token:', tokenError);
+          console.warn('⚠️ Portal token generation returned no data');
         }
       } catch (error) {
-        console.warn('Failed to generate portal link for SMS:', error);
+        console.error('💥 Portal link generation failed:', error);
       }
     }
 
@@ -98,7 +105,8 @@ serve(async (req) => {
     const formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`;
     const formattedToPhone = cleanToPhone.length === 10 ? `+1${cleanToPhone}` : `+${cleanToPhone}`;
 
-    console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
+    console.log('📞 Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
+    console.log('📝 Message length:', finalMessage.length);
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
     if (!telnyxApiKey) {
@@ -122,11 +130,11 @@ serve(async (req) => {
     const telnyxResult = await telnyxResponse.json();
 
     if (!telnyxResponse.ok) {
-      console.error('Telnyx API error:', telnyxResult);
+      console.error('❌ Telnyx API error:', telnyxResult);
       throw new Error(telnyxResult.errors?.[0]?.detail || 'Failed to send SMS via Telnyx');
     }
 
-    console.log('SMS sent successfully:', telnyxResult);
+    console.log('✅ SMS sent successfully:', telnyxResult);
 
     // Log SMS communication if it's for an estimate or invoice
     if (estimateId || invoiceId) {
@@ -145,8 +153,10 @@ serve(async (req) => {
             status: 'sent',
             provider_message_id: telnyxResult.data?.id
           });
+        
+        console.log('📊 Communication logged successfully');
       } catch (logError) {
-        console.warn('Failed to log SMS communication:', logError);
+        console.warn('⚠️ Failed to log SMS communication:', logError);
       }
     }
 
@@ -155,7 +165,8 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: telnyxResult.data?.id,
-        portalLinkIncluded: finalMessage !== message
+        portalLinkIncluded: portalLinkGenerated,
+        finalMessageLength: finalMessage.length
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -163,7 +174,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error sending SMS:', error);
+    console.error('💥 Error sending SMS:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
