@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings2, Tag, Briefcase, FileText, Database } from "lucide-react";
+import { Settings2, Tag, Briefcase, FileText, Database, Receipt } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const ConfigurationSettings = () => {
@@ -10,6 +10,12 @@ export const ConfigurationSettings = () => {
       description: "Set your business type and specialization",
       icon: Briefcase,
       href: "/configuration#business-niche"
+    },
+    {
+      title: "Tax Settings",
+      description: "Configure default tax rates and labels",
+      icon: Receipt,
+      href: "/configuration#tax-settings"
     },
     {
       title: "Tags",
@@ -36,7 +42,7 @@ export const ConfigurationSettings = () => {
       <div>
         <h3 className="text-lg font-medium mb-2">Business Configuration</h3>
         <p className="text-sm text-muted-foreground">
-          Configure your business settings, job types, statuses, and custom fields.
+          Configure your business settings, tax rates, job types, statuses, and custom fields.
         </p>
       </div>
 

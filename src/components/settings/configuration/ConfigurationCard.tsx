@@ -15,7 +15,7 @@ export function ConfigurationCard() {
                 Configuration
               </CardTitle>
               <CardDescription>
-                Manage configurable elements of the application like business niche, tags, job types, statuses, and custom fields
+                Manage configurable elements of the application like business niche, tax settings, tags, job types, statuses, and custom fields
               </CardDescription>
             </div>
           </div>
@@ -24,6 +24,9 @@ export function ConfigurationCard() {
           <div className="flex flex-wrap gap-2">
             <div className="bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded">
               Business Niche
+            </div>
+            <div className="bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded">
+              Tax Settings
             </div>
             <div className="bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded">
               Tags

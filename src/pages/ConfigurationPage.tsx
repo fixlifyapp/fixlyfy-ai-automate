@@ -10,7 +10,8 @@ import { JobTypesConfig } from "@/components/settings/configuration/JobTypesConf
 import { JobStatusesConfig } from "@/components/settings/configuration/JobStatusesConfig";
 import { CustomFieldsConfig } from "@/components/settings/configuration/CustomFieldsConfig";
 import { LeadSourcesConfig } from "@/components/settings/configuration/LeadSourcesConfig";
-import { Settings2, Tags, ListTodo, ClipboardList, FormInput, MessageCircle, Cog, Target, Zap } from "lucide-react";
+import { TaxConfig } from "@/components/settings/configuration/TaxConfig";
+import { Settings2, Tags, ListTodo, ClipboardList, FormInput, MessageCircle, Cog, Target, Zap, Receipt } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const ConfigurationPage = () => {
@@ -39,6 +40,10 @@ const ConfigurationPage = () => {
                   <Settings2 className="h-4 w-4" />
                   Business Niche
                 </TabsTrigger>
+                <TabsTrigger value="tax" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-1.5">
+                  <Receipt className="h-4 w-4" />
+                  Tax Settings
+                </TabsTrigger>
                 <TabsTrigger value="tags" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-1.5">
                   <Tags className="h-4 w-4" />
                   Tags
@@ -65,6 +70,9 @@ const ConfigurationPage = () => {
             <div className="p-6">
               <TabsContent value="niche" className="m-0">
                 <NicheConfig userId={user?.id || ""} />
+              </TabsContent>
+              <TabsContent value="tax" className="m-0">
+                <TaxConfig />
               </TabsContent>
               <TabsContent value="tags" className="m-0">
                 <TagsConfig />
