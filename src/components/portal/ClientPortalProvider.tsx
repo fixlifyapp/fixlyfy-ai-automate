@@ -50,35 +50,41 @@ export function ClientPortalProvider({
   const login = async (loginToken: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      console.log('🔐 Starting portal authentication with token:', loginToken.substring(0, 10) + '...');
       
-      // Call the portal-auth edge function with the token as a URL parameter
-      const authUrl = `https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/portal-auth?token=${encodeURIComponent(loginToken)}`;
-      
-      const authResponse = await fetch(authUrl, {
+      // Call the portal-auth edge function
+      const { data: authResult, error: authError } = await supabase.functions.invoke('portal-auth', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcHB2Y3JsdnNncnNxZWxnbG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc1OTE3MDUsImV4cCI6MjA2MzE2NzcwNX0.My-KiqG1bCMqzUru4m59d4v18N3WGxNoNtFPOFAmhzg`,
         },
+        body: JSON.stringify({ token: loginToken })
       });
 
-      const authResult = await authResponse.json();
+      console.log('🔐 Portal auth response:', authResult, authError);
 
-      if (!authResponse.ok || !authResult?.success) {
-        console.error('Portal auth error:', authResult?.error);
+      if (authError) {
+        console.error('❌ Portal auth error:', authError);
+        toast.error('Authentication failed: ' + authError.message);
+        return false;
+      }
+
+      if (!authResult?.success) {
+        console.error('❌ Portal auth failed:', authResult?.error);
         toast.error('Invalid or expired access link');
         return false;
       }
 
       setSession(authResult.session);
       setIsAuthenticated(true);
+      console.log('✅ Portal authentication successful');
       
       // Load dashboard data
       await loadDashboardData(loginToken);
       
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('💥 Login error:', error);
       toast.error('Authentication failed');
       return false;
     } finally {
@@ -88,19 +94,30 @@ export function ClientPortalProvider({
 
   const loadDashboardData = async (authToken: string) => {
     try {
+      console.log('📊 Loading dashboard data...');
+      
       const { data: dashboardData, error } = await supabase.functions.invoke('portal-dashboard', {
         body: { token: authToken }
       });
 
-      if (error || !dashboardData?.success) {
-        console.error('Dashboard data error:', error || dashboardData?.error);
+      console.log('📊 Dashboard response:', dashboardData, error);
+
+      if (error) {
+        console.error('❌ Dashboard data error:', error);
+        toast.error('Failed to load dashboard data');
+        return;
+      }
+
+      if (!dashboardData?.success) {
+        console.error('❌ Dashboard data failed:', dashboardData?.error);
         toast.error('Failed to load dashboard data');
         return;
       }
 
       setData(dashboardData.data);
+      console.log('✅ Dashboard data loaded successfully');
     } catch (error) {
-      console.error('Dashboard data error:', error);
+      console.error('💥 Dashboard data error:', error);
       toast.error('Failed to load dashboard data');
     }
   };
@@ -121,8 +138,10 @@ export function ClientPortalProvider({
 
   useEffect(() => {
     if (token) {
+      console.log('🚀 Starting portal authentication process...');
       login(token);
     } else {
+      console.log('⚠️ No token provided');
       setIsLoading(false);
     }
   }, [token]);
