@@ -17,19 +17,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
         theme={theme as ToasterProps["theme"]}
         className="toaster group"
         position="top-center"
-        expand={true}
-        visibleToasts={3}
+        expand={false}
+        visibleToasts={2}
         closeButton={true}
-        richColors={true}
+        richColors={false}
         toastOptions={{
           classNames: {
             toast:
-              "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-border group-[.toaster]:shadow-lg group-[.toaster]:rounded-lg group-[.toaster]:p-3 group-[.toaster]:max-w-sm group-[.toaster]:w-full group-[.toaster]:mx-auto",
-            description: "group-[.toast]:text-muted-foreground group-[.toast]:text-sm",
+              "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-border group-[.toaster]:shadow-sm group-[.toaster]:rounded-md group-[.toaster]:p-2 group-[.toaster]:max-w-xs group-[.toaster]:w-full group-[.toaster]:mx-auto",
+            description: "group-[.toast]:text-muted-foreground group-[.toast]:text-xs",
             actionButton:
-              "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:text-xs group-[.toast]:px-2 group-[.toast]:py-1 group-[.toast]:rounded",
+              "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:text-xs group-[.toast]:px-1.5 group-[.toast]:py-0.5 group-[.toast]:rounded",
             cancelButton:
-              "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:text-xs group-[.toast]:px-2 group-[.toast]:py-1 group-[.toast]:rounded",
+              "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:text-xs group-[.toast]:px-1.5 group-[.toast]:py-0.5 group-[.toast]:rounded",
             success:
               "group toast success-toast group-[.toaster]:bg-green-50 group-[.toaster]:border-green-200 group-[.toaster]:text-green-800",
             error:
@@ -39,11 +39,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
             info:
               "group toast info-toast group-[.toaster]:bg-blue-50 group-[.toaster]:border-blue-200 group-[.toaster]:text-blue-800",
           },
-          duration: 4000,
+          duration: 2000, // 2 seconds
           style: {
-            fontSize: '14px',
-            padding: '12px 16px',
-            maxWidth: '400px',
+            fontSize: '13px',
+            padding: '8px 12px',
+            maxWidth: '320px',
             minHeight: 'auto',
           }
         }}
@@ -53,7 +53,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-// Notification batching system
+// Notification batching system with faster batching for 2-second toasts
 class NotificationBatcher {
   private batchTimeout: NodeJS.Timeout | null = null;
   private pendingNotifications: Array<{
@@ -61,8 +61,8 @@ class NotificationBatcher {
     message: string;
     options?: any;
   }> = [];
-  private readonly BATCH_DELAY = 100; // ms
-  private readonly MAX_BATCH_SIZE = 5;
+  private readonly BATCH_DELAY = 50; // Faster batching for shorter toasts
+  private readonly MAX_BATCH_SIZE = 3; // Fewer toasts at once
 
   addNotification(type: string, message: string, options?: any) {
     this.pendingNotifications.push({ type, message, options });
@@ -127,8 +127,8 @@ const notificationBatcher = new NotificationBatcher();
 
 // Enhanced toast with error throttling and performance optimizations
 const lastErrorTime = new Map<string, number>();
-const ERROR_THROTTLE_MS = 30000; // 30 seconds
-const MAX_NOTIFICATIONS_IN_MEMORY = 50;
+const ERROR_THROTTLE_MS = 15000; // Reduced from 30 seconds
+const MAX_NOTIFICATIONS_IN_MEMORY = 30; // Reduced memory usage
 
 // Auto-cleanup old notifications
 setInterval(() => {
@@ -148,7 +148,7 @@ setInterval(() => {
     
     oldestKeys.forEach(key => lastErrorTime.delete(key));
   }
-}, 60000); // Cleanup every minute
+}, 30000); // Cleanup every 30 seconds
 
 const customToast = {
   success: (message: string | React.ReactNode, options?: any) => {
