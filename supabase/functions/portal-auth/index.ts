@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🔐 Portal auth function called');
+    console.log('🔐 Portal auth function called with method:', req.method);
     
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,7 +21,10 @@ serve(async (req) => {
     )
 
     // Get token from request body
-    const { token } = await req.json()
+    const requestBody = await req.json()
+    console.log('📥 Request body received:', requestBody);
+    
+    const { token } = requestBody
     console.log('🔑 Received token:', token?.substring(0, 10) + '...');
     
     if (!token) {

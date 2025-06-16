@@ -52,13 +52,9 @@ export function ClientPortalProvider({
       setIsLoading(true);
       console.log('🔐 Starting portal authentication with token:', loginToken.substring(0, 10) + '...');
       
-      // Call the portal-auth edge function
+      // Call the portal-auth edge function with POST method and proper body
       const { data: authResult, error: authError } = await supabase.functions.invoke('portal-auth', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: loginToken })
+        body: { token: loginToken }
       });
 
       console.log('🔐 Portal auth response:', authResult, authError);
