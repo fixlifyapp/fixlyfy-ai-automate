@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +97,6 @@ export const UnifiedItemsStep = ({
       {/* Totals Section */}
       <DocumentTotalsSection
         documentType={documentType}
-        taxRate={taxRate}
         subtotal={calculateSubtotal()}
         tax={calculateTotalTax()}
         total={calculateGrandTotal()}

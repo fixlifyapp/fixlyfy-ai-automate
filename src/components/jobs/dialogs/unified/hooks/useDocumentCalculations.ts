@@ -5,6 +5,7 @@ import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface UseDocumentCalculationsProps {
   lineItems: LineItem[];
+  taxRate?: number; // Add taxRate as optional prop
 }
 
 export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsProps) => {

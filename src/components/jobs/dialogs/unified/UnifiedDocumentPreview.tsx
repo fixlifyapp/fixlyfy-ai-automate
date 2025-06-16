@@ -1,4 +1,3 @@
-
 import React from "react";
 import { LineItem } from "../../builder/types";
 import { DocumentType } from "../UnifiedDocumentBuilder";
@@ -119,7 +118,6 @@ export const UnifiedDocumentPreview = ({
         subtotal={subtotal}
         tax={tax}
         total={total}
-        taxRate={LOCKED_TAX_RATE}
       />
 
       {/* Notes Section */}

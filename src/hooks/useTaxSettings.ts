@@ -1,5 +1,4 @@
-
-import { useUserSettings } from './useUserSettings';
+import { useUserSettings, UserSettings } from './useUserSettings';
 
 export interface TaxConfiguration {
   rate: number;

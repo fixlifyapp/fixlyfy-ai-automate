@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { generateNextId } from "@/utils/idGeneration";
 import { InvoiceFormData } from "./invoice/types";
@@ -32,7 +31,7 @@ export const useInvoiceBuilder = (jobId: string) => {
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal
-  } = useInvoiceCalculations(lineItems, taxRate);
+  } = useInvoiceCalculations(lineItems);
 
   const {
     initializeFromEstimate,

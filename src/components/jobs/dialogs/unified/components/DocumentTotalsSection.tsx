@@ -9,6 +9,7 @@ interface DocumentTotalsSectionProps {
   subtotal: number;
   tax: number;
   total: number;
+  taxRate?: number; // Add taxRate as optional prop
 }
 
 export const DocumentTotalsSection = ({

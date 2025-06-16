@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { LineItem, Product } from "../../builder/types";
@@ -54,7 +53,7 @@ export const useUnifiedDocumentBuilder = ({
     calculateGrandTotal,
     calculateTotalMargin,
     calculateMarginPercentage
-  } = useDocumentCalculations({ lineItems, taxRate });
+  } = useDocumentCalculations({ lineItems });
 
   // Smart features
   const smartFeatures = useDocumentSmartFeatures({
