@@ -1229,7 +1229,6 @@ export type Database = {
           estimate_number: string | null
           external_id: string | null
           id: string
-          portal_link_included: boolean | null
           provider_message_id: string | null
           recipient: string
           sent_at: string | null
@@ -1248,7 +1247,6 @@ export type Database = {
           estimate_number?: string | null
           external_id?: string | null
           id?: string
-          portal_link_included?: boolean | null
           provider_message_id?: string | null
           recipient: string
           sent_at?: string | null
@@ -1267,7 +1265,6 @@ export type Database = {
           estimate_number?: string | null
           external_id?: string | null
           id?: string
-          portal_link_included?: boolean | null
           provider_message_id?: string | null
           recipient?: string
           sent_at?: string | null
@@ -1406,7 +1403,6 @@ export type Database = {
           id: string
           invoice_id: string
           invoice_number: string | null
-          portal_link_included: boolean | null
           provider_message_id: string | null
           recipient: string
           sent_at: string | null
@@ -1425,7 +1421,6 @@ export type Database = {
           id?: string
           invoice_id: string
           invoice_number?: string | null
-          portal_link_included?: boolean | null
           provider_message_id?: string | null
           recipient: string
           sent_at?: string | null
@@ -1444,7 +1439,6 @@ export type Database = {
           id?: string
           invoice_id?: string
           invoice_number?: string | null
-          portal_link_included?: boolean | null
           provider_message_id?: string | null
           recipient?: string
           sent_at?: string | null
