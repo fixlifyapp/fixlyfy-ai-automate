@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,17 +23,19 @@ export default function AuthPage() {
   const [isNewUser, setIsNewUser] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  console.log('🔐 AuthPage render state:', { user: !!user, loading, authLoading });
+
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (!loading && user) {
-      console.log("User is authenticated, redirecting to dashboard");
+      console.log("✅ User is authenticated, redirecting to dashboard");
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Attempting sign in with email:", email);
+    console.log("🔑 Attempting sign in with email:", email);
     setAuthLoading(true);
     
     try {
@@ -41,23 +44,23 @@ export default function AuthPage() {
         password
       });
       
-      console.log("Sign in response:", { data, error });
+      console.log("🔐 Sign in response:", { data: !!data, error });
       
       if (error) {
+        console.error("❌ Sign in error:", error);
         toast.error("Sign in failed", {
           description: error.message
         });
-        console.error("Sign in error:", error);
       } else if (data.session) {
+        console.log("✅ Sign in successful");
         toast.success("Signed in successfully");
-        console.log("Sign in successful, session:", data.session);
         navigate('/dashboard');
       }
     } catch (error: any) {
+      console.error("💥 Sign in unexpected error:", error);
       toast.error("Unexpected error", {
         description: "Please try again later"
       });
-      console.error("Sign in unexpected error:", error);
     } finally {
       setAuthLoading(false);
     }
@@ -65,7 +68,7 @@ export default function AuthPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Attempting sign up with email:", email);
+    console.log("📝 Attempting sign up with email:", email);
     setAuthLoading(true);
     
     try {
@@ -73,40 +76,37 @@ export default function AuthPage() {
         email,
         password,
         options: {
-          data: {
-            // Can add additional user metadata here if needed
-          },
-          emailRedirectTo: window.location.origin + "/dashboard"
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
       
-      console.log("Sign up response:", { data, error });
+      console.log("📝 Sign up response:", { data: !!data, error });
       
       if (error) {
+        console.error("❌ Sign up error:", error);
         toast.error("Sign up failed", {
           description: error.message
         });
-        console.error("Sign up error:", error);
       } else if (data.user) {
         // Check if email confirmation is required
         if (data.session) {
+          console.log("✅ Sign up and auto sign in successful");
           toast.success("Account created and signed in successfully");
-          console.log("Sign up and auto sign in successful");
           setIsNewUser(true);
           setShowOnboarding(true);
         } else {
+          console.log("📧 Sign up successful, email confirmation required");
           toast.success("Account created successfully", {
             description: "Please check your email to confirm your account"
           });
-          console.log("Sign up successful, email confirmation required");
           setAuthTab("login");
         }
       }
     } catch (error: any) {
+      console.error("💥 Sign up unexpected error:", error);
       toast.error("Unexpected error", {
         description: "Please try again later"
       });
-      console.error("Sign up unexpected error:", error);
     } finally {
       setAuthLoading(false);
     }

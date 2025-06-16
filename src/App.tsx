@@ -9,7 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import InvoicesPage from './pages/InvoicesPage';
 import EstimatesPage from './pages/EstimatesPage';
 import TeamPage from './pages/TeamManagementPage';
-import LoginPage from './pages/AuthPage';
+import AuthPage from './pages/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
@@ -23,6 +23,7 @@ import AutomationsPage from './pages/AutomationsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ProfileCompanyPage from './pages/ProfileCompanyPage';
 import ClientPortalPage from './pages/ClientPortalPage';
+import Index from './pages/Index';
 
 // Add missing page imports
 import ProductsPage from './pages/ProductsPage';
@@ -49,14 +50,16 @@ function App() {
       <Toaster />
       <AppProviders>
         <Routes>
+          {/* Index route that handles auth redirection */}
+          <Route path="/" element={<Index />} />
+          
           {/* Authentication */}
-          <Route path="/auth" element={<LoginPage />} />
+          <Route path="/auth" element={<AuthPage />} />
           
           {/* Client Portal - Public Route with clean URL */}
           <Route path="/client-portal" element={<ClientPortalPage />} />
           
           {/* Main Dashboard Routes */}
-          <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard/advanced" element={<ProtectedRoute><AdvancedDashboard /></ProtectedRoute>} />
           
@@ -111,6 +114,9 @@ function App() {
           {/* Telnyx Integration */}
           <Route path="/telnyx" element={<ProtectedRoute><TelnyxPage /></ProtectedRoute>} />
           <Route path="/telnyx/settings" element={<ProtectedRoute><TelnyxSettingsPage /></ProtectedRoute>} />
+
+          {/* Catch all route - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppProviders>
     </Router>
