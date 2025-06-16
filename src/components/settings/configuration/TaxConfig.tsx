@@ -51,6 +51,7 @@ export const TaxConfig = () => {
 
   // Update form data when taxConfig changes
   useEffect(() => {
+    console.log('TaxConfig - taxConfig updated:', taxConfig);
     setFormData({
       default_tax_rate: taxConfig.rate,
       tax_label: taxConfig.label,
@@ -59,22 +60,38 @@ export const TaxConfig = () => {
   }, [taxConfig]);
 
   const handleRegionChange = (selectedRegion: string) => {
+    console.log('TaxConfig - Region changed to:', selectedRegion);
     const region = TAX_REGIONS.find(r => r.value === selectedRegion);
     if (region) {
-      setFormData(prev => ({
-        ...prev,
+      console.log('TaxConfig - Found region data:', region);
+      const newFormData = {
+        ...formData,
         tax_region: selectedRegion,
         default_tax_rate: region.rate
-      }));
+      };
+      console.log('TaxConfig - Setting new form data:', newFormData);
+      setFormData(newFormData);
     }
   };
 
+  const handleTaxRateChange = (value: string) => {
+    const numericValue = parseFloat(value) || 0;
+    console.log('TaxConfig - Tax rate changed to:', numericValue);
+    setFormData(prev => ({ 
+      ...prev, 
+      default_tax_rate: numericValue 
+    }));
+  };
+
   const handleSave = async () => {
+    console.log('TaxConfig - Saving tax settings:', formData);
     setIsUpdating(true);
     try {
       await updateTaxSettings(formData);
       toast.success('Tax settings updated successfully');
+      console.log('TaxConfig - Tax settings saved successfully');
     } catch (error) {
+      console.error('TaxConfig - Error saving tax settings:', error);
       toast.error('Failed to update tax settings');
     } finally {
       setIsUpdating(false);
@@ -148,10 +165,7 @@ export const TaxConfig = () => {
                 min="0"
                 max="100"
                 value={formData.default_tax_rate}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  default_tax_rate: parseFloat(e.target.value) || 0 
-                }))}
+                onChange={(e) => handleTaxRateChange(e.target.value)}
                 placeholder="13.00"
                 disabled={!isCustomRegion}
               />

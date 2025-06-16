@@ -22,6 +22,8 @@ export const DocumentTotalsSection = ({
   const totalColor = documentType === 'estimate' ? 'text-blue-600' : 'text-green-600';
   const totalBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-green-50';
 
+  console.log('DocumentTotalsSection - Using tax config:', taxConfig);
+
   return (
     <div className="px-8 py-6 bg-gray-50">
       <div className="flex justify-end">

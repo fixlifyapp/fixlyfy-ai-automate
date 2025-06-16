@@ -1,3 +1,4 @@
+
 import { useUserSettings, UserSettings } from './useUserSettings';
 
 export interface TaxConfiguration {
@@ -18,7 +19,14 @@ export const useTaxSettings = () => {
   };
 
   const updateTaxSettings = async (updates: Partial<Pick<UserSettings, 'default_tax_rate' | 'tax_region' | 'tax_label'>>) => {
-    return updateSettings(updates);
+    console.log('useTaxSettings - Updating tax settings with:', updates);
+    try {
+      await updateSettings(updates);
+      console.log('useTaxSettings - Tax settings updated successfully');
+    } catch (error) {
+      console.error('useTaxSettings - Error updating tax settings:', error);
+      throw error;
+    }
   };
 
   return {

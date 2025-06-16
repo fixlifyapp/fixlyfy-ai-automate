@@ -67,6 +67,8 @@ export const useUserSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('useUserSettings - Fetching settings for user:', user.id);
+
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
@@ -79,8 +81,10 @@ export const useUserSettings = () => {
       }
 
       if (data) {
+        console.log('useUserSettings - Found settings:', data);
         setSettings({ ...defaultSettings, ...data });
       } else {
+        console.log('useUserSettings - No settings found, creating default');
         // Create default settings if none exist
         const { error: insertError } = await supabase
           .from('user_settings')
@@ -107,6 +111,8 @@ export const useUserSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      console.log('useUserSettings - Updating settings with:', updates);
+      
       const newSettings = { ...settings, ...updates };
       
       const { error } = await supabase
@@ -116,10 +122,13 @@ export const useUserSettings = () => {
           ...newSettings
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('useUserSettings - Database error:', error);
+        throw error;
+      }
 
       setSettings(newSettings);
-      console.log('User settings updated successfully');
+      console.log('useUserSettings - Settings updated successfully:', newSettings);
     } catch (error) {
       console.error('Error updating settings:', error);
       toast.error('Failed to update settings');

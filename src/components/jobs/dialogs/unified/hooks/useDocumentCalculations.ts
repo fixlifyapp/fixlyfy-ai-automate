@@ -27,6 +27,7 @@ export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsPr
         }
         return total;
       }, 0);
+      console.log('useDocumentCalculations - Using tax rate:', taxConfig.rate);
       return (taxableTotal * taxConfig.rate) / 100;
     };
   }, [lineItems, taxConfig.rate]);
