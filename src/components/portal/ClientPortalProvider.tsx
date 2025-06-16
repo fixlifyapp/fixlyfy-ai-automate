@@ -52,18 +52,13 @@ export function ClientPortalProvider({
       setIsLoading(true);
       
       // Call the portal-auth edge function with the token as a URL parameter
-      const { data: authData, error } = await supabase.functions.invoke('portal-auth', {
-        method: 'GET',
-      });
-
-      // Since we need to pass the token as a URL parameter, we'll construct the URL manually
-      const authUrl = `${supabase.supabaseUrl}/functions/v1/portal-auth?token=${encodeURIComponent(loginToken)}`;
+      const authUrl = `https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/portal-auth?token=${encodeURIComponent(loginToken)}`;
       
       const authResponse = await fetch(authUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcHB2Y3JsdnNncnNxZWxnbG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc1OTE3MDUsImV4cCI6MjA2MzE2NzcwNX0.My-KiqG1bCMqzUru4m59d4v18N3WGxNoNtFPOFAmhzg`,
         },
       });
 
