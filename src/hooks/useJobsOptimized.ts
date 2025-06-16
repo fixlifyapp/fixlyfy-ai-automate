@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Job } from "@/hooks/useJobs";
 import { localStorageCache } from "@/utils/cacheConfig";
+import { withRetry, handleJobsError } from "@/utils/errorHandling";
 
 interface UseJobsOptimizedOptions {
   page?: number;
@@ -13,7 +14,6 @@ interface UseJobsOptimizedOptions {
   clientId?: string;
 }
 
-// Request deduplication cache with longer TTL
 const requestCache = new Map<string, Promise<any>>();
 
 export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
@@ -21,10 +21,10 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasError, setHasError] = useState(false);
   const { user } = useAuth();
   const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
   
-  // Use ref to track if component is mounted
   const isMountedRef = useRef(true);
   
   useEffect(() => {
@@ -34,14 +34,14 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     };
   }, []);
 
-  // Cache key for localStorage and request deduplication
   const cacheKey = useMemo(() => 
     `jobs_${clientId || 'all'}_${page}_${pageSize}_${user?.id}`,
     [clientId, page, pageSize, user?.id]
   );
 
   const fetchJobs = useCallback(async (useCache = true) => {
-    // Check if request is already in flight
+    if (hasError || !user?.id) return;
+
     if (requestCache.has(cacheKey)) {
       try {
         const cachedRequest = await requestCache.get(cacheKey);
@@ -56,7 +56,6 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       }
     }
 
-    // Try to get from localStorage cache first with longer TTL
     if (useCache) {
       const cachedJobs = localStorageCache.get(cacheKey);
       if (cachedJobs && isMountedRef.current) {
@@ -67,77 +66,76 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       }
     }
 
-    // Create and cache the request promise
     const requestPromise = (async () => {
       setIsLoading(true);
+      setHasError(false);
+      
       try {
-        // Optimized query with better indexing
-        let query = supabase
-          .from('jobs')
-          .select(`
-            id,
-            title,
-            client_id,
-            status,
-            job_type,
-            service,
-            date,
-            schedule_start,
-            revenue,
-            address,
-            tags,
-            created_at,
-            client:clients!inner(id, name, email, phone)
-          `, { count: 'exact' });
-        
-        // Apply client filter if specified
-        if (clientId) {
-          query = query.eq('client_id', clientId);
-        }
-        
-        // Apply role-based filtering
-        const jobViewScope = getJobViewScope();
-        if (jobViewScope === "assigned" && user?.id) {
-          query = query.eq('technician_id', user.id);
-        } else if (jobViewScope === "none") {
-          return { jobs: [], totalCount: 0 };
-        }
-        
-        // Apply pagination with better performance
-        query = query
-          .order('created_at', { ascending: false })
-          .range((page - 1) * pageSize, page * pageSize - 1);
-        
-        const { data, error, count } = await query;
-        
-        if (error) throw error;
-        
-        // Process jobs efficiently
-        const processedJobs = (data || []).map(job => ({
-          ...job,
-          tags: Array.isArray(job.tags) ? job.tags : [],
-          title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
-        }));
-        
-        const result = {
-          jobs: processedJobs,
-          totalCount: count || 0
-        };
-        
-        // Cache the results with longer TTL
-        if (useCache) {
-          localStorageCache.set(cacheKey, result, 20); // Cache for 20 minutes
-        }
-        
-        return result;
+        return await withRetry(async () => {
+          let query = supabase
+            .from('jobs')
+            .select(`
+              id,
+              title,
+              client_id,
+              status,
+              job_type,
+              service,
+              date,
+              schedule_start,
+              revenue,
+              address,
+              tags,
+              created_at,
+              client:clients!inner(id, name, email, phone)
+            `, { count: 'exact' });
+          
+          if (clientId) {
+            query = query.eq('client_id', clientId);
+          }
+          
+          const jobViewScope = getJobViewScope();
+          if (jobViewScope === "assigned" && user?.id) {
+            query = query.eq('technician_id', user.id);
+          } else if (jobViewScope === "none") {
+            return { jobs: [], totalCount: 0 };
+          }
+          
+          query = query
+            .order('created_at', { ascending: false })
+            .range((page - 1) * pageSize, page * pageSize - 1);
+          
+          const { data, error, count } = await query;
+          
+          if (error) throw error;
+          
+          const processedJobs = (data || []).map(job => ({
+            ...job,
+            tags: Array.isArray(job.tags) ? job.tags : [],
+            title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
+          }));
+          
+          const result = {
+            jobs: processedJobs,
+            totalCount: count || 0
+          };
+          
+          if (useCache) {
+            localStorageCache.set(cacheKey, result, 20);
+          }
+          
+          return result;
+        }, {
+          maxRetries: 2,
+          baseDelay: 2000
+        });
       } catch (error) {
-        console.error('Error fetching jobs:', error);
-        toast.error('Failed to load jobs');
+        setHasError(true);
+        handleJobsError(error, 'useJobsOptimized - fetchJobs');
         throw error;
       }
     })();
 
-    // Cache the request promise
     requestCache.set(cacheKey, requestPromise);
 
     try {
@@ -147,26 +145,24 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
         setTotalCount(result.totalCount);
       }
     } catch (error) {
-      // Error already handled in the request
+      // Error already handled
     } finally {
-      // Keep request cache longer
       setTimeout(() => {
         requestCache.delete(cacheKey);
-      }, 600000); // 10 minutes
+      }, 600000);
       if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
-  }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize]);
+  }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize, hasError]);
 
-  // Initial fetch
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Real-time updates with longer debouncing and smarter caching
+  // Real-time updates with error handling
   useEffect(() => {
-    if (!enableRealtime) return;
+    if (!enableRealtime || hasError) return;
 
     let debounceTimer: NodeJS.Timeout;
     let isSubscribed = true;
@@ -181,18 +177,16 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           table: 'jobs'
         },
         () => {
-          if (!isSubscribed) return;
+          if (!isSubscribed || hasError) return;
           
-          // Longer debounce to prevent excessive updates
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            if (isSubscribed && isMountedRef.current) {
-              // Smart cache invalidation - only clear specific cache
+            if (isSubscribed && isMountedRef.current && !hasError) {
               localStorageCache.remove(cacheKey);
               requestCache.delete(cacheKey);
               fetchJobs(false);
             }
-          }, 2000); // 2 second debounce
+          }, 2000);
         }
       )
       .subscribe();
@@ -202,18 +196,23 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
-  }, [fetchJobs, enableRealtime, cacheKey]);
+  }, [fetchJobs, enableRealtime, cacheKey, hasError]);
 
-  // Memoized computed values
   const totalPages = useMemo(() => Math.ceil(totalCount / pageSize), [totalCount, pageSize]);
   const hasNextPage = useMemo(() => page < totalPages, [page, totalPages]);
   const hasPreviousPage = useMemo(() => page > 1, [page]);
 
   const refreshJobs = useCallback(() => {
+    setHasError(false);
     localStorageCache.remove(cacheKey);
     requestCache.delete(cacheKey);
     fetchJobs(false);
   }, [fetchJobs, cacheKey]);
+
+  const clearError = useCallback(() => {
+    setHasError(false);
+    refreshJobs();
+  }, [refreshJobs]);
 
   return {
     jobs,
@@ -223,7 +222,9 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     currentPage: page,
     hasNextPage,
     hasPreviousPage,
+    hasError,
     refreshJobs,
+    clearError,
     canCreate: canCreateJobs(),
     canEdit: canEditJobs(),
     canDelete: canDeleteJobs(),

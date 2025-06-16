@@ -1,6 +1,6 @@
 
 import { useTheme } from "next-themes"
-import { Toaster as Sonner, toast as sonnerToast } from "sonner"
+import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -10,12 +10,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group hidden" // Hide all toasts
-      position="top-center"
+      className="toaster group"
+      position="bottom-right"
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg relative toast-center",
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
@@ -26,44 +26,56 @@ const Toaster = ({ ...props }: ToasterProps) => {
           error:
             "group toast error-toast",
         },
-        duration: 0, // Set to 0 to disable automatic dismissal
+        duration: 4000, // 4 seconds
       }}
       {...props}
     />
   )
 }
 
-// Updated type definitions for the toast override
+// Enhanced toast with error throttling
+const lastErrorTime = new Map<string, number>();
+const ERROR_THROTTLE_MS = 30000; // 30 seconds
+
 const customToast = {
   success: (message: string | React.ReactNode, options?: any) => {
-    // No-op implementation to silence notifications
-    return { id: '', dismiss: () => {} };
+    return import('sonner').then(({ toast }) => toast.success(message, options));
   },
   error: (message: string | React.ReactNode, options?: any) => {
-    // No-op implementation to silence notifications
-    return { id: '', dismiss: () => {} };
+    const messageKey = typeof message === 'string' ? message : 'error';
+    const now = Date.now();
+    
+    // Throttle duplicate errors
+    if (lastErrorTime.has(messageKey)) {
+      const lastTime = lastErrorTime.get(messageKey)!;
+      if (now - lastTime < ERROR_THROTTLE_MS) {
+        return { id: '', dismiss: () => {} };
+      }
+    }
+    
+    lastErrorTime.set(messageKey, now);
+    
+    return import('sonner').then(({ toast }) => toast.error(message, {
+      ...options,
+      action: {
+        label: 'Retry',
+        onClick: () => window.location.reload()
+      }
+    }));
   },
   info: (message: string | React.ReactNode, options?: any) => {
-    // No-op implementation to silence notifications
-    return { id: '', dismiss: () => {} };
+    return import('sonner').then(({ toast }) => toast.info(message, options));
   },
   warning: (message: string | React.ReactNode, options?: any) => {
-    // No-op implementation to silence notifications
-    return { id: '', dismiss: () => {} };
+    return import('sonner').then(({ toast }) => toast.warning(message, options));
   }
 }
 
-// Override the default toast function with properly typed no-op functions
+// Create enhanced toast function
 export { Toaster }
 export const toast = Object.assign(
-  (message: string | React.ReactNode) => ({ id: '', dismiss: () => {} }),
-  {
-    ...sonnerToast,
-    ...customToast,
-    dismiss: () => {},
-    update: () => {},
-  }
+  (message: string | React.ReactNode) => customToast.info(message),
+  customToast
 );
 
-// Export a renamed version for external components to use
 export const enhancedToast = toast;

@@ -1,10 +1,10 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Job } from "@/hooks/useJobs";
+import { withRetry, handleJobsError } from "@/utils/errorHandling";
 
 interface UseJobsOptions {
   page?: number;
@@ -21,7 +21,6 @@ interface UseJobsOptions {
   };
 }
 
-// Enhanced cache with longer TTL and better cleanup
 const jobsCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
@@ -36,6 +35,7 @@ export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasError, setHasError] = useState(false);
   const { user } = useAuth();
   const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
   
@@ -54,7 +54,8 @@ export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
   }, [clientId, page, pageSize, user?.id, filters]);
 
   const fetchJobs = useCallback(async (useCache = true) => {
-    // Check cache first
+    if (hasError || !user?.id) return;
+
     if (useCache) {
       const cached = jobsCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < cached.ttl) {
@@ -68,107 +69,106 @@ export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
     }
 
     setIsLoading(true);
+    setHasError(false);
+    
     try {
-      // Build optimized query with server-side filtering
-      let query = supabase
-        .from('jobs')
-        .select(`
-          id,
-          title,
-          client_id,
-          status,
-          job_type,
-          service,
-          date,
-          schedule_start,
-          revenue,
-          address,
-          tags,
-          created_at,
-          client:clients!inner(id, name, email, phone)
-        `, { count: 'exact' });
-      
-      // Apply filters at database level for better performance
-      if (clientId) {
-        query = query.eq('client_id', clientId);
-      }
-      
-      if (filters.status && filters.status !== "all") {
-        query = query.eq('status', filters.status);
-      }
-      
-      if (filters.type && filters.type !== "all") {
-        query = query.eq('job_type', filters.type);
-      }
-      
-      if (filters.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,clients.name.ilike.%${filters.search}%`);
-      }
-      
-      // Apply role-based filtering
-      const jobViewScope = getJobViewScope();
-      if (jobViewScope === "assigned" && user?.id) {
-        query = query.eq('technician_id', user.id);
-      } else if (jobViewScope === "none") {
-        if (isMountedRef.current) {
-          setJobs([]);
-          setTotalCount(0);
-          setIsLoading(false);
+      await withRetry(async () => {
+        let query = supabase
+          .from('jobs')
+          .select(`
+            id,
+            title,
+            client_id,
+            status,
+            job_type,
+            service,
+            date,
+            schedule_start,
+            revenue,
+            address,
+            tags,
+            created_at,
+            client:clients!inner(id, name, email, phone)
+          `, { count: 'exact' });
+        
+        if (clientId) {
+          query = query.eq('client_id', clientId);
         }
-        return;
-      }
-      
-      // Apply pagination
-      query = query
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1);
-      
-      const { data, error, count } = await query;
-      
-      if (error) throw error;
-      
-      const processedJobs = (data || []).map(job => ({
-        ...job,
-        tags: Array.isArray(job.tags) ? job.tags : [],
-        title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
-      }));
-      
-      const result = {
-        jobs: processedJobs,
-        totalCount: count || 0
-      };
-      
-      // Cache with 20-minute TTL
-      jobsCache.set(cacheKey, { 
-        data: result, 
-        timestamp: Date.now(), 
-        ttl: 20 * 60 * 1000 
+        
+        if (filters.status && filters.status !== "all") {
+          query = query.eq('status', filters.status);
+        }
+        
+        if (filters.type && filters.type !== "all") {
+          query = query.eq('job_type', filters.type);
+        }
+        
+        if (filters.search) {
+          query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,clients.name.ilike.%${filters.search}%`);
+        }
+        
+        const jobViewScope = getJobViewScope();
+        if (jobViewScope === "assigned" && user?.id) {
+          query = query.eq('technician_id', user.id);
+        } else if (jobViewScope === "none") {
+          if (isMountedRef.current) {
+            setJobs([]);
+            setTotalCount(0);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        query = query
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1);
+        
+        const { data, error, count } = await query;
+        
+        if (error) throw error;
+        
+        const processedJobs = (data || []).map(job => ({
+          ...job,
+          tags: Array.isArray(job.tags) ? job.tags : [],
+          title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
+        }));
+        
+        const result = {
+          jobs: processedJobs,
+          totalCount: count || 0
+        };
+        
+        jobsCache.set(cacheKey, { 
+          data: result, 
+          timestamp: Date.now(), 
+          ttl: 20 * 60 * 1000 
+        });
+        
+        if (isMountedRef.current) {
+          setJobs(result.jobs);
+          setTotalCount(result.totalCount);
+        }
+      }, {
+        maxRetries: 2,
+        baseDelay: 2000
       });
-      
-      if (isMountedRef.current) {
-        setJobs(result.jobs);
-        setTotalCount(result.totalCount);
-      }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
-      if (isMountedRef.current) {
-        toast.error('Failed to load jobs');
-      }
+      setHasError(true);
+      handleJobsError(error, 'useJobsConsolidated - fetchJobs');
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
-  }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize, filters]);
+  }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize, filters, hasError]);
 
-  // Initial fetch
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Optimized real-time updates with longer debouncing
+  // Real-time updates with error handling
   useEffect(() => {
-    if (!enableRealtime) return;
+    if (!enableRealtime || hasError) return;
 
     let debounceTimer: NodeJS.Timeout;
     let isSubscribed = true;
@@ -183,15 +183,15 @@ export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
           table: 'jobs'
         },
         () => {
-          if (!isSubscribed) return;
+          if (!isSubscribed || hasError) return;
           
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            if (isSubscribed && isMountedRef.current) {
+            if (isSubscribed && isMountedRef.current && !hasError) {
               jobsCache.delete(cacheKey);
               fetchJobs(false);
             }
-          }, 3000); // 3 second debounce
+          }, 3000);
         }
       )
       .subscribe();
@@ -201,16 +201,22 @@ export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
       clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
-  }, [fetchJobs, enableRealtime, cacheKey]);
+  }, [fetchJobs, enableRealtime, cacheKey, hasError]);
 
   const totalPages = useMemo(() => Math.ceil(totalCount / pageSize), [totalCount, pageSize]);
   const hasNextPage = useMemo(() => page < totalPages, [page, totalPages]);
   const hasPreviousPage = useMemo(() => page > 1, [page]);
 
   const refreshJobs = useCallback(() => {
+    setHasError(false);
     jobsCache.delete(cacheKey);
     fetchJobs(false);
   }, [fetchJobs, cacheKey]);
+
+  const clearError = useCallback(() => {
+    setHasError(false);
+    refreshJobs();
+  }, [refreshJobs]);
 
   return {
     jobs,
@@ -220,7 +226,9 @@ export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
     currentPage: page,
     hasNextPage,
     hasPreviousPage,
+    hasError,
     refreshJobs,
+    clearError,
     canCreate: canCreateJobs(),
     canEdit: canEditJobs(),
     canDelete: canDeleteJobs(),
@@ -237,5 +245,5 @@ if (typeof window !== 'undefined') {
         jobsCache.delete(key);
       }
     }
-  }, 5 * 60 * 1000); // Clean every 5 minutes
+  }, 5 * 60 * 1000);
 }
