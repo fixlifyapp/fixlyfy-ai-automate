@@ -14,7 +14,12 @@ interface UseJobsOptimizedOptions {
   clientId?: string;
 }
 
-const requestCache = new Map<string, Promise<any>>();
+interface JobsResult {
+  jobs: Job[];
+  totalCount: number;
+}
+
+const requestCache = new Map<string, Promise<JobsResult>>();
 
 export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const { page = 1, pageSize = 50, enableRealtime = true, clientId } = options;
@@ -57,7 +62,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     }
 
     if (useCache) {
-      const cachedJobs = localStorageCache.get(cacheKey);
+      const cachedJobs = localStorageCache.get<JobsResult>(cacheKey);
       if (cachedJobs && isMountedRef.current) {
         setJobs(cachedJobs.jobs);
         setTotalCount(cachedJobs.totalCount);
@@ -66,7 +71,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       }
     }
 
-    const requestPromise = (async () => {
+    const requestPromise = (async (): Promise<JobsResult> => {
       setIsLoading(true);
       setHasError(false);
       
@@ -115,7 +120,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
             title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
           }));
           
-          const result = {
+          const result: JobsResult = {
             jobs: processedJobs,
             totalCount: count || 0
           };

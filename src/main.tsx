@@ -3,10 +3,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { registerServiceWorker } from "./utils/cacheConfig";
-
-// Register service worker for caching
-registerServiceWorker();
 
 // Preload critical resources
 const preloadResources = () => {
