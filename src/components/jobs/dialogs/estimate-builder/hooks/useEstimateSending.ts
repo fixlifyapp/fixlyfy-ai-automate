@@ -53,8 +53,7 @@ export const useEstimateSending = () => {
           body: {
             estimateId: params.existingDocumentId,
             recipientEmail: params.sendTo,
-            subject: `Estimate ${params.documentNumber}`,
-            message: params.customNote || `Please find your estimate ${params.documentNumber}. Total: $${params.documentDetails.total?.toFixed(2) || '0.00'}.`
+            customMessage: params.customNote || `Hi ${params.contactInfo.name}! Your estimate ${params.documentNumber} is ready. Total: $${params.documentDetails.total?.toFixed(2) || '0.00'}.`
           }
         });
       } else if (params.sendMethod === "sms") {
@@ -69,6 +68,14 @@ export const useEstimateSending = () => {
           .single();
 
         const clientId = estimate?.jobs?.client_id;
+        
+        console.log("SMS parameters being sent:", {
+          recipientPhone: params.sendTo,
+          message: smsMessage,
+          estimateId: params.existingDocumentId,
+          client_id: clientId,
+          job_id: estimate?.job_id
+        });
         
         response = await supabase.functions.invoke('telnyx-sms', {
           body: {
