@@ -5,6 +5,7 @@ import { sendSMS } from './telnyx.ts'
 import { validateRequest } from './validation.ts'
 import { getEstimateData } from './estimate.ts'
 import { logSMSEvent } from './logging.ts'
+import { generatePortalLink } from './portal.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +62,23 @@ serve(async (req) => {
     const fromNumber = phoneNumbers?.[0]?.phone_number || '+14375249932'
     console.log('Using from number:', fromNumber)
 
+    // Generate portal link
+    let portalLink = ''
+    try {
+      if (estimate.client_id) {
+        portalLink = await generatePortalLink(estimate.client_id, 'estimate', estimateId)
+        console.log('Generated portal link:', portalLink)
+      }
+    } catch (error) {
+      console.error('Failed to generate portal link:', error)
+      // Continue without portal link
+    }
+
+    // Enhanced message with portal link
+    const enhancedMessage = portalLink 
+      ? `${message}\n\nView your estimate online: ${portalLink}`
+      : message
+
     // Format phone numbers for Telnyx (ensure they start with +)
     const formattedFromNumber = fromNumber.startsWith('+') ? fromNumber : `+${fromNumber}`
     const formattedToNumber = recipientPhone.startsWith('+') ? recipientPhone : `+1${recipientPhone.replace(/\D/g, '')}`
@@ -71,7 +89,7 @@ serve(async (req) => {
     const smsResult = await sendSMS({
       from: formattedFromNumber,
       to: formattedToNumber,
-      text: message
+      text: enhancedMessage
     })
 
     if (!smsResult.success) {
@@ -86,19 +104,20 @@ serve(async (req) => {
     await logSMSEvent(supabaseAdmin, {
       estimateId,
       recipientPhone,
-      message,
+      message: enhancedMessage,
       status: 'sent',
       provider: 'telnyx',
       messageId: smsResult.messageId
     })
 
-    console.log('SMS sent successfully')
+    console.log('SMS sent successfully with portal link')
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         messageId: smsResult.messageId,
-        message: 'SMS sent successfully'
+        message: 'SMS sent successfully',
+        portalLink: portalLink || null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

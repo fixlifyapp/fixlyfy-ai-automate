@@ -22,6 +22,7 @@ import AiCenterPage from './pages/AiCenterPage';
 import AutomationsPage from './pages/AutomationsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ProfileCompanyPage from './pages/ProfileCompanyPage';
+import ClientPortalPage from './pages/ClientPortalPage';
 
 // Add missing page imports
 import ProductsPage from './pages/ProductsPage';
@@ -50,6 +51,9 @@ function App() {
         <Routes>
           {/* Authentication */}
           <Route path="/auth" element={<LoginPage />} />
+          
+          {/* Client Portal - Public Route */}
+          <Route path="/portal" element={<ClientPortalPage />} />
           
           {/* Main Dashboard Routes */}
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
