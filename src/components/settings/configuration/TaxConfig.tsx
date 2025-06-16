@@ -29,13 +29,15 @@ const TAX_REGIONS = [
 export const TaxConfig = () => {
   const { taxConfig, loading, updateTaxSettings } = useTaxSettings();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(taxConfig.region);
+  const [selectedRegion, setSelectedRegion] = useState('');
 
   // Update selected region when taxConfig changes
   useEffect(() => {
     console.log('TaxConfig - taxConfig updated:', taxConfig);
-    setSelectedRegion(taxConfig.region);
-  }, [taxConfig]);
+    if (taxConfig.region) {
+      setSelectedRegion(taxConfig.region);
+    }
+  }, [taxConfig.region]);
 
   const handleRegionChange = (selectedRegionValue: string) => {
     console.log('TaxConfig - Region changed to:', selectedRegionValue);
@@ -83,6 +85,9 @@ export const TaxConfig = () => {
   const currentRegionData = TAX_REGIONS.find(r => r.value === selectedRegion);
   const previewRate = currentRegionData?.rate || 0;
   const previewLabel = currentRegionData?.taxLabel || 'Tax';
+
+  // Check if there are changes to enable save button
+  const hasChanges = selectedRegion !== taxConfig.region;
 
   return (
     <div className="space-y-6">
@@ -135,7 +140,7 @@ export const TaxConfig = () => {
                 <h4 className="font-medium text-blue-900 mb-1">Preview</h4>
                 <p className="text-sm text-blue-700">
                   Items will show "{previewLabel} ({previewRate}%)" 
-                  for taxable items in {selectedRegion}.
+                  for taxable items in {selectedRegion || 'selected region'}.
                 </p>
               </div>
             </div>
@@ -144,7 +149,7 @@ export const TaxConfig = () => {
           <div className="flex justify-end pt-4">
             <Button 
               onClick={handleSave} 
-              disabled={isUpdating || selectedRegion === taxConfig.region}
+              disabled={isUpdating || !hasChanges}
               className="gap-2"
             >
               <Save className="h-4 w-4" />
