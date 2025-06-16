@@ -187,48 +187,27 @@ serve(async (req) => {
 
     console.log('send-estimate - Company settings found:', !!companySettings);
 
-    // Generate client portal login token and create portal link
+    // Generate client portal access token using the correct function
     let portalLink = '';
-    if (client?.email) {
+    if (client?.id) {
       try {
-        console.log('Generating portal link for client email:', client.email);
+        console.log('Generating portal link for client ID:', client.id);
         
-        // Ensure client portal user exists first
-        const { data: existingPortalUser, error: portalUserError } = await supabaseAdmin
-          .from('client_portal_users')
-          .select('*')
-          .eq('email', client.email)
-          .single();
-
-        if (portalUserError && portalUserError.code === 'PGRST116') {
-          // Create client portal user if doesn't exist
-          const { error: createError } = await supabaseAdmin
-            .from('client_portal_users')
-            .insert({
-              email: client.email,
-              client_id: client.id,
-              is_active: true
-            });
-
-          if (createError) {
-            console.error('Error creating client portal user:', createError);
-          } else {
-            console.log('Created client portal user for:', client.email);
-          }
-        }
-
-        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-          p_email: client.email
+        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
+          p_client_id: client.id,
+          p_document_type: 'estimate',
+          p_document_id: estimate.id,
+          p_hours_valid: 72
         });
 
         if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/estimates?id=${estimate.id}`;
+          portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
           console.log('Portal link generated for client portal');
         } else {
-          console.error('Failed to generate portal login token:', tokenError);
+          console.error('Failed to generate portal access token:', tokenError);
         }
       } catch (error) {
-        console.warn('Failed to generate portal login token:', error);
+        console.warn('Failed to generate portal access token:', error);
       }
     }
 
@@ -331,7 +310,6 @@ serve(async (req) => {
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLink,
           provider_message_id: mailgunResult.id
         });
     } catch (logError) {
