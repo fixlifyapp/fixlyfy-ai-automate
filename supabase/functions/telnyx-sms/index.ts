@@ -107,7 +107,7 @@ serve(async (req) => {
     if (isEstimate && estimateId && client_id) {
       console.log('Processing estimate SMS - generating portal link')
       
-      // Generate portal access token for estimate
+      // Generate portal access token for estimate with better error handling
       try {
         const { data: tokenData, error: tokenError } = await supabaseClient.rpc('generate_client_portal_access', {
           p_client_id: client_id,
@@ -122,11 +122,13 @@ serve(async (req) => {
           console.log('Portal link generated and added to message');
         } else {
           console.error('Failed to generate portal access token:', tokenError);
-          // Continue without portal link
+          // Continue without portal link - don't fail the SMS
+          console.log('Continuing SMS send without portal link');
         }
       } catch (error) {
-        console.warn('Failed to generate portal access token:', error);
-        // Continue without portal link
+        console.warn('Portal access token generation failed:', error);
+        // Continue without portal link - don't fail the SMS
+        console.log('Continuing SMS send without portal link due to error');
       }
     }
 
