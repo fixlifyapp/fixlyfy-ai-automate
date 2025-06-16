@@ -23,6 +23,10 @@ export interface UserSettings {
   language: string;
   timezone: string;
   currency: string;
+  // Tax configuration
+  default_tax_rate: number;
+  tax_region: string;
+  tax_label: string;
   // Personal preferences
   notification_email?: string;
   created_at?: string;
@@ -43,7 +47,10 @@ const defaultSettings: UserSettings = {
   marketing_updates: false,
   language: 'en',
   timezone: 'utc-7',
-  currency: 'usd'
+  currency: 'usd',
+  default_tax_rate: 13.00,
+  tax_region: 'Ontario',
+  tax_label: 'HST'
 };
 
 export const useUserSettings = () => {

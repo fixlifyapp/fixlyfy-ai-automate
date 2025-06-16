@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Invoice } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface LineItem {
   id: string;
@@ -33,6 +34,7 @@ export const InvoicePreviewContent = ({
 }: InvoicePreviewContentProps) => {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const { taxConfig } = useTaxSettings();
 
   // Fetch line items for the invoice
   useEffect(() => {
@@ -69,7 +71,7 @@ export const InvoicePreviewContent = ({
     const taxableTotal = lineItems
       .filter(item => item.taxable)
       .reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    return taxableTotal * 0.13; // 13% tax rate
+    return taxableTotal * (taxConfig.rate / 100);
   };
 
   return (
@@ -191,7 +193,7 @@ export const InvoicePreviewContent = ({
               <span>{formatCurrency(calculateSubtotal())}</span>
             </div>
             <div className="flex justify-between text-gray-700">
-              <span>Tax (13%):</span>
+              <span>{taxConfig.label} ({taxConfig.rate}%):</span>
               <span>{formatCurrency(calculateTax())}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg border-t pt-2">

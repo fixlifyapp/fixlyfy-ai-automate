@@ -2,6 +2,7 @@
 import React from "react";
 import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
 import { LineItem } from "@/components/jobs/builder/types";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface InvoicePreviewStepProps {
   formData: {
@@ -14,10 +15,9 @@ interface InvoicePreviewStepProps {
   jobId: string;
 }
 
-// Lock tax rate to 13%
-const LOCKED_TAX_RATE = 13;
-
 export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps) => {
+  const { taxConfig } = useTaxSettings();
+  
   console.log('=== InvoicePreviewStep Debug ===');
   console.log('JobId received:', jobId);
   console.log('Form data:', formData);
@@ -29,7 +29,7 @@ export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps)
   const calculateTax = () => {
     return formData.items.reduce((sum: number, item: any) => {
       if (item.taxable) {
-        return sum + (item.quantity * item.unitPrice * (LOCKED_TAX_RATE / 100));
+        return sum + (item.quantity * item.unitPrice * (taxConfig.rate / 100));
       }
       return sum;
     }, 0);
@@ -44,7 +44,7 @@ export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps)
       documentType="invoice"
       documentNumber={formData.invoiceNumber}
       lineItems={formData.items}
-      taxRate={LOCKED_TAX_RATE}
+      taxRate={taxConfig.rate}
       calculateSubtotal={calculateSubtotal}
       calculateTotalTax={calculateTax}
       calculateGrandTotal={calculateTotal}

@@ -8,6 +8,7 @@ import { PersonalInfoCard } from "./profile/PersonalInfoCard";
 import { CompanyInfoCard } from "./profile/CompanyInfoCard";
 import { BrandingCard } from "./profile/BrandingCard";
 import { SystemSettingsCard } from "./profile/SystemSettingsCard";
+import { TaxSettingsCard } from "./profile/TaxSettingsCard";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,6 +157,11 @@ export const SettingsUserCompany = () => {
         />
         
         <SystemSettingsCard 
+          userSettings={currentUserSettings}
+          updateUserSettings={updatePendingUserSettings}
+        />
+
+        <TaxSettingsCard 
           userSettings={currentUserSettings}
           updateUserSettings={updatePendingUserSettings}
         />

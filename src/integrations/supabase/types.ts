@@ -3186,6 +3186,7 @@ export type Database = {
           dark_mode: boolean | null
           date_format: string | null
           default_landing_page: string | null
+          default_tax_rate: number | null
           email_notifications: boolean | null
           id: string
           invoice_alerts: boolean | null
@@ -3196,6 +3197,8 @@ export type Database = {
           push_notifications: boolean | null
           sms_notifications: boolean | null
           sound_effects: boolean | null
+          tax_label: string | null
+          tax_region: string | null
           timezone: string | null
           updated_at: string
           user_id: string
@@ -3207,6 +3210,7 @@ export type Database = {
           dark_mode?: boolean | null
           date_format?: string | null
           default_landing_page?: string | null
+          default_tax_rate?: number | null
           email_notifications?: boolean | null
           id?: string
           invoice_alerts?: boolean | null
@@ -3217,6 +3221,8 @@ export type Database = {
           push_notifications?: boolean | null
           sms_notifications?: boolean | null
           sound_effects?: boolean | null
+          tax_label?: string | null
+          tax_region?: string | null
           timezone?: string | null
           updated_at?: string
           user_id: string
@@ -3228,6 +3234,7 @@ export type Database = {
           dark_mode?: boolean | null
           date_format?: string | null
           default_landing_page?: string | null
+          default_tax_rate?: number | null
           email_notifications?: boolean | null
           id?: string
           invoice_alerts?: boolean | null
@@ -3238,6 +3245,8 @@ export type Database = {
           push_notifications?: boolean | null
           sms_notifications?: boolean | null
           sound_effects?: boolean | null
+          tax_label?: string | null
+          tax_region?: string | null
           timezone?: string | null
           updated_at?: string
           user_id?: string

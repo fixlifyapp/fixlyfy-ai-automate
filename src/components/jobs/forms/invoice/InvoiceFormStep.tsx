@@ -2,6 +2,7 @@
 import React from "react";
 import { UnifiedDocumentForm } from "@/components/jobs/dialogs/unified/UnifiedDocumentForm";
 import { LineItem } from "@/components/jobs/builder/types";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface InvoiceFormStepProps {
   formData: {
@@ -15,10 +16,9 @@ interface InvoiceFormStepProps {
   jobId: string;
 }
 
-// Lock tax rate to 13%
-const LOCKED_TAX_RATE = 13;
-
 export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFormStepProps) => {
+  const { taxConfig } = useTaxSettings();
+
   const handleUpdateLineItem = (id: string, field: string, value: any) => {
     const updatedItems = formData.items.map(item => 
       item.id === id ? { ...item, [field]: value } : item
@@ -41,7 +41,7 @@ export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFo
 
   const calculateTotalTax = () => {
     const subtotal = calculateSubtotal();
-    return subtotal * (LOCKED_TAX_RATE / 100);
+    return subtotal * (taxConfig.rate / 100);
   };
 
   const calculateGrandTotal = () => {
@@ -71,8 +71,8 @@ export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFo
       onEditLineItem={handleEditLineItem}
       onAddEmptyLineItem={() => {}}
       onAddCustomLine={() => {}}
-      taxRate={LOCKED_TAX_RATE}
-      setTaxRate={() => {}} // No-op since tax rate is locked
+      taxRate={taxConfig.rate}
+      setTaxRate={() => {}} // No-op since tax rate comes from user settings
       calculateSubtotal={calculateSubtotal}
       calculateTotalTax={calculateTotalTax}
       calculateGrandTotal={calculateGrandTotal}

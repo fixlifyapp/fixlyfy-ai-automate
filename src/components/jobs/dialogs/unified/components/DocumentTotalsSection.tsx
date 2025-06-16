@@ -2,22 +2,22 @@
 import React from "react";
 import { formatCurrency } from "@/lib/utils";
 import { DocumentType } from "../../UnifiedDocumentBuilder";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface DocumentTotalsSectionProps {
   documentType: DocumentType;
   subtotal: number;
   tax: number;
   total: number;
-  taxRate: number;
 }
 
 export const DocumentTotalsSection = ({
   documentType,
   subtotal,
   tax,
-  total,
-  taxRate
+  total
 }: DocumentTotalsSectionProps) => {
+  const { taxConfig } = useTaxSettings();
   const totalColor = documentType === 'estimate' ? 'text-blue-600' : 'text-green-600';
   const totalBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-green-50';
 
@@ -32,7 +32,9 @@ export const DocumentTotalsSection = ({
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Tax ({taxRate}%)</span>
+              <span className="text-gray-700">
+                {taxConfig.label} ({taxConfig.rate}%)
+              </span>
               <span className="font-medium text-gray-900">{formatCurrency(tax)}</span>
             </div>
             

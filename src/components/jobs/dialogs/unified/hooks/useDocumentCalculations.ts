@@ -1,16 +1,15 @@
 
 import { useMemo } from "react";
 import { LineItem } from "../../../builder/types";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface UseDocumentCalculationsProps {
   lineItems: LineItem[];
-  taxRate?: number; // Make optional since we'll use locked rate
 }
 
-// Lock tax rate to 13%
-const LOCKED_TAX_RATE = 13;
-
 export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsProps) => {
+  const { taxConfig } = useTaxSettings();
+
   const calculateSubtotal = useMemo(() => {
     return () => {
       return lineItems.reduce((total, item) => {
@@ -27,9 +26,9 @@ export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsPr
         }
         return total;
       }, 0);
-      return (taxableTotal * LOCKED_TAX_RATE) / 100;
+      return (taxableTotal * taxConfig.rate) / 100;
     };
-  }, [lineItems]);
+  }, [lineItems, taxConfig.rate]);
 
   const calculateGrandTotal = useMemo(() => {
     return () => {
@@ -63,6 +62,8 @@ export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsPr
     calculateGrandTotal,
     calculateTotalMargin,
     calculateMarginPercentage,
-    taxRate: LOCKED_TAX_RATE // Always return the locked tax rate
+    taxRate: taxConfig.rate,
+    taxLabel: taxConfig.label,
+    taxDisplayText: taxConfig.displayText
   };
 };

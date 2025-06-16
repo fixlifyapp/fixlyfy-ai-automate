@@ -1,5 +1,6 @@
 
 import { formatCurrency } from '@/lib/utils';
+import { useTaxSettings } from '@/hooks/useTaxSettings';
 
 interface DocumentTotalsProps {
   calculateSubtotal: () => number;
@@ -7,13 +8,13 @@ interface DocumentTotalsProps {
   calculateGrandTotal: () => number;
 }
 
-const LOCKED_TAX_RATE = 13;
-
 export const DocumentTotals = ({
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal
 }: DocumentTotalsProps) => {
+  const { taxConfig } = useTaxSettings();
+
   return (
     <div className="mt-6 flex justify-end">
       <div className="w-80 space-y-2">
@@ -24,7 +25,9 @@ export const DocumentTotals = ({
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span>Tax:</span>
-            <span className="text-sm font-medium text-blue-600">{LOCKED_TAX_RATE}% (Locked)</span>
+            <span className="text-sm font-medium text-blue-600">
+              {taxConfig.label} {taxConfig.rate}% ({taxConfig.region})
+            </span>
           </div>
           <span>{formatCurrency(calculateTotalTax())}</span>
         </div>
