@@ -58,14 +58,25 @@ export const useEstimateSending = () => {
           }
         });
       } else if (params.sendMethod === "sms") {
-        console.log("Calling send-estimate-sms function for SMS...");
+        console.log("Calling telnyx-sms function for SMS...");
         const smsMessage = params.customNote || `Hi ${params.contactInfo.name}! Your estimate ${params.documentNumber} is ready. Total: $${params.documentDetails.total?.toFixed(2) || '0.00'}.`;
         
-        response = await supabase.functions.invoke('send-estimate-sms', {
+        // Get estimate details for client_id
+        const { data: estimate } = await supabase
+          .from('estimates')
+          .select('job_id, jobs!inner(client_id)')
+          .eq('id', params.existingDocumentId)
+          .single();
+
+        const clientId = estimate?.jobs?.client_id;
+        
+        response = await supabase.functions.invoke('telnyx-sms', {
           body: {
-            estimateId: params.existingDocumentId,
             recipientPhone: params.sendTo,
-            message: smsMessage
+            message: smsMessage,
+            estimateId: params.existingDocumentId,
+            client_id: clientId,
+            job_id: estimate?.job_id
           }
         });
       } else {

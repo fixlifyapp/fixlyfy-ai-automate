@@ -34,17 +34,30 @@ serve(async (req) => {
     
     console.log('Authenticated user:', user.id)
 
-    const { to, body, client_id, job_id } = await req.json()
+    const requestBody = await req.json()
+    const { to, body, client_id, job_id, estimateId, recipientPhone, message } = requestBody
     
-    console.log('Sending SMS via Telnyx:', { to, body, client_id, job_id })
+    // Handle both regular SMS and estimate SMS
+    const phoneNumber = to || recipientPhone
+    const messageBody = body || message
+    const isEstimate = !!estimateId
+    
+    console.log('Sending SMS via Telnyx:', { 
+      phoneNumber, 
+      messageBody: messageBody?.substring(0, 50) + '...', 
+      client_id, 
+      job_id, 
+      isEstimate,
+      estimateId 
+    })
 
     // Validate inputs
-    if (!to || !body) {
+    if (!phoneNumber || !messageBody) {
       throw new Error('Phone number and message body are required')
     }
 
     // Clean and validate phone number
-    const cleanPhone = to.replace(/\D/g, '')
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
     if (cleanPhone.length < 10) {
       throw new Error('Valid phone number is required')
     }
@@ -89,6 +102,34 @@ serve(async (req) => {
       formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`
     }
 
+    // Handle estimate-specific logic
+    let finalMessage = messageBody
+    if (isEstimate && estimateId && client_id) {
+      console.log('Processing estimate SMS - generating portal link')
+      
+      // Generate portal access token for estimate
+      try {
+        const { data: tokenData, error: tokenError } = await supabaseClient.rpc('generate_client_portal_access', {
+          p_client_id: client_id,
+          p_document_type: 'estimate',
+          p_document_id: estimateId,
+          p_hours_valid: 72
+        });
+
+        if (!tokenError && tokenData) {
+          const portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
+          finalMessage = `${messageBody}\n\nView your estimate securely: ${portalLink}`;
+          console.log('Portal link generated and added to message');
+        } else {
+          console.error('Failed to generate portal access token:', tokenError);
+          // Continue without portal link
+        }
+      } catch (error) {
+        console.warn('Failed to generate portal access token:', error);
+        // Continue without portal link
+      }
+    }
+
     console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedPhone)
 
     const response = await fetch('https://api.telnyx.com/v2/messages', {
@@ -100,7 +141,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: formattedFromPhone,
         to: formattedPhone,
-        text: body
+        text: finalMessage
       })
     })
 
@@ -156,7 +197,7 @@ serve(async (req) => {
           .from('messages')
           .insert({
             conversation_id: conversationId,
-            body: body,
+            body: finalMessage,
             direction: 'outbound',
             sender: 'System',
             recipient: formattedPhone,
@@ -185,6 +226,25 @@ serve(async (req) => {
         } else {
           console.log('Conversation timestamp updated for real-time sync')
         }
+      }
+    }
+
+    // Log estimate communication if this is an estimate SMS
+    if (isEstimate && estimateId) {
+      try {
+        await supabaseClient
+          .from('estimate_communications')
+          .insert({
+            estimate_id: estimateId,
+            communication_type: 'sms',
+            recipient: formattedPhone,
+            content: finalMessage,
+            status: 'sent',
+            provider_message_id: result.data?.id
+          });
+        console.log('Estimate communication logged');
+      } catch (logError) {
+        console.warn('Failed to log estimate communication:', logError);
       }
     }
 
