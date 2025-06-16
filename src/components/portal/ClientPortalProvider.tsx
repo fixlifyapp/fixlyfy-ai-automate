@@ -32,6 +32,7 @@ interface ClientPortalContextType {
   login: (token: string) => Promise<boolean>;
   logout: () => void;
   refreshData: () => Promise<void>;
+  retryAuth: () => void;
 }
 
 const ClientPortalContext = createContext<ClientPortalContextType | undefined>(undefined);
@@ -48,6 +49,7 @@ export function ClientPortalProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const login = async (loginToken: string): Promise<boolean> => {
     try {
@@ -55,7 +57,11 @@ export function ClientPortalProvider({
       setError(null);
       console.log('🔐 Starting portal authentication with token:', loginToken.substring(0, 10) + '...');
       
-      // Call the portal-auth edge function with POST method and proper body
+      // Validate token format
+      if (!loginToken || loginToken.length < 10) {
+        throw new Error('Invalid token format');
+      }
+
       console.log('📡 Calling portal-auth edge function...');
       const { data: authResult, error: authError } = await supabase.functions.invoke('portal-auth', {
         body: { token: loginToken }
@@ -65,18 +71,12 @@ export function ClientPortalProvider({
 
       if (authError) {
         console.error('❌ Portal auth error:', authError);
-        const errorMessage = `Authentication failed: ${authError.message}`;
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return false;
+        throw new Error(`Authentication failed: ${authError.message}`);
       }
 
       if (!authResult?.success) {
         console.error('❌ Portal auth failed:', authResult?.error);
-        const errorMessage = authResult?.error || 'Invalid or expired access link';
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return false;
+        throw new Error(authResult?.error || 'Invalid or expired access link');
       }
 
       setSession(authResult.session);
@@ -89,9 +89,14 @@ export function ClientPortalProvider({
       return true;
     } catch (error: any) {
       console.error('💥 Login error:', error);
-      const errorMessage = `Authentication failed: ${error.message || 'Unknown error'}`;
+      const errorMessage = error?.message || 'Authentication failed';
       setError(errorMessage);
-      toast.error(errorMessage);
+      
+      // Don't show toast for network errors during initial load
+      if (!errorMessage.includes('fetch')) {
+        toast.error(errorMessage);
+      }
+      
       return false;
     } finally {
       setIsLoading(false);
@@ -110,25 +115,19 @@ export function ClientPortalProvider({
 
       if (error) {
         console.error('❌ Dashboard data error:', error);
-        const errorMessage = `Failed to load dashboard data: ${error.message}`;
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return;
+        throw new Error(`Failed to load dashboard data: ${error.message}`);
       }
 
       if (!dashboardData?.success) {
         console.error('❌ Dashboard data failed:', dashboardData?.error);
-        const errorMessage = dashboardData?.error || 'Failed to load dashboard data';
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return;
+        throw new Error(dashboardData?.error || 'Failed to load dashboard data');
       }
 
       setData(dashboardData.data);
       console.log('✅ Dashboard data loaded successfully');
     } catch (error: any) {
       console.error('💥 Dashboard data error:', error);
-      const errorMessage = `Failed to load dashboard data: ${error.message || 'Unknown error'}`;
+      const errorMessage = error?.message || 'Failed to load dashboard data';
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -139,7 +138,7 @@ export function ClientPortalProvider({
     setData(null);
     setIsAuthenticated(false);
     setError(null);
-    // Redirect to the portal login page instead of /auth
+    setRetryCount(0);
     window.location.href = '/client-portal';
   };
 
@@ -149,14 +148,39 @@ export function ClientPortalProvider({
     }
   };
 
+  const retryAuth = () => {
+    if (token && retryCount < 3) {
+      setRetryCount(prev => prev + 1);
+      setError(null);
+      login(token);
+    } else {
+      setError('Maximum retry attempts reached. Please check your link.');
+    }
+  };
+
   useEffect(() => {
+    let mounted = true;
+    
     if (token) {
       console.log('🚀 Starting portal authentication process with token:', token.substring(0, 10) + '...');
-      login(token);
+      login(token).then(success => {
+        if (!mounted) return;
+        if (!success && retryCount < 2) {
+          // Auto-retry once for network issues
+          setTimeout(() => {
+            if (mounted) retryAuth();
+          }, 1000);
+        }
+      });
     } else {
       console.log('⚠️ No token provided');
       setIsLoading(false);
+      setError('No access token provided');
     }
+    
+    return () => {
+      mounted = false;
+    };
   }, [token]);
 
   const value = {
@@ -167,7 +191,8 @@ export function ClientPortalProvider({
     error,
     login,
     logout,
-    refreshData
+    refreshData,
+    retryAuth
   };
 
   return (
