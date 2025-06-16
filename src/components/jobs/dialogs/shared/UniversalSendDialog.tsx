@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -121,7 +120,7 @@ export const UniversalSendDialog = ({
         // Use telnyx-sms for both estimates and invoices
         console.log("Calling telnyx-sms function for SMS...");
         
-        // Get document details for client_id
+        // Get document details for client_id and job_id
         const tableName = documentType === "estimate" ? "estimates" : "invoices";
         const { data: document } = await supabase
           .from(tableName)
@@ -130,17 +129,27 @@ export const UniversalSendDialog = ({
           .single();
 
         const clientId = document?.jobs?.client_id;
+        const jobId = document?.job_id;
         
         const smsMessage = customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`;
         
+        // Pass the correct parameters for estimate SMS
+        const smsBody: any = {
+          recipientPhone: sendTo,
+          message: smsMessage,
+          client_id: clientId,
+          job_id: jobId
+        };
+
+        // Add estimate-specific parameters
+        if (documentType === "estimate") {
+          smsBody.estimateId = documentId;
+        } else {
+          smsBody.invoiceId = documentId;
+        }
+
         const { data, error } = await supabase.functions.invoke('telnyx-sms', {
-          body: {
-            recipientPhone: sendTo,
-            message: smsMessage,
-            [`${documentType}Id`]: documentId,
-            client_id: clientId,
-            job_id: document?.job_id
-          }
+          body: smsBody
         });
 
         if (error) {

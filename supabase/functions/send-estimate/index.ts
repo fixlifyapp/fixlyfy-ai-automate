@@ -16,7 +16,6 @@ const createEstimateEmailTemplate = (data: any) => {
     clientName,
     estimateNumber,
     total,
-    estimateLink,
     portalLink
   } = data;
 
@@ -41,8 +40,6 @@ const createEstimateEmailTemplate = (data: any) => {
     .estimate-total { font-size: 28px; font-weight: bold; color: #059669; margin: 15px 0; }
     .portal-button { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: transform 0.2s; }
     .portal-button:hover { transform: translateY(-2px); }
-    .alternative-link { margin: 20px 0; padding: 15px; background-color: #f3f4f6; border-radius: 8px; }
-    .alternative-link a { color: #4f46e5; text-decoration: none; word-break: break-all; }
     .footer { background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb; }
     .company-info { color: #6b7280; font-size: 14px; line-height: 1.6; }
     .contact-info { margin-top: 15px; }
@@ -72,23 +69,18 @@ const createEstimateEmailTemplate = (data: any) => {
         <div class="estimate-total">$${total.toFixed(2)}</div>
         
         ${portalLink ? `
-          <a href="${portalLink}" class="portal-button">View in Client Portal</a>
+          <a href="${portalLink}" class="portal-button">View Your Estimate</a>
           <div style="margin-top: 15px; color: #6b7280; font-size: 14px;">
-            ✓ Easy online access<br>
-            ✓ Download PDF<br>
-            ✓ View all your documents
+            ✓ Secure client portal access<br>
+            ✓ View all your documents<br>
+            ✓ Download PDF when ready
           </div>
         ` : `
-          <a href="${estimateLink}" class="portal-button">View Estimate</a>
+          <div style="color: #6b7280; font-size: 14px;">
+            Your estimate is being prepared and will be available soon.
+          </div>
         `}
       </div>
-      
-      ${portalLink && estimateLink ? `
-        <div class="alternative-link">
-          <strong>Alternative link:</strong><br>
-          <a href="${estimateLink}">${estimateLink}</a>
-        </div>
-      ` : ''}
       
       <p>If you're ready to proceed, please contact us at your earliest convenience. We look forward to working with you!</p>
       
@@ -211,8 +203,6 @@ serve(async (req) => {
       }
     }
 
-    const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.id}`;
-
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
     const companyLogo = companySettings?.company_logo_url;
     const companyPhone = companySettings?.company_phone;
@@ -233,7 +223,6 @@ serve(async (req) => {
         clientName: client?.name,
         estimateNumber: estimate.estimate_number,
         total: estimate.total || 0,
-        estimateLink,
         portalLink
       });
     }
@@ -259,7 +248,7 @@ serve(async (req) => {
       formData.append('text', emailBody);
     } else {
       formData.append('html', emailBody);
-      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour estimate ${estimate.estimate_number} is ready for review.\n\nTotal: $${(estimate.total || 0).toFixed(2)}\n\nView your estimate: ${estimateLink}\n${portalLink ? `\nClient Portal: ${portalLink}` : ''}\n\nThank you for your business!\n\n${companyName}`);
+      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour estimate ${estimate.estimate_number} is ready for review.\n\nTotal: $${(estimate.total || 0).toFixed(2)}\n\n${portalLink ? `View your estimate: ${portalLink}` : 'Your estimate will be available soon.'}\n\nThank you for your business!\n\n${companyName}`);
     }
     formData.append('o:tracking', 'yes');
     formData.append('o:tracking-clicks', 'yes');
