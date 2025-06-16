@@ -28,6 +28,7 @@ interface ClientPortalContextType {
   data: PortalData | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
   login: (token: string) => Promise<boolean>;
   logout: () => void;
   refreshData: () => Promise<void>;
@@ -46,13 +47,16 @@ export function ClientPortalProvider({
   const [data, setData] = useState<PortalData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const login = async (loginToken: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setError(null);
       console.log('🔐 Starting portal authentication with token:', loginToken.substring(0, 10) + '...');
       
       // Call the portal-auth edge function with POST method and proper body
+      console.log('📡 Calling portal-auth edge function...');
       const { data: authResult, error: authError } = await supabase.functions.invoke('portal-auth', {
         body: { token: loginToken }
       });
@@ -61,13 +65,17 @@ export function ClientPortalProvider({
 
       if (authError) {
         console.error('❌ Portal auth error:', authError);
-        toast.error('Authentication failed: ' + authError.message);
+        const errorMessage = `Authentication failed: ${authError.message}`;
+        setError(errorMessage);
+        toast.error(errorMessage);
         return false;
       }
 
       if (!authResult?.success) {
         console.error('❌ Portal auth failed:', authResult?.error);
-        toast.error('Invalid or expired access link');
+        const errorMessage = authResult?.error || 'Invalid or expired access link';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return false;
       }
 
@@ -79,9 +87,11 @@ export function ClientPortalProvider({
       await loadDashboardData(loginToken);
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Login error:', error);
-      toast.error('Authentication failed');
+      const errorMessage = `Authentication failed: ${error.message || 'Unknown error'}`;
+      setError(errorMessage);
+      toast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -100,21 +110,27 @@ export function ClientPortalProvider({
 
       if (error) {
         console.error('❌ Dashboard data error:', error);
-        toast.error('Failed to load dashboard data');
+        const errorMessage = `Failed to load dashboard data: ${error.message}`;
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
       if (!dashboardData?.success) {
         console.error('❌ Dashboard data failed:', dashboardData?.error);
-        toast.error('Failed to load dashboard data');
+        const errorMessage = dashboardData?.error || 'Failed to load dashboard data';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
       setData(dashboardData.data);
       console.log('✅ Dashboard data loaded successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Dashboard data error:', error);
-      toast.error('Failed to load dashboard data');
+      const errorMessage = `Failed to load dashboard data: ${error.message || 'Unknown error'}`;
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -122,6 +138,7 @@ export function ClientPortalProvider({
     setSession(null);
     setData(null);
     setIsAuthenticated(false);
+    setError(null);
     // Redirect to the portal login page instead of /auth
     window.location.href = '/client-portal';
   };
@@ -134,7 +151,7 @@ export function ClientPortalProvider({
 
   useEffect(() => {
     if (token) {
-      console.log('🚀 Starting portal authentication process...');
+      console.log('🚀 Starting portal authentication process with token:', token.substring(0, 10) + '...');
       login(token);
     } else {
       console.log('⚠️ No token provided');
@@ -147,6 +164,7 @@ export function ClientPortalProvider({
     data,
     isLoading,
     isAuthenticated,
+    error,
     login,
     logout,
     refreshData

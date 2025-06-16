@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ClientPortalDashboard } from '@/components/portal/ClientPortalDashboard';
 import { ClientPortalLogin } from '@/components/portal/ClientPortalLogin';
 import { ClientPortalProvider } from '@/components/portal/ClientPortalProvider';
+import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary';
 
 export default function ClientPortalPage() {
   const [searchParams] = useSearchParams();
@@ -11,9 +12,13 @@ export default function ClientPortalPage() {
   const token = searchParams.get('token');
 
   useEffect(() => {
+    console.log('🌐 ClientPortalPage loaded with token:', token ? 'present' : 'missing');
+    if (token) {
+      console.log('🔑 Token preview:', token.substring(0, 10) + '...');
+    }
     // Always show loading initially to validate token
     setIsLoading(false);
-  }, []);
+  }, [token]);
 
   if (isLoading) {
     return (
@@ -28,14 +33,17 @@ export default function ClientPortalPage() {
 
   // If no token is provided, show the login page
   if (!token) {
+    console.log('❌ No token provided, showing login page');
     return <ClientPortalLogin />;
   }
 
   return (
-    <ClientPortalProvider token={token}>
-      <div className="min-h-screen bg-gray-50">
-        <ClientPortalDashboard />
-      </div>
-    </ClientPortalProvider>
+    <AppErrorBoundary>
+      <ClientPortalProvider token={token}>
+        <div className="min-h-screen bg-gray-50">
+          <ClientPortalDashboard />
+        </div>
+      </ClientPortalProvider>
+    </AppErrorBoundary>
   );
 }
