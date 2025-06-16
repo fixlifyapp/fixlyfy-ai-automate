@@ -1,10 +1,8 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 export const useInvoiceCreation = (clientId?: string) => {
-  const { toast } = useToast();
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [invoiceData, setInvoiceData] = useState({
     description: "",
@@ -39,10 +37,7 @@ export const useInvoiceCreation = (clientId?: string) => {
       
       setIsInvoiceModalOpen(false);
       
-      toast({
-        title: "Invoice created",
-        description: `Invoice for $${invoiceData.amount} has been created successfully.`,
-      });
+      toast.success(`Invoice for $${invoiceData.amount} has been created successfully.`);
     
       // Reset form data
       setInvoiceData({
@@ -51,11 +46,7 @@ export const useInvoiceCreation = (clientId?: string) => {
       });
     } catch (error) {
       console.error("Error creating invoice:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create invoice. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to create invoice. Please try again.");
     }
   };
 

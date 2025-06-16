@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { PaymentMethod, PaymentStatus } from "@/types/payment";
 import { useClientPaymentsRealtime } from "./useClientPaymentsRealtime";
 
@@ -117,11 +116,7 @@ export const useClientPayments = (clientId?: string) => {
       setPaidInvoices(invoiceCount);
     } catch (error) {
       console.error("Error loading client payments:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load payment history",
-        variant: "destructive"
-      });
+      toast.error("Failed to load payment history");
     } finally {
       setIsLoading(false);
     }

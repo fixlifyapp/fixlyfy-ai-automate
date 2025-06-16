@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, Mail, Zap, Clock, Bell, Gift, CheckCircle, AlertTriangle, User, MessageSquare, Phone } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { ActionTypeSelector } from "./ActionTypeSelector";
 
 interface CreateAutomationDialogProps {
@@ -122,7 +122,6 @@ const templateCategories: TemplateCategory[] = [
 ];
 
 export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = null }: CreateAutomationDialogProps) => {
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("templates");
   const [prompt, setPrompt] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -147,10 +146,7 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
     // In a real implementation, this would send the prompt to an AI service
     console.log("Creating automation from prompt:", prompt);
     
-    toast({
-      title: "Automation Created",
-      description: "Your automation has been created successfully.",
-    });
+    toast.success("Your automation has been created successfully.");
     
     // For demo purposes, simply close the dialog
     onOpenChange(false);
@@ -172,10 +168,7 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
   };
   
   const handleSaveTemplate = () => {
-    toast({
-      title: "Automation Created",
-      description: `${selectedTemplate?.name} automation has been created and activated.`,
-    });
+    toast.success(`${selectedTemplate?.name} automation has been created and activated.`);
     onOpenChange(false);
   };
   

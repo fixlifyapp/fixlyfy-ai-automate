@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 export interface ClientHistoryItem {
@@ -12,7 +12,6 @@ export interface ClientHistoryItem {
 }
 
 export const useClientHistory = (clientId?: string) => {
-  const { toast } = useToast();
   const [history, setHistory] = useState<ClientHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -73,11 +72,7 @@ export const useClientHistory = (clientId?: string) => {
       setHistory(sortedHistory);
     } catch (error) {
       console.error("Error loading client history:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load client history",
-        variant: "destructive"
-      });
+      toast.error("Failed to load client history");
     } finally {
       setIsLoading(false);
     }

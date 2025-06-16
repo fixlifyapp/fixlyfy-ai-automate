@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 export const useClientData = (clientId?: string) => {
   const { toast } = useToast();
@@ -63,18 +62,11 @@ export const useClientData = (clientId?: string) => {
           });
           generateClientInsight(data);
         } else {
-          toast({
-            title: "Client not found",
-            description: "The requested client could not be found.",
-          });
+          toast.error("The requested client could not be found.");
         }
       } catch (error) {
         console.error("Error fetching client:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load client data.",
-          variant: "destructive",
-        });
+        toast.error("Failed to load client data.");
       } finally {
         setIsLoading(false);
       }
@@ -150,17 +142,10 @@ export const useClientData = (clientId?: string) => {
       // Update local client state
       setClient(prev => ({ ...prev, ...updates }));
       
-      toast({
-        title: "Changes saved",
-        description: "Client information has been updated successfully.",
-      });
+      toast.success("Client information has been updated successfully.");
     } catch (error) {
       console.error("Error saving client:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save changes. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to save changes. Please try again.");
     } finally {
       setIsSaving(false);
     }

@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 export const useClientProperties = (clientId?: string) => {
   const { toast } = useToast();
@@ -69,11 +68,7 @@ export const useClientProperties = (clientId?: string) => {
       }
     } catch (error) {
       console.error("Error loading client properties:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load properties",
-        variant: "destructive"
-      });
+      toast.error("Failed to load properties");
     } finally {
       setIsLoading(false);
     }

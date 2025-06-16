@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Mail, User, Zap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 
 interface QuickStartItemDialogProps {
   open: boolean;
@@ -20,7 +19,6 @@ interface QuickStartItemDialogProps {
 }
 
 export const QuickStartItemDialog = ({ open, onOpenChange, item }: QuickStartItemDialogProps) => {
-  const { toast } = useToast();
   const [automationName, setAutomationName] = useState(item.title);
   const [triggerType, setTriggerType] = useState("time");
   const [actionType, setActionType] = useState("email");
@@ -29,10 +27,7 @@ export const QuickStartItemDialog = ({ open, onOpenChange, item }: QuickStartIte
   
   const handleSave = () => {
     // Here you would implement the actual saving logic
-    toast({
-      title: "Automation created",
-      description: `${automationName} has been created successfully.`,
-    });
+    toast.success(`${automationName} has been created successfully.`);
     onOpenChange(false);
   };
   
