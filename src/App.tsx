@@ -43,7 +43,7 @@ import AiCenterPage from "@/pages/AiCenterPage";
 import PreviewPage from "@/pages/PreviewPage";
 import AdminRolesPage from "@/pages/AdminRolesPage";
 import NotFound from "@/pages/NotFound";
-import { AppProviders } from "@/components/AppProviders";
+import { AppProviders } from "@/components/ui/AppProviders";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import ClientPortal from "@/pages/ClientPortal";
 
