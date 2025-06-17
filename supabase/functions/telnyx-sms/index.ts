@@ -64,6 +64,8 @@ serve(async (req) => {
       .eq('status', 'active')
       .limit(1)
 
+    console.log('Telnyx query result:', { telnyxNumbers, telnyxError })
+
     if (telnyxError) {
       console.error('❌ Error fetching Telnyx phone numbers:', telnyxError)
       return new Response(
@@ -72,16 +74,25 @@ serve(async (req) => {
       )
     }
 
+    let fromPhone: string
+
     if (!telnyxNumbers || telnyxNumbers.length === 0) {
-      console.error('❌ No active Telnyx phone numbers found')
-      return new Response(
-        JSON.stringify({ error: 'No active SMS phone number configured. Please set up a Telnyx phone number first.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.warn('⚠️ No active Telnyx phone numbers found, using fallback')
+      // Fallback to a default number - you should configure this in your environment
+      const fallbackPhone = Deno.env.get('FALLBACK_PHONE_NUMBER')
+      if (!fallbackPhone) {
+        console.error('❌ No active Telnyx phone numbers and no fallback configured')
+        return new Response(
+          JSON.stringify({ error: 'No active SMS phone number configured. Please set up a Telnyx phone number first.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      fromPhone = fallbackPhone
+    } else {
+      fromPhone = telnyxNumbers[0].phone_number
     }
 
-    const fromPhone = telnyxNumbers[0].phone_number
-    console.log('✅ Using active Telnyx phone number:', fromPhone)
+    console.log('✅ Using phone number for SMS:', fromPhone)
 
     console.log(`📞 Sending SMS from: ${fromPhone} to: ${recipientPhone}`)
     console.log(`📝 Message length: ${message.length}`)
