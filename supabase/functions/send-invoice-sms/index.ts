@@ -130,7 +130,7 @@ serve(async (req) => {
         });
 
         if (!tokenError && accessToken) {
-          viewLink = `https://hub.fixlify.app/view/${accessToken}`;
+          viewLink = `https://portal.fixlify.app/view/${accessToken}`;
           console.log('Secure access link generated:', viewLink.substring(0, 60) + '...');
         } else {
           console.error('Failed to generate secure access token:', tokenError);
