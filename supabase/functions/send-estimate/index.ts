@@ -217,7 +217,16 @@ serve(async (req) => {
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
       console.error('❌ Mailgun API key not found');
-      throw new Error('Mailgun API key not configured');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Email service not configured. Please contact administrator.' 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
     console.log('📨 Sending email via Mailgun');
@@ -256,7 +265,16 @@ serve(async (req) => {
 
     if (!mailgunResponse.ok) {
       console.error("❌ Mailgun send error:", responseText);
-      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${responseText}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Email service error: ${mailgunResponse.status} - ${responseText}` 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
     let mailgunResult;
@@ -264,7 +282,16 @@ serve(async (req) => {
       mailgunResult = JSON.parse(responseText);
     } catch (parseError) {
       console.error('❌ Error parsing Mailgun response:', parseError);
-      throw new Error('Invalid response from Mailgun API');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid response from email service' 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
     console.log('✅ Email sent successfully via Mailgun:', mailgunResult);

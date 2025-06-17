@@ -63,7 +63,16 @@ serve(async (req) => {
       .limit(1)
       .single()
 
-    const fromPhone = companySettings?.company_phone || '+14375249932'
+    let fromPhone = companySettings?.company_phone || '+14375249932'
+    
+    // Validate and clean the phone number
+    if (fromPhone && fromPhone.includes('(') && fromPhone.includes(')')) {
+      // This is a formatted number like (555) 123-4567, which is likely invalid for Telnyx
+      console.warn('⚠️ Company phone number appears to be a placeholder/formatted number:', fromPhone)
+      console.warn('⚠️ Using fallback number for SMS sending')
+      fromPhone = '+14375249932' // Use a fallback number
+    }
+    
     console.log('Using phone number:', fromPhone)
 
     console.log(`📞 Sending SMS from: ${fromPhone} to: ${recipientPhone}`)
@@ -80,50 +89,54 @@ serve(async (req) => {
       console.log('✅ Portal link added to message')
     }
 
-    // Send SMS via Telnyx
-    const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: fromPhone,
-        to: recipientPhone,
-        text: finalMessage,
-        webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
-        webhook_failover_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
-      }),
-    })
+    // Only attempt to send SMS if we have a valid Telnyx phone number
+    if (fromPhone === '+14375249932' || fromPhone.startsWith('+1')) {
+      // Send SMS via Telnyx
+      const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${telnyxApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: fromPhone,
+          to: recipientPhone,
+          text: finalMessage,
+          webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
+          webhook_failover_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
+        }),
+      })
 
-    const telnyxData = await telnyxResponse.json()
+      const telnyxData = await telnyxResponse.json()
 
-    if (!telnyxResponse.ok) {
-      console.error('❌ Telnyx API error:', telnyxData)
+      if (!telnyxResponse.ok) {
+        console.error('❌ Telnyx API error:', telnyxData)
+        return new Response(
+          JSON.stringify({ error: `SMS service error: ${telnyxData.errors?.[0]?.detail || 'Unable to send SMS. Please check phone number configuration.'}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log('✅ SMS sent successfully:', telnyxData)
+
       return new Response(
-        JSON.stringify({ error: `Telnyx error: ${telnyxData.errors?.[0]?.detail || 'Unknown error'}` }),
+        JSON.stringify({ 
+          success: true, 
+          id: telnyxData.data?.id,
+          status: telnyxData.data?.to?.[0]?.status 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } else {
+      console.error('❌ Invalid phone number configuration:', fromPhone)
+      return new Response(
+        JSON.stringify({ error: 'SMS service not properly configured. Please contact administrator to set up a valid phone number.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    console.log('✅ SMS sent successfully:', telnyxData)
-
-    // Log communication if we have client_id
-    if (client_id) {
-      console.log('📊 Communication logged successfully')
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        id: telnyxData.data?.id,
-        status: telnyxData.data?.to?.[0]?.status 
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
 
   } catch (error) {
     console.error('❌ Error in telnyx-sms function:', error)
