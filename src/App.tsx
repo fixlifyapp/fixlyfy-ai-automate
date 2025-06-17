@@ -16,6 +16,10 @@ import FinancePage from "./pages/FinancePage";
 import ReportsPage from "./pages/ReportsPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import ClientPortal from "./pages/ClientPortal";
+import SchedulePage from "./pages/SchedulePage";
+import ConnectCenterPageOptimized from "./pages/ConnectCenterPageOptimized";
+import AiCenterPage from "./pages/AiCenterPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import { AppErrorBoundary } from "./components/ui/AppErrorBoundary";
 
 const App = () => (
@@ -30,13 +34,17 @@ const App = () => (
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:id" element={<JobDetailsPage />} />
           <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/finance" element={<FinancePage />} />
+          <Route path="/connect" element={<ConnectCenterPageOptimized />} />
+          <Route path="/ai-center" element={<AiCenterPage />} />
+          <Route path="/automations" element={<AutomationsPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/team" element={<TeamManagementPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/estimates" element={<EstimatesPage />} />
-          <Route path="/finance" element={<FinancePage />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/team" element={<TeamManagementPage />} />
           <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/automations" element={<AutomationsPage />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/portal/:accessId" element={<ClientPortal />} />
         </Routes>
       </AppErrorBoundary>
