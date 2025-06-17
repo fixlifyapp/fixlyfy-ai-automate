@@ -49,6 +49,17 @@ import ClientPortal from "@/pages/ClientPortal";
 
 const queryClient = new QueryClient();
 
+// Wrapper component for protected routes with providers
+const ProtectedRouteWithProviders = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <ProtectedRoute>
+      <AppProviders>
+        {children}
+      </AppProviders>
+    </ProtectedRoute>
+  );
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -60,51 +71,44 @@ function App() {
             {/* Public client portal route - no authentication required */}
             <Route path="/portal/:accessId" element={<ClientPortal />} />
             
-            <Route path="/" element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/jobs" element={<JobsPageOptimized />} />
-                    <Route path="/jobs/:jobId" element={<JobDetailsPage />} />
-                    <Route path="/clients" element={<ClientsPage />} />
-                    <Route path="/clients/:clientId" element={<ClientDetailPage />} />
-                    <Route path="/estimates" element={<EstimatesPage />} />
-                    <Route path="/estimates/:id" element={<EstimateViewPage />} />
-                    <Route path="/invoices" element={<InvoicesPage />} />
-                    <Route path="/finance" element={<FinancePage />} />
-                    <Route path="/schedule" element={<SchedulePage />} />
-                    <Route path="/messages" element={<MessagesPage />} />
-                    <Route path="/connect" element={<ConnectCenterPageOptimized />} />
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/reports/builder" element={<ReportBuilderPage />} />
-                    <Route path="/reports/advanced" element={<AdvancedReportsPage />} />
-                    <Route path="/analytics" element={<AnalyticsPage />} />
-                    <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
-                    <Route path="/team" element={<TeamManagementPage />} />
-                    <Route path="/team/:userId" element={<TeamMemberProfilePage />} />
-                    <Route path="/team/collaboration" element={<TeamCollaborationPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/settings/profile" element={<ProfileCompanyPage />} />
-                    <Route path="/settings/configuration" element={<ConfigurationPage />} />
-                    <Route path="/settings/ai" element={<AISettingsPage />} />
-                    <Route path="/settings/integrations" element={<IntegrationsPage />} />
-                    <Route path="/settings/telnyx" element={<TelnyxSettingsPage />} />
-                    <Route path="/phone-numbers" element={<PhoneNumbersPage />} />
-                    <Route path="/telnyx" element={<TelnyxPage />} />
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/inventory" element={<InventoryPage />} />
-                    <Route path="/automations" element={<AutomationsPage />} />
-                    <Route path="/documents" element={<DocumentsPage />} />
-                    <Route path="/ai-center" element={<AiCenterPage />} />
-                    <Route path="/preview" element={<PreviewPage />} />
-                    <Route path="/admin/roles" element={<AdminRolesPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AppProviders>
-              </ProtectedRoute>
-            } />
+            {/* Protected routes */}
+            <Route path="/" element={<ProtectedRouteWithProviders><Index /></ProtectedRouteWithProviders>} />
+            <Route path="/dashboard" element={<ProtectedRouteWithProviders><Dashboard /></ProtectedRouteWithProviders>} />
+            <Route path="/jobs" element={<ProtectedRouteWithProviders><JobsPageOptimized /></ProtectedRouteWithProviders>} />
+            <Route path="/jobs/:jobId" element={<ProtectedRouteWithProviders><JobDetailsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/clients" element={<ProtectedRouteWithProviders><ClientsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/clients/:clientId" element={<ProtectedRouteWithProviders><ClientDetailPage /></ProtectedRouteWithProviders>} />
+            <Route path="/estimates" element={<ProtectedRouteWithProviders><EstimatesPage /></ProtectedRouteWithProviders>} />
+            <Route path="/estimates/:id" element={<ProtectedRouteWithProviders><EstimateViewPage /></ProtectedRouteWithProviders>} />
+            <Route path="/invoices" element={<ProtectedRouteWithProviders><InvoicesPage /></ProtectedRouteWithProviders>} />
+            <Route path="/finance" element={<ProtectedRouteWithProviders><FinancePage /></ProtectedRouteWithProviders>} />
+            <Route path="/schedule" element={<ProtectedRouteWithProviders><SchedulePage /></ProtectedRouteWithProviders>} />
+            <Route path="/messages" element={<ProtectedRouteWithProviders><MessagesPage /></ProtectedRouteWithProviders>} />
+            <Route path="/connect" element={<ProtectedRouteWithProviders><ConnectCenterPageOptimized /></ProtectedRouteWithProviders>} />
+            <Route path="/reports" element={<ProtectedRouteWithProviders><ReportsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/reports/builder" element={<ProtectedRouteWithProviders><ReportBuilderPage /></ProtectedRouteWithProviders>} />
+            <Route path="/reports/advanced" element={<ProtectedRouteWithProviders><AdvancedReportsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/analytics" element={<ProtectedRouteWithProviders><AnalyticsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/advanced-dashboard" element={<ProtectedRouteWithProviders><AdvancedDashboard /></ProtectedRouteWithProviders>} />
+            <Route path="/team" element={<ProtectedRouteWithProviders><TeamManagementPage /></ProtectedRouteWithProviders>} />
+            <Route path="/team/:userId" element={<ProtectedRouteWithProviders><TeamMemberProfilePage /></ProtectedRouteWithProviders>} />
+            <Route path="/team/collaboration" element={<ProtectedRouteWithProviders><TeamCollaborationPage /></ProtectedRouteWithProviders>} />
+            <Route path="/settings" element={<ProtectedRouteWithProviders><SettingsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/settings/profile" element={<ProtectedRouteWithProviders><ProfileCompanyPage /></ProtectedRouteWithProviders>} />
+            <Route path="/settings/configuration" element={<ProtectedRouteWithProviders><ConfigurationPage /></ProtectedRouteWithProviders>} />
+            <Route path="/settings/ai" element={<ProtectedRouteWithProviders><AISettingsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/settings/integrations" element={<ProtectedRouteWithProviders><IntegrationsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/settings/telnyx" element={<ProtectedRouteWithProviders><TelnyxSettingsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/phone-numbers" element={<ProtectedRouteWithProviders><PhoneNumbersPage /></ProtectedRouteWithProviders>} />
+            <Route path="/telnyx" element={<ProtectedRouteWithProviders><TelnyxPage /></ProtectedRouteWithProviders>} />
+            <Route path="/products" element={<ProtectedRouteWithProviders><ProductsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/inventory" element={<ProtectedRouteWithProviders><InventoryPage /></ProtectedRouteWithProviders>} />
+            <Route path="/automations" element={<ProtectedRouteWithProviders><AutomationsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/documents" element={<ProtectedRouteWithProviders><DocumentsPage /></ProtectedRouteWithProviders>} />
+            <Route path="/ai-center" element={<ProtectedRouteWithProviders><AiCenterPage /></ProtectedRouteWithProviders>} />
+            <Route path="/preview" element={<ProtectedRouteWithProviders><PreviewPage /></ProtectedRouteWithProviders>} />
+            <Route path="/admin/roles" element={<ProtectedRouteWithProviders><AdminRolesPage /></ProtectedRouteWithProviders>} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
