@@ -101,9 +101,13 @@ function App() {
               <Route path="/settings/profile" element={<ProtectedRouteWithProviders><ProfileCompanyPage /></ProtectedRouteWithProviders>} />
               <Route path="/profile-company" element={<ProtectedRouteWithProviders><ProfileCompanyPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/configuration" element={<ProtectedRouteWithProviders><ConfigurationPage /></ProtectedRouteWithProviders>} />
+              <Route path="/configuration" element={<ProtectedRouteWithProviders><ConfigurationPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/ai" element={<ProtectedRouteWithProviders><AISettingsPage /></ProtectedRouteWithProviders>} />
+              <Route path="/ai-settings" element={<ProtectedRouteWithProviders><AISettingsPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/integrations" element={<ProtectedRouteWithProviders><IntegrationsPage /></ProtectedRouteWithProviders>} />
+              <Route path="/integrations" element={<ProtectedRouteWithProviders><IntegrationsPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/telnyx" element={<ProtectedRouteWithProviders><TelnyxSettingsPage /></ProtectedRouteWithProviders>} />
+              <Route path="/telnyx-settings" element={<ProtectedRouteWithProviders><TelnyxSettingsPage /></ProtectedRouteWithProviders>} />
               <Route path="/phone-numbers" element={<ProtectedRouteWithProviders><PhoneNumbersPage /></ProtectedRouteWithProviders>} />
               <Route path="/telnyx" element={<ProtectedRouteWithProviders><TelnyxPage /></ProtectedRouteWithProviders>} />
               <Route path="/products" element={<ProtectedRouteWithProviders><ProductsPage /></ProtectedRouteWithProviders>} />
