@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -81,7 +80,7 @@ function App() {
               <Route path="/jobs" element={<ProtectedRouteWithProviders><JobsPageOptimized /></ProtectedRouteWithProviders>} />
               <Route path="/jobs/:jobId" element={<ProtectedRouteWithProviders><JobDetailsPage /></ProtectedRouteWithProviders>} />
               <Route path="/clients" element={<ProtectedRouteWithProviders><ClientsPage /></ProtectedRouteWithProviders>} />
-              <Route path="/clients/:clientId" element={<ProtectedRouteWithProviders><ClientDetailPage /></ProtectedRouteWithProviders>} />
+              <Route path="/clients/:id" element={<ProtectedRouteWithProviders><ClientDetailPage /></ProtectedRouteWithProviders>} />
               <Route path="/estimates" element={<ProtectedRouteWithProviders><EstimatesPage /></ProtectedRouteWithProviders>} />
               <Route path="/estimates/:id" element={<ProtectedRouteWithProviders><EstimateViewPage /></ProtectedRouteWithProviders>} />
               <Route path="/invoices" element={<ProtectedRouteWithProviders><InvoicesPage /></ProtectedRouteWithProviders>} />
