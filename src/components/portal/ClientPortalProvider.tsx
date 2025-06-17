@@ -55,7 +55,7 @@ export function ClientPortalProvider({
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🔐 Starting portal authentication...');
+      console.log('🔐 Starting portal authentication with token:', loginToken?.substring(0, 10) + '...');
       
       if (!loginToken || loginToken.length < 10) {
         throw new Error('Invalid access link format');
@@ -93,7 +93,7 @@ export function ClientPortalProvider({
       setIsAuthenticated(false);
       setSession(null);
       
-      // Only show toast for non-network errors
+      // Only show toast for critical errors
       if (!errorMessage.includes('fetch') && !errorMessage.includes('connect')) {
         toast.error(errorMessage);
       }
@@ -128,9 +128,9 @@ export function ClientPortalProvider({
       setData(dashboardData.data);
     } catch (error: any) {
       console.error('💥 Dashboard data error:', error);
-      const errorMessage = error?.message || 'Failed to load your information';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      // Don't throw here - we want auth to succeed even if dashboard fails
+      const errorMessage = error?.message || 'Failed to load some information';
+      console.warn('⚠️ Dashboard load failed, continuing with auth:', errorMessage);
     }
   };
 
@@ -158,7 +158,7 @@ export function ClientPortalProvider({
       setError(null);
       login(token);
     } else {
-      setError('Maximum retry attempts reached. Please try a new access link.');
+      setError('Maximum retry attempts reached. Please request a new access link.');
     }
   };
 
@@ -166,7 +166,7 @@ export function ClientPortalProvider({
     let mounted = true;
     
     if (token) {
-      console.log('🚀 Initializing client portal with token');
+      console.log('🚀 Initializing client portal with token:', token.substring(0, 10) + '...');
       login(token).then(success => {
         if (!mounted) return;
         

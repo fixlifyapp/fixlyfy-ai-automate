@@ -34,12 +34,29 @@ serve(async (req) => {
       )
     }
 
-    // Validate session
+    // Validate session using direct query (not RPC since it's not working)
     console.log('🔍 Validating session for dashboard...');
     const { data: sessionData, error: sessionError } = await supabaseAdmin
-      .rpc('validate_client_portal_session', { p_token: token })
+      .from('client_portal_sessions')
+      .select(`
+        id,
+        token,
+        expires_at,
+        document_type,
+        document_id,
+        client_portal_user_id,
+        client_portal_users!inner(
+          id,
+          client_id,
+          email,
+          name
+        )
+      `)
+      .eq('token', token)
+      .gt('expires_at', new Date().toISOString())
+      .single()
 
-    if (sessionError) {
+    if (sessionError || !sessionData) {
       console.error('❌ Session validation error:', sessionError);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid session' }),
@@ -50,19 +67,7 @@ serve(async (req) => {
       )
     }
 
-    if (!sessionData || sessionData.length === 0 || !sessionData[0].is_valid) {
-      console.error('❌ Invalid or expired session');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid session' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      )
-    }
-
-    const session = sessionData[0]
-    const clientId = session.client_id
+    const clientId = sessionData.client_portal_users.client_id
     console.log('✅ Valid session for client:', clientId);
 
     // Get client information
@@ -145,7 +150,7 @@ serve(async (req) => {
     const { data: activities, error: activitiesError } = await supabaseAdmin
       .from('client_portal_activity_logs')
       .select('*')
-      .eq('client_portal_user_id', session.user_id)
+      .eq('client_portal_user_id', sessionData.client_portal_users.id)
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -155,15 +160,17 @@ serve(async (req) => {
 
     // Log dashboard access
     try {
-      await supabaseAdmin.rpc('log_client_portal_activity', {
-        p_user_id: session.user_id,
-        p_action: 'view_dashboard',
-        p_resource_type: 'portal',
-        p_resource_id: null,
-        p_details: {},
-        p_ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-        p_user_agent: req.headers.get('user-agent') || 'unknown'
-      });
+      await supabaseAdmin
+        .from('client_portal_activity_logs')
+        .insert({
+          client_portal_user_id: sessionData.client_portal_users.id,
+          action: 'view_dashboard',
+          resource_type: 'portal',
+          resource_id: null,
+          details: {},
+          ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+          user_agent: req.headers.get('user-agent') || 'unknown'
+        });
     } catch (logError) {
       console.warn('⚠️ Failed to log dashboard access:', logError);
     }
@@ -181,12 +188,12 @@ serve(async (req) => {
           payments: payments || [],
           activities: activities || [],
           session: {
-            user_id: session.user_id,
-            client_id: session.client_id,
-            email: session.email,
-            name: session.name,
-            document_type: session.document_type,
-            document_id: session.document_id
+            user_id: sessionData.client_portal_users.id,
+            client_id: sessionData.client_portal_users.client_id,
+            email: sessionData.client_portal_users.email,
+            name: sessionData.client_portal_users.name,
+            document_type: sessionData.document_type,
+            document_id: sessionData.document_id
           }
         }
       }),

@@ -23,7 +23,7 @@ serve(async (req) => {
     const requestBody = await req.json()
     const { token } = requestBody
     
-    console.log('🔑 Received token for validation');
+    console.log('🔑 Received token for validation:', token ? token.substring(0, 10) + '...' : 'missing');
     
     if (!token) {
       console.error('❌ No token provided');
@@ -36,26 +36,31 @@ serve(async (req) => {
       )
     }
 
-    // Validate the token and get session info
-    console.log('🔍 Validating token with database...');
-    const { data: sessionData, error } = await supabaseAdmin
-      .rpc('validate_client_portal_session', { p_token: token })
+    // First check if session exists
+    console.log('🔍 Checking session existence...');
+    const { data: sessionCheck, error: sessionCheckError } = await supabaseAdmin
+      .from('client_portal_sessions')
+      .select(`
+        id,
+        token,
+        expires_at,
+        document_type,
+        document_id,
+        client_portal_user_id,
+        client_portal_users!inner(
+          id,
+          client_id,
+          email,
+          name
+        )
+      `)
+      .eq('token', token)
+      .single()
 
-    console.log('🔍 Session validation result:', { sessionData, error });
+    console.log('🔍 Session check result:', { sessionCheck, sessionCheckError });
 
-    if (error) {
-      console.error('❌ Session validation error:', error);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Database validation failed' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      )
-    }
-
-    if (!sessionData || sessionData.length === 0) {
-      console.error('❌ No session data found for token');
+    if (sessionCheckError || !sessionCheck) {
+      console.error('❌ Session not found:', sessionCheckError);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or expired access link' }),
         { 
@@ -65,10 +70,15 @@ serve(async (req) => {
       )
     }
 
-    const session = sessionData[0]
-    console.log('✅ Session found for client:', session.client_id);
-    
-    if (!session.is_valid) {
+    // Check if session is expired
+    const isExpired = new Date(sessionCheck.expires_at) <= new Date()
+    console.log('⏰ Session expiry check:', { 
+      expires_at: sessionCheck.expires_at, 
+      now: new Date().toISOString(),
+      isExpired 
+    });
+
+    if (isExpired) {
       console.error('❌ Session has expired');
       return new Response(
         JSON.stringify({ success: false, error: 'Access link has expired' }),
@@ -79,21 +89,44 @@ serve(async (req) => {
       )
     }
 
+    // Update accessed_at
+    try {
+      await supabaseAdmin
+        .from('client_portal_sessions')
+        .update({ accessed_at: new Date().toISOString() })
+        .eq('token', token)
+    } catch (updateError) {
+      console.warn('⚠️ Failed to update accessed_at:', updateError);
+    }
+
+    const session = {
+      user_id: sessionCheck.client_portal_users.id,
+      client_id: sessionCheck.client_portal_users.client_id,
+      email: sessionCheck.client_portal_users.email,
+      name: sessionCheck.client_portal_users.name,
+      document_type: sessionCheck.document_type,
+      document_id: sessionCheck.document_id
+    }
+
+    console.log('✅ Session found for client:', session.client_id);
+
     // Log the login activity
     try {
-      await supabaseAdmin.rpc('log_client_portal_activity', {
-        p_user_id: session.user_id,
-        p_action: 'login',
-        p_resource_type: 'portal',
-        p_resource_id: null,
-        p_details: { 
-          document_type: session.document_type,
-          document_id: session.document_id,
-          login_method: 'magic_link'
-        },
-        p_ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-        p_user_agent: req.headers.get('user-agent') || 'unknown'
-      });
+      await supabaseAdmin
+        .from('client_portal_activity_logs')
+        .insert({
+          client_portal_user_id: session.user_id,
+          action: 'login',
+          resource_type: 'portal',
+          resource_id: null,
+          details: { 
+            document_type: session.document_type,
+            document_id: session.document_id,
+            login_method: 'magic_link'
+          },
+          ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+          user_agent: req.headers.get('user-agent') || 'unknown'
+        });
     } catch (logError) {
       console.warn('⚠️ Failed to log activity:', logError);
     }
@@ -114,12 +147,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         session: {
-          user_id: session.user_id,
-          client_id: session.client_id,
-          email: session.email,
-          name: session.name,
-          document_type: session.document_type,
-          document_id: session.document_id,
+          ...session,
           token: token
         }
       }),
