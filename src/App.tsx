@@ -50,7 +50,7 @@ import ClientPortal from "@/pages/ClientPortal";
 
 const queryClient = new QueryClient();
 
-// Wrapper component for protected routes with providers (excluding AuthProvider)
+// Wrapper component for protected routes with providers
 const ProtectedRouteWithProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <ProtectedRoute>
