@@ -1,48 +1,48 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Toaster } from "@/components/ui/toaster"
-import { Sonner } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/sonner"
 
-import { AuthPage } from "@/pages/AuthPage";
-import { Index } from "@/pages/Index";
-import { Dashboard } from "@/pages/Dashboard";
-import { JobsPageOptimized } from "@/pages/JobsPageOptimized";
-import { JobDetailsPage } from "@/pages/JobDetailsPage";
-import { ClientsPage } from "@/pages/ClientsPage";
-import { ClientDetailPage } from "@/pages/ClientDetailPage";
-import { EstimatesPage } from "@/pages/EstimatesPage";
-import { EstimateViewPage } from "@/pages/EstimateViewPage";
-import { InvoicesPage } from "@/pages/InvoicesPage";
-import { FinancePage } from "@/pages/FinancePage";
-import { SchedulePage } from "@/pages/SchedulePage";
-import { MessagesPage } from "@/pages/MessagesPage";
-import { ConnectCenterPageOptimized } from "@/pages/ConnectCenterPageOptimized";
-import { ReportsPage } from "@/pages/ReportsPage";
-import { ReportBuilderPage } from "@/pages/ReportBuilderPage";
-import { AdvancedReportsPage } from "@/pages/AdvancedReportsPage";
-import { AnalyticsPage } from "@/pages/AnalyticsPage";
-import { AdvancedDashboard } from "@/pages/AdvancedDashboard";
-import { TeamManagementPage } from "@/pages/TeamManagementPage";
-import { TeamMemberProfilePage } from "@/pages/TeamMemberProfilePage";
-import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { ProfileCompanyPage } from "@/pages/ProfileCompanyPage";
-import { ConfigurationPage } from "@/pages/ConfigurationPage";
-import { AISettingsPage } from "@/pages/AISettingsPage";
-import { IntegrationsPage } from "@/pages/IntegrationsPage";
-import { TelnyxSettingsPage } from "@/pages/TelnyxSettingsPage";
-import { PhoneNumbersPage } from "@/pages/PhoneNumbersPage";
-import { TelnyxPage } from "@/pages/TelnyxPage";
-import { ProductsPage } from "@/pages/ProductsPage";
-import { InventoryPage } from "@/pages/InventoryPage";
-import { AutomationsPage } from "@/pages/AutomationsPage";
-import { DocumentsPage } from "@/pages/DocumentsPage";
-import { AiCenterPage } from "@/pages/AiCenterPage";
-import { PreviewPage } from "@/pages/PreviewPage";
-import { AdminRolesPage } from "@/pages/AdminRolesPage";
-import { NotFound } from "@/pages/NotFound";
+import AuthPage from "@/pages/AuthPage";
+import Index from "@/pages/Index";
+import Dashboard from "@/pages/Dashboard";
+import JobsPageOptimized from "@/pages/JobsPageOptimized";
+import JobDetailsPage from "@/pages/JobDetailsPage";
+import ClientsPage from "@/pages/ClientsPage";
+import ClientDetailPage from "@/pages/ClientDetailPage";
+import EstimatesPage from "@/pages/EstimatesPage";
+import EstimateViewPage from "@/pages/EstimateViewPage";
+import InvoicesPage from "@/pages/InvoicesPage";
+import FinancePage from "@/pages/FinancePage";
+import SchedulePage from "@/pages/SchedulePage";
+import MessagesPage from "@/pages/MessagesPage";
+import ConnectCenterPageOptimized from "@/pages/ConnectCenterPageOptimized";
+import ReportsPage from "@/pages/ReportsPage";
+import ReportBuilderPage from "@/pages/ReportBuilderPage";
+import AdvancedReportsPage from "@/pages/AdvancedReportsPage";
+import AnalyticsPage from "@/pages/AnalyticsPage";
+import AdvancedDashboard from "@/pages/AdvancedDashboard";
+import TeamManagementPage from "@/pages/TeamManagementPage";
+import TeamMemberProfilePage from "@/pages/TeamMemberProfilePage";
+import TeamCollaborationPage from "@/pages/TeamCollaborationPage";
+import SettingsPage from "@/pages/SettingsPage";
+import ProfileCompanyPage from "@/pages/ProfileCompanyPage";
+import ConfigurationPage from "@/pages/ConfigurationPage";
+import AISettingsPage from "@/pages/AISettingsPage";
+import IntegrationsPage from "@/pages/IntegrationsPage";
+import TelnyxSettingsPage from "@/pages/TelnyxSettingsPage";
+import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
+import TelnyxPage from "@/pages/TelnyxPage";
+import ProductsPage from "@/pages/ProductsPage";
+import InventoryPage from "@/pages/InventoryPage";
+import AutomationsPage from "@/pages/AutomationsPage";
+import DocumentsPage from "@/pages/DocumentsPage";
+import AiCenterPage from "@/pages/AiCenterPage";
+import PreviewPage from "@/pages/PreviewPage";
+import AdminRolesPage from "@/pages/AdminRolesPage";
+import NotFound from "@/pages/NotFound";
 import { AppProviders } from "@/components/AppProviders";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import ClientPortal from "@/pages/ClientPortal";
@@ -54,7 +54,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
