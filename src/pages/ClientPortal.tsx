@@ -48,11 +48,11 @@ export default function ClientPortal() {
     }
   }, [accessId]);
 
-  const loadPortalData = async (id: string) => {
+  const loadPortalData = async (clientId: string) => {
     try {
       setLoading(true);
       const { data: portalData, error } = await supabase.functions.invoke('get-client-portal-data', {
-        body: { accessId: id }
+        body: { clientId }
       });
 
       if (error) throw error;
@@ -60,33 +60,13 @@ export default function ClientPortal() {
       if (portalData) {
         setData(portalData);
       } else {
-        setError('Access link not found or expired');
+        setError('Client not found');
       }
     } catch (err: any) {
       console.error('Portal data load error:', err);
       setError('Failed to load portal data');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const approveEstimate = async (estimateId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke('approve-estimate', {
-        body: { estimateId, accessId }
-      });
-
-      if (error) throw error;
-      
-      toast.success('Estimate approved successfully!');
-      
-      // Reload data to reflect changes
-      if (accessId) {
-        await loadPortalData(accessId);
-      }
-    } catch (err: any) {
-      console.error('Approve estimate error:', err);
-      toast.error('Failed to approve estimate');
     }
   };
 
@@ -189,7 +169,7 @@ export default function ClientPortal() {
                   <div key={estimate.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold">{estimate.title}</h3>
+                        <h3 className="font-semibold">{estimate.title || `Estimate ${estimate.estimate_number}`}</h3>
                         <p className="text-sm text-gray-500">#{estimate.estimate_number}</p>
                       </div>
                       <div className="text-right">
@@ -204,18 +184,6 @@ export default function ClientPortal() {
                         <span>Valid until: {new Date(estimate.valid_until).toLocaleDateString()}</span>
                       )}
                     </div>
-
-                    {estimate.status === 'sent' && (
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => approveEstimate(estimate.id)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve Estimate
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -238,7 +206,7 @@ export default function ClientPortal() {
                   <div key={invoice.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold">{invoice.title}</h3>
+                        <h3 className="font-semibold">{invoice.title || `Invoice ${invoice.invoice_number}`}</h3>
                         <p className="text-sm text-gray-500">#{invoice.invoice_number}</p>
                       </div>
                       <div className="text-right">

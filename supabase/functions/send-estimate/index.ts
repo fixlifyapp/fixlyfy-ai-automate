@@ -183,34 +183,9 @@ serve(async (req) => {
 
     console.log('🏢 Company settings loaded:', !!companySettings);
 
-    // Generate client portal access token using the fixed function
-    let portalLink = '';
-    let portalLinkGenerated = false;
-    
-    try {
-      console.log('🔗 Generating portal link for client ID:', client.id);
-      console.log('📄 Estimate ID for portal:', estimate.id);
-      
-      const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
-        p_client_id: client.id,
-        p_document_type: 'estimate',
-        p_document_id: estimate.id,
-        p_hours_valid: 72
-      });
-
-      if (tokenError) {
-        console.error('❌ Portal token generation error:', tokenError);
-      } else if (tokenData) {
-        // Use the production domain instead of Lovable test domain
-        portalLink = `https://hub.fixlify.app/portal/${tokenData}`;
-        portalLinkGenerated = true;
-        console.log('✅ Portal link generated successfully');
-      } else {
-        console.warn('⚠️ Portal token generation returned no data');
-      }
-    } catch (error) {
-      console.error('💥 Portal access token generation failed:', error);
-    }
+    // Generate simple portal link using client ID directly
+    const portalLink = `https://hub.fixlify.app/portal/${client.id}`;
+    console.log('✅ Portal link generated:', portalLink);
 
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
     const companyLogo = companySettings?.company_logo_url;
@@ -221,10 +196,8 @@ serve(async (req) => {
     
     if (customMessage) {
       subject = `Estimate ${estimate.estimate_number} from ${companyName}`;
-      // Include portal link in custom message if available
-      emailBody = portalLink 
-        ? `${customMessage}\n\nView your estimate online: ${portalLink}`
-        : customMessage;
+      // Include portal link in custom message
+      emailBody = `${customMessage}\n\nView your estimate online: ${portalLink}`;
     } else {
       subject = `Your Estimate ${estimate.estimate_number} is Ready`;
       emailBody = createEstimateEmailTemplate({
@@ -251,7 +224,7 @@ serve(async (req) => {
     console.log('📧 FROM:', fromEmail);
     console.log('📧 TO:', recipientEmail);
     console.log('📧 SUBJECT:', subject);
-    console.log('🔗 Portal link included:', portalLinkGenerated);
+    console.log('🔗 Portal link included:', portalLink);
 
     const formData = new FormData();
     formData.append('from', fromEmail);
@@ -261,7 +234,7 @@ serve(async (req) => {
       formData.append('text', emailBody);
     } else {
       formData.append('html', emailBody);
-      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour estimate ${estimate.estimate_number} is ready for review.\n\nTotal: $${(estimate.total || 0).toFixed(2)}\n\n${portalLink ? `View your estimate: ${portalLink}` : 'Your estimate will be available soon.'}\n\nThank you for your business!\n\n${companyName}`);
+      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour estimate ${estimate.estimate_number} is ready for review.\n\nTotal: $${(estimate.total || 0).toFixed(2)}\n\nView your estimate: ${portalLink}\n\nThank you for your business!\n\n${companyName}`);
     }
     formData.append('o:tracking', 'yes');
     formData.append('o:tracking-clicks', 'yes');
@@ -326,7 +299,7 @@ serve(async (req) => {
         success: true, 
         message: 'Email sent successfully',
         messageId: mailgunResult.id,
-        portalLinkIncluded: portalLinkGenerated
+        portalLinkIncluded: true
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

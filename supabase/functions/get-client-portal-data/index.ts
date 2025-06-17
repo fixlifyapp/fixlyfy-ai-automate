@@ -18,46 +18,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { accessId } = await req.json()
-    console.log('🔍 Looking up portal access for:', accessId)
-
-    // Verify the access token and get associated data
-    const { data: accessData, error: accessError } = await supabaseClient
-      .from('client_portal_access')
-      .select('*')
-      .eq('access_token', accessId)
-      .single()
-
-    if (accessError || !accessData) {
-      console.error('❌ Access token not found:', accessError)
-      return new Response(
-        JSON.stringify({ error: 'Access token not found or expired' }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-
-    // Check if token has expired
-    if (new Date(accessData.expires_at) < new Date()) {
-      console.error('❌ Access token expired')
-      return new Response(
-        JSON.stringify({ error: 'Access token has expired' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-
-    console.log('✅ Valid access token found for client:', accessData.client_id)
+    const { clientId } = await req.json()
+    console.log('🔍 Looking up portal data for client:', clientId)
 
     // Get client information
     const { data: client, error: clientError } = await supabaseClient
       .from('clients')
       .select('*')
-      .eq('id', accessData.client_id)
+      .eq('id', clientId)
       .single()
 
     if (clientError || !client) {
@@ -71,11 +39,13 @@ serve(async (req) => {
       )
     }
 
+    console.log('✅ Valid client found:', client.name)
+
     // Get estimates for the client
     const { data: estimates, error: estimatesError } = await supabaseClient
       .from('estimates')
       .select('*')
-      .eq('client_id', accessData.client_id)
+      .eq('client_id', clientId)
       .order('created_at', { ascending: false })
 
     if (estimatesError) {
@@ -86,18 +56,12 @@ serve(async (req) => {
     const { data: invoices, error: invoicesError } = await supabaseClient
       .from('invoices')
       .select('*')
-      .eq('client_id', accessData.client_id)
+      .eq('client_id', clientId)
       .order('created_at', { ascending: false })
 
     if (invoicesError) {
       console.error('❌ Error fetching invoices:', invoicesError)
     }
-
-    // Mark the access token as used
-    await supabaseClient
-      .from('client_portal_access')
-      .update({ used_at: new Date().toISOString() })
-      .eq('access_token', accessId)
 
     const portalData = {
       client: {

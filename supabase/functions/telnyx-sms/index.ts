@@ -69,41 +69,15 @@ serve(async (req) => {
     console.log(`📞 Sending SMS from: ${fromPhone} to: ${recipientPhone}`)
     console.log(`📝 Message length: ${message.length}`)
 
-    // Generate portal link if we have document info
+    // Generate portal link if we have client info
     let finalMessage = message
-    if ((estimateId || invoiceId) && client_id) {
-      console.log('🔗 Generating portal link for client:', client_id)
+    if (client_id && (estimateId || invoiceId)) {
+      console.log('🔗 Adding portal link for client:', client_id)
       
-      const documentType = estimateId ? 'estimate' : 'invoice'
-      const documentId = estimateId || invoiceId
-      
-      console.log('📄 Document details:', {
-        documentType,
-        documentId,
-        client_id
-      })
-
-      try {
-        const { data: accessToken, error: tokenError } = await supabaseClient
-          .rpc('generate_client_portal_access', {
-            p_client_id: client_id,
-            p_document_type: documentType,
-            p_document_id: documentId,
-            p_hours_valid: 72
-          })
-
-        if (tokenError) {
-          console.error('❌ Portal token generation error:', tokenError)
-        } else if (accessToken) {
-          // Use the production domain instead of Lovable test domain
-          const portalUrl = `https://hub.fixlify.app/portal/${accessToken}`
-          finalMessage = `${message}\n\nView online: ${portalUrl}`
-          console.log('✅ Portal link generated and added to message')
-        }
-      } catch (error) {
-        console.error('❌ Error generating portal link:', error)
-        // Continue without portal link
-      }
+      // Use simple client ID based portal link
+      const portalUrl = `https://hub.fixlify.app/portal/${client_id}`
+      finalMessage = `${message}\n\nView online: ${portalUrl}`
+      console.log('✅ Portal link added to message')
     }
 
     // Send SMS via Telnyx
