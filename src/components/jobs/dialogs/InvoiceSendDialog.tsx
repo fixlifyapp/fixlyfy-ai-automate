@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -103,7 +104,7 @@ export const InvoiceSendDialog = ({
     try {
       console.log("Fetching invoice details for invoice number:", invoiceNumber);
       
-      // Since the view doesn't exist, query directly from invoices table
+      // Query directly from invoices table
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
@@ -467,7 +468,6 @@ export const InvoiceSendDialog = ({
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No valid email available for this client</p>
                     )}
-                    <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
                   </div>
                 </div>
                 
@@ -485,7 +485,6 @@ export const InvoiceSendDialog = ({
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No valid phone number available for this client</p>
                     )}
-                    <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
                   </div>
                 </div>
               </RadioGroup>
@@ -505,22 +504,22 @@ export const InvoiceSendDialog = ({
                   className={validationError ? "border-red-500" : ""}
                 />
                 {validationError && (
-                  <p className="text-sm text-red-600 mt-1">{validationError}</p>
-                )}
-                {sendMethod === "sms" && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Phone numbers will be automatically formatted for Telnyx delivery
-                  </p>
+                  <p className="text-sm text-red-600">{validationError}</p>
                 )}
               </div>
               
-              <div className="pt-4 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setCurrentStep("warranty")}>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStep("warranty")}
+                  className="flex-1"
+                >
                   Back
                 </Button>
-                <Button 
-                  onClick={handleSendInvoice} 
-                  disabled={!sendTo || isProcessing || !!validationError}
+                <Button
+                  onClick={handleSendInvoice}
+                  disabled={isProcessing || !sendTo.trim()}
+                  className="flex-1"
                 >
                   {isProcessing ? "Sending..." : "Send Invoice"}
                 </Button>
@@ -529,23 +528,16 @@ export const InvoiceSendDialog = ({
           )}
           
           {currentStep === "confirmation" && (
-            <div className="text-center p-6">
-              <div className="flex justify-center mb-4">
-                <CheckCircle className="h-16 w-16 text-green-500" />
+            <div className="text-center space-y-4">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+              <div>
+                <h3 className="text-lg font-semibold">Invoice Sent Successfully!</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Invoice {invoiceNumber} has been sent to {contactInfo.name}
+                </p>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Invoice Sent Successfully</h3>
-              <p className="text-muted-foreground mb-6">
-                The invoice has been sent to the client via {sendMethod === "email" ? "email" : "text message"}.
-                {sendMethod === "email" && (
-                  <span className="block mt-2">The client can access their portal to view and pay the invoice.</span>
-                )}
-                {sendMethod === "sms" && (
-                  <span className="block mt-2">The client can access their portal to view and pay the invoice via the secure link.</span>
-                )}
-                {customNote && <span className="block mt-2">Your warranty recommendation was included.</span>}
-              </p>
-              <Button onClick={handleCloseAfterSend}>
-                Close
+              <Button onClick={handleCloseAfterSend} className="w-full">
+                Done
               </Button>
             </div>
           )}

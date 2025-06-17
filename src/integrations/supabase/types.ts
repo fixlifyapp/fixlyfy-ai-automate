@@ -636,141 +636,6 @@ export type Database = {
         }
         Relationships: []
       }
-      client_portal_activity_logs: {
-        Row: {
-          action: string
-          client_portal_user_id: string
-          created_at: string
-          details: Json | null
-          id: string
-          ip_address: string | null
-          resource_id: string | null
-          resource_type: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          action: string
-          client_portal_user_id: string
-          created_at?: string
-          details?: Json | null
-          id?: string
-          ip_address?: string | null
-          resource_id?: string | null
-          resource_type?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          action?: string
-          client_portal_user_id?: string
-          created_at?: string
-          details?: Json | null
-          id?: string
-          ip_address?: string | null
-          resource_id?: string | null
-          resource_type?: string | null
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_portal_activity_logs_client_portal_user_id_fkey"
-            columns: ["client_portal_user_id"]
-            isOneToOne: false
-            referencedRelation: "client_portal_users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      client_portal_sessions: {
-        Row: {
-          accessed_at: string | null
-          client_portal_user_id: string
-          created_at: string
-          document_id: string | null
-          document_type: string | null
-          expires_at: string
-          id: string
-          ip_address: string | null
-          token: string
-          user_agent: string | null
-        }
-        Insert: {
-          accessed_at?: string | null
-          client_portal_user_id: string
-          created_at?: string
-          document_id?: string | null
-          document_type?: string | null
-          expires_at: string
-          id?: string
-          ip_address?: string | null
-          token: string
-          user_agent?: string | null
-        }
-        Update: {
-          accessed_at?: string | null
-          client_portal_user_id?: string
-          created_at?: string
-          document_id?: string | null
-          document_type?: string | null
-          expires_at?: string
-          id?: string
-          ip_address?: string | null
-          token?: string
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_portal_sessions_client_portal_user_id_fkey"
-            columns: ["client_portal_user_id"]
-            isOneToOne: false
-            referencedRelation: "client_portal_users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      client_portal_users: {
-        Row: {
-          client_id: string
-          created_at: string
-          email: string
-          id: string
-          is_active: boolean
-          last_login_at: string | null
-          name: string
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          client_id: string
-          created_at?: string
-          email: string
-          id?: string
-          is_active?: boolean
-          last_login_at?: string | null
-          name: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          client_id?: string
-          created_at?: string
-          email?: string
-          id?: string
-          is_active?: boolean
-          last_login_at?: string | null
-          name?: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_portal_users_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       client_properties: {
         Row: {
           address: string | null
@@ -3499,15 +3364,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      generate_client_portal_access: {
-        Args: {
-          p_client_id: string
-          p_document_type?: string
-          p_document_id?: string
-          p_hours_valid?: number
-        }
-        Returns: string
-      }
       generate_next_id: {
         Args: { p_entity_type: string }
         Returns: string
@@ -3552,18 +3408,6 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: string
       }
-      log_client_portal_activity: {
-        Args: {
-          p_user_id: string
-          p_action: string
-          p_resource_type?: string
-          p_resource_id?: string
-          p_details?: Json
-          p_ip_address?: string
-          p_user_agent?: string
-        }
-        Returns: undefined
-      }
       log_security_event: {
         Args: {
           p_action: string
@@ -3580,17 +3424,6 @@ export type Database = {
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
-      }
-      validate_client_portal_session: {
-        Args: { p_token: string }
-        Returns: {
-          user_id: string
-          client_id: string
-          email: string
-          name: string
-          document_type: string
-          document_id: string
-        }[]
       }
     }
     Enums: {
