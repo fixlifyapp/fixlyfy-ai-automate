@@ -95,7 +95,8 @@ serve(async (req) => {
         if (tokenError) {
           console.error('❌ Portal token generation error:', tokenError)
         } else if (accessToken) {
-          const portalUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '')}.lovable.app/portal/${accessToken}`
+          // Use the production domain instead of Lovable test domain
+          const portalUrl = `https://hub.fixlify.app/portal/${accessToken}`
           finalMessage = `${message}\n\nView online: ${portalUrl}`
           console.log('✅ Portal link generated and added to message')
         }

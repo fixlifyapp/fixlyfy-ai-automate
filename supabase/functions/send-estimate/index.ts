@@ -201,7 +201,8 @@ serve(async (req) => {
       if (tokenError) {
         console.error('❌ Portal token generation error:', tokenError);
       } else if (tokenData) {
-        portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
+        // Use the production domain instead of Lovable test domain
+        portalLink = `https://hub.fixlify.app/portal/${tokenData}`;
         portalLinkGenerated = true;
         console.log('✅ Portal link generated successfully');
       } else {

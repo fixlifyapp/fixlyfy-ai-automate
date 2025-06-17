@@ -14,8 +14,11 @@ DECLARE
   access_token text;
   expires_at timestamp with time zone;
 BEGIN
-  -- Generate a secure random token
-  access_token := encode(gen_random_bytes(32), 'base64url');
+  -- Generate a secure random token using base64 instead of base64url
+  access_token := encode(gen_random_bytes(32), 'base64');
+  
+  -- Remove any problematic characters for URLs
+  access_token := replace(replace(replace(access_token, '+', '-'), '/', '_'), '=', '');
   
   -- Calculate expiration time
   expires_at := now() + (p_hours_valid || ' hours')::interval;
