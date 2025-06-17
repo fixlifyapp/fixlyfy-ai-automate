@@ -19,14 +19,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 const JobDetailsPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { jobId } = useParams<{ jobId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>("overview");
   const { hasPermission } = useRBAC();
   const isMobile = useIsMobile();
   
-  console.log("🔍 JobDetailsPage - params:", { id });
+  console.log("🔍 JobDetailsPage - params:", { jobId });
   console.log("🔍 JobDetailsPage - location:", location);
   
   useEffect(() => {
@@ -47,7 +47,7 @@ const JobDetailsPage = () => {
     return /^J-\d+$/.test(jobId);
   };
   
-  if (!id) {
+  if (!jobId) {
     console.error("❌ JobDetailsPage - No job ID provided");
     return (
       <PageLayout>
@@ -69,15 +69,15 @@ const JobDetailsPage = () => {
     );
   }
   
-  if (!isValidJobId(id)) {
-    console.error("❌ JobDetailsPage - Invalid job ID format:", id);
+  if (!isValidJobId(jobId)) {
+    console.error("❌ JobDetailsPage - Invalid job ID format:", jobId);
     return (
       <PageLayout>
         <div className="container mx-auto px-2 sm:px-4">
           <div className="text-center py-8">
             <h1 className="text-xl sm:text-2xl font-bold text-red-600">Invalid Job ID</h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Job ID "{id}" is not in the correct format. Expected format: J-####
+              Job ID "{jobId}" is not in the correct format. Expected format: J-####
             </p>
             <Button 
               variant="outline" 
@@ -93,11 +93,11 @@ const JobDetailsPage = () => {
     );
   }
   
-  console.log("✅ JobDetailsPage - Valid job ID, rendering job details for:", id);
+  console.log("✅ JobDetailsPage - Valid job ID, rendering job details for:", jobId);
   
   return (
     <PageLayout>
-      <JobDetailsProvider jobId={id}>
+      <JobDetailsProvider jobId={jobId}>
         <div className="container mx-auto px-2 sm:px-4 max-w-none overflow-x-hidden">
           <div className="mb-4 sm:mb-6">
             <Card className="border-fixlyfy-border shadow-sm">
@@ -111,22 +111,22 @@ const JobDetailsPage = () => {
               onTabChange={setActiveTab}
             >
               <TabsContent value="overview" className="mt-0">
-                <JobOverview jobId={id} />
+                <JobOverview jobId={jobId} />
               </TabsContent>
               <TabsContent value="estimates" className="mt-0">
                 <ModernJobEstimatesTab 
-                  jobId={id} 
+                  jobId={jobId} 
                   onEstimateConverted={handleEstimateConverted}
                 />
               </TabsContent>
               <TabsContent value="invoices" className="mt-0">
-                <ModernJobInvoicesTab jobId={id} />
+                <ModernJobInvoicesTab jobId={jobId} />
               </TabsContent>
               <TabsContent value="payments" className="mt-0">
-                <ModernJobPaymentsTab jobId={id} />
+                <ModernJobPaymentsTab jobId={jobId} />
               </TabsContent>
               <TabsContent value="history" className="mt-0">
-                <JobHistory jobId={id} />
+                <JobHistory jobId={jobId} />
               </TabsContent>
             </JobDetailsTabs>
           </div>
