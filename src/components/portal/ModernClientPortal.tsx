@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Loader2, LogOut, RefreshCw, FileText, CreditCard, Calendar, Activity, Download, Eye } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, Box, Sphere } from '@react-three/drei';
+import { OrbitControls, Box, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 
 // 3D Background Component
