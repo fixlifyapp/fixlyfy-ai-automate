@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -7,17 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const createEstimateEmailTemplate = (data: any) => {
+const createInvoiceEmailTemplate = (data: any) => {
   const {
     companyName,
     companyLogo,
     companyPhone,
     companyEmail,
     clientName,
-    estimateNumber,
+    invoiceNumber,
     total,
+    amountDue,
+    invoiceLink,
     portalLink,
-    companyAddress,
     companyWebsite
   } = data;
 
@@ -27,14 +27,14 @@ const createEstimateEmailTemplate = (data: any) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Estimate is Ready</title>
+  <title>Invoice Ready for Payment</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       margin: 0; 
       padding: 0; 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       min-height: 100vh;
       padding: 20px;
     }
@@ -47,7 +47,7 @@ const createEstimateEmailTemplate = (data: any) => {
       box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     }
     .header { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); 
       padding: 40px 30px; 
       text-align: center; 
       position: relative;
@@ -109,9 +109,9 @@ const createEstimateEmailTemplate = (data: any) => {
       line-height: 1.6;
       margin-bottom: 32px;
     }
-    .estimate-card { 
-      background: linear-gradient(135deg, #f8faff 0%, #f1f5ff 100%);
-      border: 2px solid #e2e8f0; 
+    .invoice-card { 
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border: 2px solid #fecaca; 
       border-radius: 16px; 
       padding: 32px; 
       margin: 32px 0; 
@@ -119,18 +119,18 @@ const createEstimateEmailTemplate = (data: any) => {
       position: relative;
       overflow: hidden;
     }
-    .estimate-card::before {
+    .invoice-card::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       height: 4px;
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%);
     }
-    .estimate-badge {
+    .invoice-badge {
       display: inline-block;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       color: white;
       padding: 8px 20px;
       border-radius: 50px;
@@ -140,31 +140,49 @@ const createEstimateEmailTemplate = (data: any) => {
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .estimate-title { 
+    .invoice-title { 
       font-size: 24px; 
       font-weight: 700; 
       color: #1a1a1a; 
       margin-bottom: 8px; 
     }
-    .estimate-number { 
+    .invoice-number { 
       font-size: 16px; 
       color: #718096; 
       margin-bottom: 20px; 
       font-weight: 500;
     }
-    .estimate-total { 
-      font-size: 36px; 
-      font-weight: 800; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .invoice-amounts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 24px 0;
+    }
+    .amount-item {
+      text-align: center;
+    }
+    .amount-label {
+      font-size: 14px;
+      color: #718096;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .amount-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+    .amount-due {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      margin: 20px 0; 
-      text-shadow: none;
+      font-size: 32px;
     }
     .portal-button { 
       display: inline-block; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); 
       color: #ffffff; 
       text-decoration: none; 
       padding: 16px 32px; 
@@ -172,7 +190,7 @@ const createEstimateEmailTemplate = (data: any) => {
       font-weight: 600; 
       font-size: 16px; 
       margin: 24px 0; 
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); 
+      box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3); 
       transition: all 0.3s ease;
       border: none;
       cursor: pointer;
@@ -181,7 +199,7 @@ const createEstimateEmailTemplate = (data: any) => {
     }
     .portal-button:hover { 
       transform: translateY(-2px); 
-      box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4); 
+      box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4); 
     }
     .features-list {
       margin-top: 20px;
@@ -198,7 +216,7 @@ const createEstimateEmailTemplate = (data: any) => {
     .feature-icon {
       width: 20px;
       height: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -208,12 +226,26 @@ const createEstimateEmailTemplate = (data: any) => {
       font-size: 12px;
       font-weight: bold;
     }
+    .urgent-note { 
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); 
+      border: 2px solid #f59e0b; 
+      border-radius: 12px; 
+      padding: 20px; 
+      margin: 24px 0; 
+      color: #92400e;
+      border-left: 4px solid #f59e0b;
+    }
+    .urgent-note strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
     .company-info-section {
-      background: linear-gradient(135deg, #f8faff 0%, #f1f5ff 100%);
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
       border-radius: 12px;
       padding: 24px;
       margin: 32px 0;
-      border-left: 4px solid #667eea;
+      border-left: 4px solid #dc2626;
     }
     .company-info-title {
       font-size: 18px;
@@ -260,35 +292,13 @@ const createEstimateEmailTemplate = (data: any) => {
       line-height: 1.6;
       margin-bottom: 20px;
     }
-    .social-links {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      margin-top: 20px;
-    }
-    .social-link {
-      width: 40px;
-      height: 40px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(255,255,255,0.8);
-      text-decoration: none;
-      transition: all 0.3s ease;
-    }
-    .social-link:hover {
-      background: rgba(255,255,255,0.2);
-      transform: translateY(-2px);
-    }
     @media (max-width: 600px) {
       body { padding: 10px; }
       .content { padding: 30px 20px; }
-      .estimate-card { padding: 24px 16px; margin: 20px 0; }
+      .invoice-card { padding: 24px 16px; margin: 20px 0; }
       .portal-button { padding: 14px 24px; font-size: 14px; }
       .header { padding: 30px 20px; }
-      .estimate-total { font-size: 28px; }
+      .invoice-amounts { grid-template-columns: 1fr; gap: 16px; }
       .company-details { grid-template-columns: 1fr; }
     }
   </style>
@@ -298,77 +308,99 @@ const createEstimateEmailTemplate = (data: any) => {
     <div class="header">
       <div class="header-content">
         ${companyLogo ? `<img src="${companyLogo}" alt="${companyName}" class="logo">` : ''}
-        <h1 class="header-text">${companyName}</h1>
-        <p class="header-subtitle">Your Trusted Service Provider</p>
+        <h1 class="header-text">Invoice Ready</h1>
+        <p class="header-subtitle">Payment Required - ${companyName}</p>
       </div>
     </div>
     
     <div class="content">
-      <div class="greeting">Hello ${clientName},</div>
+      <div class="greeting">Hi ${clientName || 'valued customer'},</div>
       
-      <p class="intro-text">Great news! We've prepared a detailed estimate for your service request. Our team has carefully reviewed your needs and put together a comprehensive quote.</p>
+      <p class="intro-text">Thank you for your business! Your invoice is now ready for payment. Please review the details below and submit your payment at your earliest convenience.</p>
       
-      <div class="estimate-card">
-        <div class="estimate-badge">Estimate Ready</div>
-        <div class="estimate-title">Professional Service Estimate</div>
-        <div class="estimate-number">Estimate #${estimateNumber}</div>
-        <div class="estimate-total">$${total.toFixed(2)}</div>
+      <div class="invoice-card">
+        <div class="invoice-badge">Payment Due</div>
+        <div class="invoice-title">Service Invoice</div>
+        <div class="invoice-number">Invoice #${invoiceNumber}</div>
+        
+        <div class="invoice-amounts">
+          <div class="amount-item">
+            <div class="amount-label">Total Amount</div>
+            <div class="amount-value">$${total.toFixed(2)}</div>
+          </div>
+          <div class="amount-item">
+            <div class="amount-label">Amount Due</div>
+            <div class="amount-value amount-due">$${amountDue.toFixed(2)}</div>
+          </div>
+        </div>
         
         ${portalLink ? `
           <a href="${portalLink}" class="portal-button">
-            View & Accept Estimate
+            View & Pay Online
           </a>
           <div class="features-list">
             <div class="feature-item">
-              <span class="feature-icon">✓</span>
-              <span>Secure online portal access</span>
+              <span class="feature-icon">🔒</span>
+              <span>Secure online payment</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📄</span>
+              <span>Download PDF invoice</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📊</span>
+              <span>View payment history</span>
             </div>
             <div class="feature-item">
               <span class="feature-icon">📱</span>
-              <span>Mobile-friendly interface</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">📋</span>
-              <span>Detailed service breakdown</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">💳</span>
-              <span>Easy approval process</span>
+              <span>Mobile-friendly portal</span>
             </div>
           </div>
         ` : `
-          <p style="margin-top: 20px; font-size: 16px; color: #718096;">
-            Please contact us to review and discuss this estimate.
-          </p>
+          <a href="${invoiceLink}" class="portal-button">View Invoice</a>
         `}
       </div>
       
+      ${amountDue > 0 ? `
+        <div class="urgent-note">
+          <strong>⚠️ Payment Required</strong>
+          Please remit payment at your earliest convenience to avoid any service interruptions. We appreciate your prompt attention to this matter.
+        </div>
+      ` : ''}
+      
       <div class="company-info-section">
-        <div class="company-info-title">About ${companyName}</div>
+        <div class="company-info-title">Contact ${companyName}</div>
         <div class="company-details">
           ${companyPhone ? `
             <div class="company-detail">
               <span class="company-detail-icon">📞</span>
-              <a href="tel:${companyPhone}" style="color: #667eea; text-decoration: none;">${companyPhone}</a>
+              <a href="tel:${companyPhone}" style="color: #dc2626; text-decoration: none;">${companyPhone}</a>
             </div>
           ` : ''}
           ${companyEmail ? `
             <div class="company-detail">
               <span class="company-detail-icon">✉️</span>
-              <a href="mailto:${companyEmail}" style="color: #667eea; text-decoration: none;">${companyEmail}</a>
+              <a href="mailto:${companyEmail}" style="color: #dc2626; text-decoration: none;">${companyEmail}</a>
             </div>
           ` : ''}
           ${companyWebsite ? `
             <div class="company-detail">
               <span class="company-detail-icon">🌐</span>
-              <a href="${companyWebsite}" style="color: #667eea; text-decoration: none;">${companyWebsite}</a>
+              <a href="${companyWebsite}" style="color: #dc2626; text-decoration: none;">${companyWebsite}</a>
             </div>
           ` : ''}
         </div>
       </div>
       
+      ${portalLink && invoiceLink ? `
+        <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0;">
+          <strong>Alternative access:</strong><br>
+          <a href="${invoiceLink}" style="color: #dc2626; word-break: break-all;">${invoiceLink}</a>
+        </div>
+      ` : ''}
+      
       <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin-top: 32px;">
-        If you have any questions about this estimate or would like to discuss any details, please don't hesitate to reach out. We're here to ensure you have all the information you need to make an informed decision.
+        If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us. We're here to help and appreciate your business.
       </p>
       
       <p style="color: #1a1a1a; font-size: 16px; font-weight: 600; margin-top: 24px;">
@@ -402,7 +434,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('📧 Email Estimate request received');
+    console.log('📧 Email Invoice request received');
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -420,124 +452,128 @@ serve(async (req) => {
       throw new Error('Failed to authenticate user');
     }
 
+    console.log('send-invoice - Authenticated user ID:', userData.user.id);
+
     const requestBody = await req.json()
     console.log('Request body:', requestBody);
     
-    const { estimateId, recipientEmail, customMessage } = requestBody;
+    const { invoiceId, recipientEmail, customMessage } = requestBody;
 
-    if (!estimateId || !recipientEmail) {
-      throw new Error('Missing required fields: estimateId and recipientEmail');
+    if (!invoiceId || !recipientEmail) {
+      throw new Error('Missing required fields: invoiceId and recipientEmail');
     }
 
-    console.log('Processing email for estimate:', estimateId, 'to email:', recipientEmail);
+    console.log('Processing email for invoice:', invoiceId, 'to email:', recipientEmail);
 
-    // Get estimate details
-    const { data: estimate, error: estimateError } = await supabaseAdmin
-      .from('estimates')
-      .select('*')
-      .eq('id', estimateId)
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
+      .from('invoices')
+      .select(`
+        *,
+        jobs!inner(
+          *,
+          clients(*)
+        )
+      `)
+      .eq('id', invoiceId)
       .single();
 
-    if (estimateError || !estimate) {
-      throw new Error('Estimate not found');
+    if (invoiceError || !invoice) {
+      console.error('Invoice lookup error:', invoiceError);
+      throw new Error('Invoice not found');
     }
 
-    console.log('Estimate found:', estimate.estimate_number);
+    console.log('Invoice found:', invoice.invoice_number);
     
-    // Get job and client details
-    const { data: job, error: jobError } = await supabaseAdmin
-      .from('jobs')
-      .select('*')
-      .eq('id', estimate.job_id)
-      .single();
+    const job = invoice.jobs;
+    const client = job?.clients;
 
-    if (jobError) {
-      console.warn('Could not fetch job details:', jobError);
-    }
-
-    let client = null;
-    if (job?.client_id) {
-      const { data: clientData, error: clientError } = await supabaseAdmin
-        .from('clients')
-        .select('*')
-        .eq('id', job.client_id)
-        .single();
-      
-      if (!clientError) {
-        client = clientData;
-      }
-    }
-
-    // Get company settings
-    const { data: companySettings } = await supabaseAdmin
+    const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
       .eq('user_id', userData.user.id)
       .maybeSingle();
 
-    const companyName = companySettings?.company_name || 'Fixlify Services';
-    const companyEmail = companySettings?.company_email || userData.user.email || '';
-    const companyPhone = companySettings?.company_phone || '';
-    const companyLogo = companySettings?.company_logo_url;
-    const companyWebsite = companySettings?.company_website;
+    if (settingsError) {
+      console.error('send-invoice - Error fetching company settings:', settingsError);
+    }
 
-    // Generate secure document access token using correct portal domain
+    // Generate client portal login token and create portal link
     let portalLink = '';
     if (client?.email) {
       try {
-        console.log('Generating secure access token for client email:', client.email);
-        
-        const { data: accessToken, error: tokenError } = await supabaseAdmin.rpc('generate_secure_document_access', {
-          p_document_type: 'estimate',
-          p_document_id: estimate.id,
-          p_client_email: client.email,
-          p_hours_valid: 72
+        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
+          p_email: client.email
         });
 
-        if (!tokenError && accessToken) {
-          portalLink = `https://portal.fixlify.app/view/${accessToken}`;
-          console.log('Secure access link generated:', portalLink.substring(0, 60) + '...');
-        } else {
-          console.error('Failed to generate secure access token:', tokenError);
+        if (!tokenError && tokenData) {
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/invoices?id=${invoice.id}`;
+          console.log('Portal link generated for client portal');
         }
       } catch (error) {
-        console.warn('Failed to generate secure access token:', error);
+        console.warn('Failed to generate portal login token:', error);
       }
     }
 
-    // Create email HTML
-    const emailHtml = createEstimateEmailTemplate({
-      companyName,
-      companyEmail,
-      companyPhone,
-      companyLogo,
-      companyWebsite,
-      clientName: client?.name || 'Valued Customer',
-      estimateNumber: estimate.estimate_number,
-      total: estimate.total || 0,
-      portalLink
-    });
+    const invoiceLink = `https://portal.fixlify.app/invoice/view/${invoice.id}`;
 
-    // Get Mailgun configuration
+    const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
+    const companyLogo = companySettings?.company_logo_url;
+    const companyPhone = companySettings?.company_phone;
+    const companyEmail = companySettings?.company_email;
+    const companyWebsite = companySettings?.company_website;
+
+    const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
+
+    let subject, emailBody;
+    
+    if (customMessage) {
+      subject = `Invoice ${invoice.invoice_number} from ${companyName}`;
+      emailBody = customMessage;
+    } else {
+      subject = `Your Invoice ${invoice.invoice_number} is Ready`;
+      emailBody = createInvoiceEmailTemplate({
+        companyName,
+        companyLogo,
+        companyPhone,
+        companyEmail,
+        companyWebsite,
+        clientName: client?.name,
+        invoiceNumber: invoice.invoice_number,
+        total: invoice.total || 0,
+        amountDue,
+        invoiceLink,
+        portalLink
+      });
+    }
+
+    const fromEmail = `${companyName} <${companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30)}@fixlify.app>`;
+
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
+      console.error('send-invoice - Mailgun API key not found in environment variables');
       throw new Error('Mailgun API key not configured');
     }
 
-    const mailgunDomain = 'fixlify.app';
-    const fromEmail = `${companyName} <estimates@${mailgunDomain}>`;
+    console.log('send-invoice - Sending email via Mailgun');
+    console.log('send-invoice - FROM:', fromEmail);
+    console.log('send-invoice - TO:', recipientEmail);
+    console.log('send-invoice - SUBJECT:', subject);
 
-    // Send email via Mailgun
     const formData = new FormData();
     formData.append('from', fromEmail);
     formData.append('to', recipientEmail);
-    formData.append('subject', `Your Estimate #${estimate.estimate_number} is Ready - ${companyName}`);
-    formData.append('html', emailHtml);
+    formData.append('subject', subject);
+    if (customMessage) {
+      formData.append('text', emailBody);
+    } else {
+      formData.append('html', emailBody);
+      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour invoice ${invoice.invoice_number} is ready for payment.\n\nTotal: $${(invoice.total || 0).toFixed(2)}\nAmount Due: $${amountDue.toFixed(2)}\n\nView your invoice: ${invoiceLink}\n${portalLink ? `\nClient Portal: ${portalLink}` : ''}\n\nThank you for your business!\n\n${companyName}`);
+    }
     formData.append('o:tracking', 'yes');
     formData.append('o:tracking-clicks', 'yes');
     formData.append('o:tracking-opens', 'yes');
 
-    const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
+    const mailgunUrl = 'https://api.mailgun.net/v3/fixlify.app/messages';
     const basicAuth = btoa(`api:${mailgunApiKey}`);
 
     const mailgunResponse = await fetch(mailgunUrl, {
@@ -548,31 +584,42 @@ serve(async (req) => {
       body: formData
     });
 
-    const mailgunResult = await mailgunResponse.json();
-    console.log('Mailgun response:', mailgunResult);
+    const responseText = await mailgunResponse.text();
+    console.log('send-invoice - Mailgun response status:', mailgunResponse.status);
+    console.log('send-invoice - Mailgun response body:', responseText);
 
     if (!mailgunResponse.ok) {
-      console.error('Mailgun send error:', mailgunResult);
-      throw new Error(`Failed to send email via Mailgun: ${mailgunResult.message || 'Unknown error'}`);
+      console.error("send-invoice - Mailgun send error:", responseText);
+      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${responseText}`);
     }
+
+    let mailgunResult;
+    try {
+      mailgunResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('send-invoice - Error parsing Mailgun response:', parseError);
+      throw new Error('Invalid response from Mailgun API');
+    }
+
+    console.log('send-invoice - Email sent successfully via Mailgun:', mailgunResult);
 
     // Log email communication
     try {
       await supabaseAdmin
-        .from('estimate_communications')
+        .from('invoice_communications')
         .insert({
-          estimate_id: estimateId,
+          invoice_id: invoiceId,
           communication_type: 'email',
           recipient: recipientEmail,
-          subject: `Your Estimate #${estimate.estimate_number} is Ready - ${companyName}`,
-          content: emailHtml,
+          subject: subject,
+          content: customMessage || `Professional invoice email with portal access sent`,
           status: 'sent',
-          provider_message_id: mailgunResult.id,
-          estimate_number: estimate.estimate_number,
+          invoice_number: invoice.invoice_number,
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLink
+          portal_link_included: !!portalLink,
+          provider_message_id: mailgunResult.id
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);

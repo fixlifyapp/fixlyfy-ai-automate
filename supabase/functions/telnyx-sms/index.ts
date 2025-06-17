@@ -1,22 +1,10 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface SMSRequest {
-  to?: string
-  recipientPhone?: string
-  body?: string
-  message?: string
-  client_id?: string
-  job_id?: string
-  estimateId?: string
-  invoiceId?: string
-  portalLink?: string
 }
 
 serve(async (req) => {
@@ -25,135 +13,125 @@ serve(async (req) => {
   }
 
   try {
-    console.log('📱 SMS request received')
+    console.log('📱 SMS request received');
     
-    const supabaseClient = createClient(
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header provided');
+    }
+
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const requestBody: SMSRequest = await req.json()
-    console.log('SMS request body:', requestBody)
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !userData.user) {
+      throw new Error('Failed to authenticate user');
+    }
 
-    const recipientPhone = requestBody.to || requestBody.recipientPhone
-    const message = requestBody.body || requestBody.message
-    const { client_id, job_id, estimateId, invoiceId } = requestBody
+    const requestBody = await req.json()
+    console.log('SMS request body:', requestBody);
+    
+    const { recipientPhone, message, client_id, job_id, estimateId } = requestBody;
 
     if (!recipientPhone || !message) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: recipientPhone and message' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      throw new Error('Missing required fields: recipientPhone and message');
     }
 
-    // Get Telnyx API key
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
-    if (!telnyxApiKey) {
-      console.error('❌ TELNYX_API_KEY not configured')
-      return new Response(
-        JSON.stringify({ error: 'SMS service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    console.log('🔍 Getting active Telnyx phone number...');
 
-    // Get active Telnyx phone number from telnyx_phone_numbers table
-    console.log('🔍 Getting active Telnyx phone number...')
-    const { data: telnyxNumbers, error: telnyxError } = await supabaseClient
+    const { data: telnyxNumbers, error: telnyxError } = await supabaseAdmin
       .from('telnyx_phone_numbers')
       .select('phone_number')
       .eq('status', 'active')
-      .limit(1)
+      .limit(1);
 
-    console.log('Telnyx query result:', { telnyxNumbers, telnyxError })
+    console.log('Telnyx query result:', { telnyxNumbers, telnyxError });
 
-    if (telnyxError) {
-      console.error('❌ Error fetching Telnyx phone numbers:', telnyxError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to get SMS phone number configuration' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (telnyxError || !telnyxNumbers || telnyxNumbers.length === 0) {
+      throw new Error('No active Telnyx phone number found');
     }
 
-    let fromPhone: string
+    const fromNumber = telnyxNumbers[0].phone_number;
+    console.log('✅ Using phone number for SMS:', fromNumber);
 
-    if (!telnyxNumbers || telnyxNumbers.length === 0) {
-      console.warn('⚠️ No active Telnyx phone numbers found, using fallback')
-      // Fallback to a default number - you should configure this in your environment
-      const fallbackPhone = Deno.env.get('FALLBACK_PHONE_NUMBER')
-      if (!fallbackPhone) {
-        console.error('❌ No active Telnyx phone numbers and no fallback configured')
-        return new Response(
-          JSON.stringify({ error: 'No active SMS phone number configured. Please set up a Telnyx phone number first.' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      fromPhone = fallbackPhone
-    } else {
-      fromPhone = telnyxNumbers[0].phone_number
+    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
+    if (!telnyxApiKey) {
+      throw new Error('Telnyx API key not configured');
     }
 
-    console.log('✅ Using phone number for SMS:', fromPhone)
+    let finalMessage = message;
 
-    console.log(`📞 Sending SMS from: ${fromPhone} to: ${recipientPhone}`)
-    console.log(`📝 Message length: ${message.length}`)
-
-    // Generate portal link if we have client info
-    let finalMessage = message
-    if (client_id && (estimateId || invoiceId)) {
-      console.log('🔗 Adding portal link for client:', client_id)
-      
-      const portalUrl = `https://hub.fixlify.app/portal/${client_id}`
-      finalMessage = `${message}\n\nView online: ${portalUrl}`
-      console.log('✅ Portal link added to message')
+    // Add portal link if client_id is provided
+    if (client_id) {
+      console.log('🔗 Adding portal link for client:', client_id);
+      const portalLink = `https://portal.fixlify.app/portal/${client_id}`;
+      finalMessage = `${message}\n\nView online: ${portalLink}`;
+      console.log('✅ Portal link added to message');
     }
 
-    // Send SMS via Telnyx
+    const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
+    const formatPhone = (phone: string) => {
+      const cleaned = cleanPhone(phone);
+      return cleaned.startsWith('1') ? `+${cleaned}` : `+1${cleaned}`;
+    };
+
+    const formattedFromPhone = formatPhone(fromNumber);
+    const formattedToPhone = formatPhone(recipientPhone);
+
+    console.log('📞 Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
+    console.log('📝 Message length:', finalMessage.length);
+
+    const smsPayload = {
+      from: formattedFromPhone,
+      to: formattedToPhone,
+      text: finalMessage,
+      webhook_url: 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/sms-receiver',
+      webhook_failover_url: 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/sms-receiver'
+    };
+
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        from: fromPhone,
-        to: recipientPhone,
-        text: finalMessage,
-        webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
-        webhook_failover_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
-      }),
-    })
+      body: JSON.stringify(smsPayload)
+    });
 
-    const telnyxData = await telnyxResponse.json()
+    const telnyxResult = await telnyxResponse.json();
 
     if (!telnyxResponse.ok) {
-      console.error('❌ Telnyx API error:', telnyxData)
-      return new Response(
-        JSON.stringify({ error: `SMS service error: ${telnyxData.errors?.[0]?.detail || 'Unable to send SMS'}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.error('Telnyx API error:', telnyxResult);
+      throw new Error(telnyxResult.errors?.[0]?.detail || 'Failed to send SMS');
     }
 
-    console.log('✅ SMS sent successfully:', telnyxData)
+    console.log('✅ SMS sent successfully:', telnyxResult);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        id: telnyxData.data?.id,
-        status: telnyxData.data?.to?.[0]?.status 
+        message: 'SMS sent successfully',
+        messageId: telnyxResult.data?.id,
+        smsContent: finalMessage
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
       }
     )
-
   } catch (error) {
-    console.error('❌ Error in telnyx-sms function:', error)
+    console.error('Error sending SMS:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     )
   }
