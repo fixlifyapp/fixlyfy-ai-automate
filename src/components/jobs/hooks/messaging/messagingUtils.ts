@@ -46,8 +46,8 @@ export const sendClientMessage = async ({
     
     const { data, error } = await supabase.functions.invoke('telnyx-sms', {
       body: {
-        to: clientPhone,
-        body: content.trim(),
+        recipientPhone: clientPhone,
+        message: content.trim(),
         client_id: clientId || '',
         job_id: jobId || ''
       }
