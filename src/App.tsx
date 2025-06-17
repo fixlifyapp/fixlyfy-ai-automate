@@ -8,7 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import JobsPage from "./pages/JobsPage";
 import JobDetailsPage from "./pages/JobDetailsPage";
 import ClientsPage from "./pages/ClientsPage";
-import Settings from "./pages/Settings";
+import SettingsPage from "./pages/SettingsPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import EstimatesPage from "./pages/EstimatesPage";
@@ -44,7 +44,7 @@ const App = () => (
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/estimates" element={<EstimatesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/portal/:accessId" element={<ClientPortal />} />
         </Routes>
       </AppErrorBoundary>
