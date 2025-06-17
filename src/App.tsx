@@ -20,6 +20,12 @@ import SchedulePage from "./pages/SchedulePage";
 import ConnectCenterPageOptimized from "./pages/ConnectCenterPageOptimized";
 import AiCenterPage from "./pages/AiCenterPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import ProfileCompanyPage from "./pages/ProfileCompanyPage";
+import ProductsPage from "./pages/ProductsPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import ConfigurationPage from "./pages/ConfigurationPage";
+import TelnyxSettingsPage from "./pages/TelnyxSettingsPage";
+import AISettingsPage from "./pages/AISettingsPage";
 import { AppErrorBoundary } from "./components/ui/AppErrorBoundary";
 
 const App = () => (
@@ -45,6 +51,12 @@ const App = () => (
           <Route path="/estimates" element={<EstimatesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile-company" element={<ProfileCompanyPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/integrations" element={<IntegrationsPage />} />
+          <Route path="/configuration" element={<ConfigurationPage />} />
+          <Route path="/settings/telnyx" element={<TelnyxSettingsPage />} />
+          <Route path="/ai-settings" element={<AISettingsPage />} />
           <Route path="/portal/:accessId" element={<ClientPortal />} />
         </Routes>
       </AppErrorBoundary>
