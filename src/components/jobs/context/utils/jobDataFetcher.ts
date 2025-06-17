@@ -24,24 +24,8 @@ export const fetchJobWithClient = async (jobId: string): Promise<JobDataFetchRes
   
   console.log("✅ User authenticated:", user.id);
   
-  // Check if job exists first with simple query
-  const { data: jobExists, error: jobExistsError } = await supabase
-    .from('jobs')
-    .select('id, title, client_id')
-    .eq('id', jobId)
-    .single();
-  
-  if (jobExistsError || !jobExists) {
-    console.error("❌ Job doesn't exist:", jobExistsError);
-    toast.error(`Job ${jobId} not found`);
-    throw new Error(`Job not found: ${jobId}`);
-  }
-  
-  console.log("✅ Job exists:", jobExists);
-  
-  // Try to get the full job data with client
-  let jobData: any = null;
-  const { data: jobDataResult, error: jobError } = await supabase
+  // With simplified RLS, we can directly fetch the job with client data
+  const { data: jobData, error: jobError } = await supabase
     .from('jobs')
     .select(`
       *,
@@ -53,7 +37,7 @@ export const fetchJobWithClient = async (jobId: string): Promise<JobDataFetchRes
   if (jobError) {
     console.error("❌ Error fetching job with client:", jobError);
     
-    // Fallback: get job without client join
+    // If join fails, try fetching job and client separately
     const { data: jobOnly, error: jobOnlyError } = await supabase
       .from('jobs')
       .select('*')
@@ -61,7 +45,9 @@ export const fetchJobWithClient = async (jobId: string): Promise<JobDataFetchRes
       .single();
       
     if (jobOnlyError) {
-      throw new Error(`Failed to fetch job: ${jobOnlyError.message}`);
+      console.error("❌ Job not found:", jobOnlyError);
+      toast.error(`Job ${jobId} not found`);
+      throw new Error(`Job not found: ${jobId}`);
     }
     
     // Get client separately if job has client_id
@@ -80,9 +66,19 @@ export const fetchJobWithClient = async (jobId: string): Promise<JobDataFetchRes
       }
     }
     
-    jobData = { ...jobOnly, clients: clientData };
-  } else {
-    jobData = jobDataResult;
+    const finalJobData = { ...jobOnly, clients: clientData };
+    
+    // Fetch payments for this job
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('job_id', jobId);
+      
+    if (paymentsError) {
+      console.warn("⚠️ Could not fetch payments:", paymentsError);
+    }
+    
+    return { jobData: finalJobData, paymentsData };
   }
   
   if (!jobData) {

@@ -2843,6 +2843,7 @@ export type Database = {
           business_niche: string | null
           call_masking_enabled: boolean | null
           created_at: string | null
+          email: string | null
           id: string
           internal_notes: string | null
           is_public: boolean | null
@@ -2863,6 +2864,7 @@ export type Database = {
           business_niche?: string | null
           call_masking_enabled?: boolean | null
           created_at?: string | null
+          email?: string | null
           id: string
           internal_notes?: string | null
           is_public?: boolean | null
@@ -2883,6 +2885,7 @@ export type Database = {
           business_niche?: string | null
           call_masking_enabled?: boolean | null
           created_at?: string | null
+          email?: string | null
           id?: string
           internal_notes?: string | null
           is_public?: boolean | null

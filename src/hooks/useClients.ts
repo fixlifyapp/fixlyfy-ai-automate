@@ -39,17 +39,25 @@ export const useClients = (options: UseClientsOptions = {}) => {
 
   useEffect(() => {
     const fetchClients = async () => {
-      if (!isAuthenticated || !user?.id) {
+      if (!isAuthenticated) {
+        console.log("User not authenticated, skipping client fetch");
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
+        console.log("Fetching clients with simplified RLS...");
+        
         // Get total count
-        const { count } = await supabase
+        const { count, error: countError } = await supabase
           .from('clients')
           .select('*', { count: 'exact', head: true });
+        
+        if (countError) {
+          console.error("Error getting client count:", countError);
+          throw countError;
+        }
         
         setTotalCount(count || 0);
 
@@ -60,8 +68,12 @@ export const useClients = (options: UseClientsOptions = {}) => {
           .order('created_at', { ascending: false })
           .range((page - 1) * pageSize, page * pageSize - 1);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching clients:", error);
+          throw error;
+        }
         
+        console.log("✅ Clients fetched successfully:", data?.length || 0);
         setClients(data || []);
       } catch (error) {
         console.error('Error fetching clients:', error);
@@ -72,9 +84,14 @@ export const useClients = (options: UseClientsOptions = {}) => {
     };
     
     fetchClients();
-  }, [refreshTrigger, page, pageSize, user?.id, isAuthenticated]);
+  }, [refreshTrigger, page, pageSize, isAuthenticated]);
 
   const addClient = async (client: { name: string } & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to add clients');
+      throw new Error('Not authenticated');
+    }
+    
     try {
       // Generate new client ID using the database function
       const clientId = await generateNextId('client');
@@ -106,6 +123,11 @@ export const useClients = (options: UseClientsOptions = {}) => {
   };
 
   const updateClient = async (id: string, updates: Partial<Client>) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to update clients');
+      return null;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -130,6 +152,11 @@ export const useClients = (options: UseClientsOptions = {}) => {
   };
 
   const deleteClient = async (id: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to delete clients');
+      return false;
+    }
+    
     try {
       const { error } = await supabase
         .from('clients')

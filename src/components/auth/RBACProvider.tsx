@@ -1,4 +1,3 @@
-
 import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { User, UserRole, DEFAULT_PERMISSIONS } from './types';
 import { toast } from 'sonner';
@@ -30,7 +29,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          // Get user profile data
+          // Get user profile data with simplified query
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -39,17 +38,37 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
           
           if (error) {
             console.error("Error fetching user profile:", error);
-            // In production, don't fall back to default user
-            if (process.env.NODE_ENV === 'production') {
-              setCurrentUser(null);
-            } else {
-              console.warn("Development mode: Using default admin user");
+            console.warn("Profile not found, creating default user profile");
+            
+            // Try to create a profile for this user
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'User',
+                email: session.user.email,
+                role: 'admin' // Default to admin for now
+              })
+              .select()
+              .single();
+              
+            if (createError) {
+              console.error("Error creating profile:", createError);
+              // Fallback to basic user data
               setCurrentUser({
-                id: "dev-admin",
-                name: "Dev Admin",
-                email: "dev@fixlyfy.com",
-                role: "admin",
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'User',
+                email: session.user.email || 'unknown@example.com',
+                role: 'admin',
                 avatar: "https://github.com/shadcn.png"
+              });
+            } else {
+              setCurrentUser({
+                id: newProfile.id,
+                name: newProfile.name || session.user.email?.split('@')[0] || 'User',
+                email: newProfile.email || session.user.email || 'unknown@example.com',
+                role: (newProfile.role as UserRole) || 'admin',
+                avatar: newProfile.avatar_url || "https://github.com/shadcn.png"
               });
             }
           } else if (profile) {
@@ -57,8 +76,8 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser({
               id: profile.id,
               name: profile.name || session.user.email?.split('@')[0] || 'User',
-              email: session.user.email || 'unknown@example.com',
-              role: (profile.role as UserRole) || 'technician',
+              email: profile.email || session.user.email || 'unknown@example.com',
+              role: (profile.role as UserRole) || 'admin',
               avatar: profile.avatar_url || "https://github.com/shadcn.png"
             });
           }
@@ -81,6 +100,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
         fetchCurrentUser();
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
     
