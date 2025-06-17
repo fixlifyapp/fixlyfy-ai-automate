@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { generateNextId } from "@/utils/idGeneration";
+import { useAuth } from "@/hooks/use-auth";
 
 export interface Client {
   id: string;
@@ -34,9 +35,15 @@ export const useClients = (options: UseClientsOptions = {}) => {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchClients = async () => {
+      if (!isAuthenticated || !user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         // Get total count
@@ -65,7 +72,7 @@ export const useClients = (options: UseClientsOptions = {}) => {
     };
     
     fetchClients();
-  }, [refreshTrigger, page, pageSize]);
+  }, [refreshTrigger, page, pageSize, user?.id, isAuthenticated]);
 
   const addClient = async (client: { name: string } & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
     try {

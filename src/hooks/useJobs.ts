@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,7 +10,7 @@ import { withRetry, handleJobsError } from "@/utils/errorHandling";
 
 export interface Job {
   id: string;
-  title?: string; // Made optional
+  title?: string;
   client_id?: string;
   description?: string;
   job_type?: string;
@@ -25,7 +26,7 @@ export interface Job {
   tags?: string[];
   tasks?: string[];
   property_id?: string;
-  address?: string; // Added address field
+  address?: string;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -46,7 +47,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [hasError, setHasError] = useState(false);
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
   
   // Get configuration data for validation and consistency
@@ -55,7 +56,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   // Memoize fetchJobs to prevent infinite loops
   const fetchJobs = useCallback(async () => {
-    if (!user?.id || hasError) {
+    if (!isAuthenticated || !user?.id || hasError) {
       setIsLoading(false);
       return;
     }
@@ -115,7 +116,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     } finally {
       setIsLoading(false);
     }
-  }, [clientId, user?.id, getJobViewScope, hasError]);
+  }, [clientId, user?.id, isAuthenticated, getJobViewScope, hasError]);
 
   // Only trigger fetch when dependencies actually change
   useEffect(() => {
@@ -126,12 +127,12 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   useUnifiedRealtime({
     tables: ['jobs'],
     onUpdate: () => {
-      if (!hasError) {
+      if (!hasError && isAuthenticated) {
         console.log('Real-time update triggered for jobs');
         setRefreshTrigger(prev => prev + 1);
       }
     },
-    enabled: !hasError
+    enabled: !hasError && isAuthenticated
   });
 
   const validateJobData = (jobData: any) => {
