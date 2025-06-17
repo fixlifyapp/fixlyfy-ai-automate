@@ -42,6 +42,7 @@ serve(async (req) => {
       .single()
 
     if (clientError || !client) {
+      console.log('❌ Client not found:', clientId)
       return new Response(
         JSON.stringify({ error: 'Client not found' }),
         { 
@@ -58,6 +59,10 @@ serve(async (req) => {
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
 
+    if (jobsError) {
+      console.warn('Error fetching jobs:', jobsError)
+    }
+
     // Get client's estimates
     const { data: estimates, error: estimatesError } = await supabaseClient
       .from('estimates')
@@ -65,12 +70,20 @@ serve(async (req) => {
       .in('job_id', jobs?.map(job => job.id) || [])
       .order('created_at', { ascending: false })
 
+    if (estimatesError) {
+      console.warn('Error fetching estimates:', estimatesError)
+    }
+
     // Get client's invoices
     const { data: invoices, error: invoicesError } = await supabaseClient
       .from('invoices')
       .select('*')
       .in('job_id', jobs?.map(job => job.id) || [])
       .order('created_at', { ascending: false })
+
+    if (invoicesError) {
+      console.warn('Error fetching invoices:', invoicesError)
+    }
 
     console.log('✅ Portal data loaded successfully for client:', client.name)
 
