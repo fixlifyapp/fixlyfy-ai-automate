@@ -99,6 +99,7 @@ function App() {
               <Route path="/team/collaboration" element={<ProtectedRouteWithProviders><TeamCollaborationPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings" element={<ProtectedRouteWithProviders><SettingsPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/profile" element={<ProtectedRouteWithProviders><ProfileCompanyPage /></ProtectedRouteWithProviders>} />
+              <Route path="/profile-company" element={<ProtectedRouteWithProviders><ProfileCompanyPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/configuration" element={<ProtectedRouteWithProviders><ConfigurationPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/ai" element={<ProtectedRouteWithProviders><AISettingsPage /></ProtectedRouteWithProviders>} />
               <Route path="/settings/integrations" element={<ProtectedRouteWithProviders><IntegrationsPage /></ProtectedRouteWithProviders>} />
