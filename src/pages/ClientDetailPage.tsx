@@ -10,10 +10,12 @@ import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
 const ClientDetailPage = () => {
-  const { id } = useParams();
+  const { id: clientId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const { addJob } = useJobs();
+  
+  console.log("🔍 ClientDetailPage - params:", { clientId });
   
   const handleJobCreated = async (jobData: any) => {
     try {
@@ -33,6 +35,29 @@ const ClientDetailPage = () => {
   const handleJobSuccess = (job: any) => {
     navigate(`/jobs/${job.id}`);
   };
+
+  if (!clientId) {
+    console.error("❌ ClientDetailPage - No client ID provided");
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-2 sm:px-4">
+          <div className="text-center py-8">
+            <h1 className="text-xl sm:text-2xl font-bold text-red-600">Client not found</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">No client ID provided.</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => navigate('/clients')}
+            >
+              Back to Clients
+            </Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  console.log("✅ ClientDetailPage - Valid client ID, rendering client details for:", clientId);
 
   return (
     <PageLayout>
@@ -54,13 +79,13 @@ const ClientDetailPage = () => {
       </div>
       
       <div className="space-y-6 sm:space-y-8">
-        <ClientForm clientId={id} onCreateJob={() => setIsCreateJobModalOpen(true)} />
+        <ClientForm clientId={clientId} onCreateJob={() => setIsCreateJobModalOpen(true)} />
       </div>
       
       <ScheduleJobModal 
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
-        preselectedClientId={id}
+        preselectedClientId={clientId}
         onJobCreated={handleJobCreated}
         onSuccess={handleJobSuccess}
       />
