@@ -49,6 +49,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import ClientPortal from "@/pages/ClientPortal";
 import EnhancedClientPortal from "@/pages/EnhancedClientPortal";
 import PublicEnhancedPortal from "@/pages/PublicEnhancedPortal";
+import PublicJobPortal from "@/pages/PublicJobPortal";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ function App() {
           <Route path="/portal/:accessId" element={<PublicRoute><ClientPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:clientId/:jobId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
+          <Route path="/client/:jobNumber" element={<PublicRoute><PublicJobPortal /></PublicRoute>} />
           
           {/* Protected routes with authentication */}
           <Route path="/" element={

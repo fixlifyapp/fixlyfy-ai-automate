@@ -115,11 +115,14 @@ serve(async (req) => {
 
     console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
 
-    // Generate portal link using client ID directly (no authentication needed)
+    // Generate portal link - prioritize job portal for direct access
     let viewLink = '';
-    if (client?.id) {
-      viewLink = `https://portal.fixlify.app/portal/${client.id}`;
-      console.log('Direct portal link generated:', viewLink);
+    if (job?.id) {
+      viewLink = `https://hub.fixlify.app/client/${job.id}`;
+      console.log('Direct job portal link generated:', viewLink);
+    } else if (client?.id) {
+      viewLink = `https://hub.fixlify.app/enhanced-portal/${client.id}`;
+      console.log('Client portal link generated:', viewLink);
     }
 
     // Create SMS message with portal link
@@ -128,9 +131,13 @@ serve(async (req) => {
     let smsMessage;
     if (message) {
       smsMessage = message;
+      // Add portal link to custom message if not already included
+      if (viewLink && !message.includes('hub.fixlify.app')) {
+        smsMessage = `${message}\n\nView & pay: ${viewLink}`;
+      }
     } else {
       if (viewLink) {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Pay securely: ${viewLink}`;
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. View & pay: ${viewLink}`;
       } else {
         smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Contact us for payment.`;
       }

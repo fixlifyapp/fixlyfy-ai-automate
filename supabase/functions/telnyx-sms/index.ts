@@ -64,12 +64,17 @@ serve(async (req) => {
 
     let finalMessage = message;
 
-    // Add portal link if client_id is provided - use direct client ID approach
-    if (client_id) {
-      console.log('🔗 Adding portal link for client:', client_id);
-      const portalLink = `https://portal.fixlify.app/portal/${client_id}`;
-      finalMessage = `${message}\n\nView online: ${portalLink}`;
-      console.log('✅ Portal link added to message');
+    // Add portal link - prioritize job_id for direct job access
+    if (job_id) {
+      console.log('🔗 Adding job portal link for job:', job_id);
+      const jobPortalLink = `https://hub.fixlify.app/client/${job_id}`;
+      finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
+      console.log('✅ Job portal link added to message');
+    } else if (client_id) {
+      console.log('🔗 Adding client portal link for client:', client_id);
+      const clientPortalLink = `https://hub.fixlify.app/enhanced-portal/${client_id}`;
+      finalMessage = `${message}\n\nView portal: ${clientPortalLink}`;
+      console.log('✅ Client portal link added to message');
     }
 
     const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
