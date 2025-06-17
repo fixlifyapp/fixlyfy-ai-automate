@@ -64,7 +64,7 @@ serve(async (req) => {
 
     let finalMessage = message;
 
-    // Add portal link if client_id is provided
+    // Add portal link if client_id is provided - use direct client ID approach
     if (client_id) {
       console.log('🔗 Adding portal link for client:', client_id);
       const portalLink = `https://portal.fixlify.app/portal/${client_id}`;

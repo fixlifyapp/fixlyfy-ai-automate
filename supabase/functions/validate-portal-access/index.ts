@@ -18,50 +18,66 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { accessToken } = await req.json()
+    const { accessId } = await req.json()
     const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     const userAgent = req.headers.get('user-agent') || 'unknown'
 
-    console.log('🔐 Validating portal access for token:', accessToken.substring(0, 8) + '...')
+    console.log('🔐 Validating portal access for client ID:', accessId)
 
-    // Use the new validation function
-    const { data: validation, error } = await supabaseClient
-      .rpc('validate_portal_access', {
-        p_access_token: accessToken,
-        p_ip_address: clientIP,
-        p_user_agent: userAgent
-      })
+    // For portal.fixlify.app - treat accessId as client_id directly (no auth needed)
+    if (accessId && accessId.startsWith('C-')) {
+      // Get client data directly
+      const { data: client, error: clientError } = await supabaseClient
+        .from('clients')
+        .select('*')
+        .eq('id', accessId)
+        .single()
 
-    if (error) {
-      console.error('❌ Validation error:', error)
-      throw error
-    }
+      if (clientError || !client) {
+        console.log('❌ Client not found:', accessId)
+        return new Response(
+          JSON.stringify({ error: 'Client not found' }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
 
-    if (!validation?.valid) {
-      console.log('❌ Invalid access token')
+      console.log('✅ Valid portal access for client:', client.name)
+
       return new Response(
-        JSON.stringify({ error: validation?.error || 'Access denied' }),
+        JSON.stringify({ 
+          valid: true,
+          client: {
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            address: client.address,
+            city: client.city,
+            state: client.state,
+            zip: client.zip
+          },
+          permissions: {
+            view_estimates: true,
+            view_invoices: true,
+            make_payments: false
+          }
+        }),
         { 
-          status: 401, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
 
-    console.log('✅ Valid portal access for client:', validation.client_name)
-
+    // If not a client ID format, return error
+    console.log('❌ Invalid access ID format')
     return new Response(
-      JSON.stringify({ 
-        valid: true,
-        client: {
-          id: validation.client_id,
-          name: validation.client_name,
-          email: validation.client_email
-        },
-        permissions: validation.permissions
-      }),
+      JSON.stringify({ error: 'Invalid access format' }),
       { 
-        status: 200, 
+        status: 401, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )

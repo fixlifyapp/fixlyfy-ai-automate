@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -481,28 +480,11 @@ serve(async (req) => {
     const companyLogo = companySettings?.company_logo_url;
     const companyWebsite = companySettings?.company_website;
 
-    // Generate secure document access token using correct portal domain
+    // Generate portal link using client ID directly (no authentication needed)
     let portalLink = '';
-    if (client?.email) {
-      try {
-        console.log('Generating secure access token for client email:', client.email);
-        
-        const { data: accessToken, error: tokenError } = await supabaseAdmin.rpc('generate_secure_document_access', {
-          p_document_type: 'estimate',
-          p_document_id: estimate.id,
-          p_client_email: client.email,
-          p_hours_valid: 72
-        });
-
-        if (!tokenError && accessToken) {
-          portalLink = `https://portal.fixlify.app/view/${accessToken}`;
-          console.log('Secure access link generated:', portalLink.substring(0, 60) + '...');
-        } else {
-          console.error('Failed to generate secure access token:', tokenError);
-        }
-      } catch (error) {
-        console.warn('Failed to generate secure access token:', error);
-      }
+    if (client?.id) {
+      portalLink = `https://portal.fixlify.app/portal/${client.id}`;
+      console.log('Direct portal link generated:', portalLink);
     }
 
     // Create email HTML

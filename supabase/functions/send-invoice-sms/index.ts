@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -116,31 +115,14 @@ serve(async (req) => {
 
     console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
 
-    // Generate secure document access token
+    // Generate portal link using client ID directly (no authentication needed)
     let viewLink = '';
-    if (client?.email) {
-      try {
-        console.log('Generating secure access token for client email:', client.email);
-        
-        const { data: accessToken, error: tokenError } = await supabaseAdmin.rpc('generate_secure_document_access', {
-          p_document_type: 'invoice',
-          p_document_id: invoice.id,
-          p_client_email: client.email,
-          p_hours_valid: 72
-        });
-
-        if (!tokenError && accessToken) {
-          viewLink = `https://portal.fixlify.app/view/${accessToken}`;
-          console.log('Secure access link generated:', viewLink.substring(0, 60) + '...');
-        } else {
-          console.error('Failed to generate secure access token:', tokenError);
-        }
-      } catch (error) {
-        console.warn('Failed to generate secure access token:', error);
-      }
+    if (client?.id) {
+      viewLink = `https://portal.fixlify.app/portal/${client.id}`;
+      console.log('Direct portal link generated:', viewLink);
     }
 
-    // Create SMS message with secure view link
+    // Create SMS message with portal link
     const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
     
     let smsMessage;

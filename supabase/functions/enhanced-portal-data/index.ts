@@ -19,36 +19,22 @@ serve(async (req) => {
     )
 
     const { accessToken } = await req.json()
-    const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
-    const userAgent = req.headers.get('user-agent') || 'unknown'
+    console.log('📊 Loading enhanced portal data for client:', accessToken)
 
-    console.log('📊 Getting enhanced portal data for token:', accessToken.substring(0, 8) + '...')
-
-    // First validate access
-    const { data: validation, error: validationError } = await supabaseClient
-      .rpc('validate_portal_access', {
-        p_access_token: accessToken,
-        p_ip_address: clientIP,
-        p_user_agent: userAgent
-      })
-
-    if (validationError || !validation?.valid) {
-      console.error('❌ Access validation failed:', validationError)
+    // For portal domain, accessToken is actually the client_id
+    if (!accessToken || !accessToken.startsWith('C-')) {
       return new Response(
-        JSON.stringify({ error: 'Access denied' }),
+        JSON.stringify({ error: 'Invalid client ID' }),
         { 
-          status: 401, 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
 
-    const clientId = validation.client_id
-    const permissions = validation.permissions
+    const clientId = accessToken
 
-    console.log('✅ Valid access for client:', validation.client_name)
-
-    // Get client information
+    // Get client data
     const { data: client, error: clientError } = await supabaseClient
       .from('clients')
       .select('*')
@@ -56,7 +42,6 @@ serve(async (req) => {
       .single()
 
     if (clientError || !client) {
-      console.error('❌ Client not found:', clientError)
       return new Response(
         JSON.stringify({ error: 'Client not found' }),
         { 
@@ -66,120 +51,67 @@ serve(async (req) => {
       )
     }
 
-    // Get estimates (if permitted)
-    let estimates = []
-    if (permissions.view_estimates) {
-      const { data: estimatesData, error: estimatesError } = await supabaseClient
-        .from('estimates')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-
-      if (!estimatesError) {
-        estimates = estimatesData || []
-      }
-    }
-
-    // Get invoices (if permitted)
-    let invoices = []
-    if (permissions.view_invoices) {
-      const { data: invoicesData, error: invoicesError } = await supabaseClient
-        .from('invoices')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-
-      if (!invoicesError) {
-        invoices = invoicesData || []
-      }
-    }
-
-    // Get jobs
+    // Get client's jobs
     const { data: jobs, error: jobsError } = await supabaseClient
       .from('jobs')
       .select('*')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
 
-    // Get portal messages
-    const { data: messages, error: messagesError } = await supabaseClient
-      .from('portal_messages')
+    // Get client's estimates
+    const { data: estimates, error: estimatesError } = await supabaseClient
+      .from('estimates')
       .select('*')
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    // Get portal documents
-    const { data: documents, error: documentsError } = await supabaseClient
-      .from('portal_documents')
-      .select('*')
-      .eq('client_id', clientId)
+      .in('job_id', jobs?.map(job => job.id) || [])
       .order('created_at', { ascending: false })
 
-    // Get portal preferences
-    const { data: preferences, error: preferencesError } = await supabaseClient
-      .from('portal_preferences')
+    // Get client's invoices
+    const { data: invoices, error: invoicesError } = await supabaseClient
+      .from('invoices')
       .select('*')
-      .eq('client_id', clientId)
-      .single()
+      .in('job_id', jobs?.map(job => job.id) || [])
+      .order('created_at', { ascending: false })
 
-    // Log portal data access
-    await supabaseClient
-      .from('portal_activity_logs')
-      .insert({
-        client_id: clientId,
-        action: 'portal_data_access',
-        ip_address: clientIP,
-        user_agent: userAgent,
-        metadata: {
-          accessed_sections: {
-            estimates: permissions.view_estimates,
-            invoices: permissions.view_invoices,
-            jobs: true,
-            messages: true,
-            documents: true
-          }
-        }
-      })
-
-    const portalData = {
-      client: {
-        id: client.id,
-        name: client.name,
-        email: client.email,
-        phone: client.phone,
-        address: client.address,
-        city: client.city,
-        state: client.state,
-        zip: client.zip
-      },
-      estimates: estimates,
-      invoices: invoices,
-      jobs: jobs || [],
-      messages: messages || [],
-      documents: documents || [],
-      preferences: preferences || {
-        theme: 'light',
-        language: 'en',
-        notification_preferences: { email: true, sms: false },
-        timezone: 'UTC'
-      },
-      permissions: permissions
-    }
-
-    console.log('📊 Returning enhanced portal data for client:', client.name)
+    console.log('✅ Portal data loaded successfully for client:', client.name)
 
     return new Response(
-      JSON.stringify(portalData),
+      JSON.stringify({
+        client: {
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+          address: client.address,
+          city: client.city,
+          state: client.state,
+          zip: client.zip
+        },
+        jobs: jobs || [],
+        estimates: estimates || [],
+        invoices: invoices || [],
+        messages: [], // Not implemented yet
+        documents: [], // Not implemented yet
+        preferences: {
+          theme: 'light',
+          language: 'en',
+          notification_preferences: {},
+          timezone: 'UTC'
+        },
+        permissions: {
+          view_estimates: true,
+          view_invoices: true,
+          make_payments: false
+        }
+      }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
   } catch (error) {
-    console.error('❌ Error in enhanced-portal-data:', error)
+    console.error('❌ Error loading portal data:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Failed to load portal data' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

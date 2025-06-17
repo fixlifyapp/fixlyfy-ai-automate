@@ -68,9 +68,9 @@ const EnhancedClientPortal = () => {
       }
 
       try {
-        console.log("🔐 Validating portal access with token:", accessId.substring(0, 8) + "...");
+        console.log("🔐 Loading portal data for client:", accessId);
 
-        // Call the enhanced portal data function
+        // For portal.fixlify.app, accessId is the client_id - no authentication needed
         const { data, error: functionError } = await supabase.functions.invoke(
           'enhanced-portal-data',
           {
@@ -79,8 +79,8 @@ const EnhancedClientPortal = () => {
         );
 
         if (functionError) {
-          console.error("❌ Portal validation error:", functionError);
-          setError("Access denied or link expired");
+          console.error("❌ Portal data error:", functionError);
+          setError("Failed to load portal data");
           return;
         }
 
