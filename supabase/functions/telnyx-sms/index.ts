@@ -71,10 +71,10 @@ serve(async (req) => {
       finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
       console.log('✅ Job portal link added to message');
     } else if (client_id) {
-      console.log('🔗 Adding client portal link for client:', client_id);
-      const clientPortalLink = `https://hub.fixlify.app/enhanced-portal/${client_id}`;
-      finalMessage = `${message}\n\nView portal: ${clientPortalLink}`;
-      console.log('✅ Client portal link added to message');
+      console.log('🔗 Adding enhanced portal link for client:', client_id);
+      const portalLink = `https://hub.fixlify.app/portal/${client_id}`;
+      finalMessage = `${message}\n\nView portal: ${portalLink}`;
+      console.log('✅ Enhanced portal link added to message');
     }
 
     const cleanPhone = (phone: string) => phone.replace(/\D/g, '');

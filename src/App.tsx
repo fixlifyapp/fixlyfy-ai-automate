@@ -46,8 +46,6 @@ import NotFound from "@/pages/NotFound";
 import { AppProviders } from "@/components/ui/AppProviders";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import ClientPortal from "@/pages/ClientPortal";
-import EnhancedClientPortal from "@/pages/EnhancedClientPortal";
 import PublicEnhancedPortal from "@/pages/PublicEnhancedPortal";
 import PublicJobPortal from "@/pages/PublicJobPortal";
 
@@ -81,7 +79,7 @@ function App() {
         <Routes>
           {/* Public routes - no authentication required */}
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/portal/:accessId" element={<PublicRoute><ClientPortal /></PublicRoute>} />
+          <Route path="/portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:clientId/:jobId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/client/:jobNumber" element={<PublicRoute><PublicJobPortal /></PublicRoute>} />

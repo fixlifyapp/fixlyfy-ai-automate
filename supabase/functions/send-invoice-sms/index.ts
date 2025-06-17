@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -121,8 +122,8 @@ serve(async (req) => {
       viewLink = `https://hub.fixlify.app/client/${job.id}`;
       console.log('Direct job portal link generated:', viewLink);
     } else if (client?.id) {
-      viewLink = `https://hub.fixlify.app/enhanced-portal/${client.id}`;
-      console.log('Client portal link generated:', viewLink);
+      viewLink = `https://hub.fixlify.app/portal/${client.id}`;
+      console.log('Enhanced portal link generated:', viewLink);
     }
 
     // Create SMS message with portal link
