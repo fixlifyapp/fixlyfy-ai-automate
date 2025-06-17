@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
 
   useEffect(() => {
     if (!jobId) {
+      console.log("❌ No jobId provided to useJobData");
       setIsLoading(false);
       return;
     }
@@ -32,6 +34,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     
     // Check if request is already in flight
     if (jobRequestCache.has(cacheKey)) {
+      console.log("🔄 Using cached request for job:", jobId);
       jobRequestCache.get(cacheKey)?.then((result) => {
         if (isMountedRef.current && result) {
           setJob(result.jobInfo);
@@ -40,7 +43,8 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           setBalance(result.balance);
           setIsLoading(false);
         }
-      }).catch(() => {
+      }).catch((error) => {
+        console.error("❌ Cached request failed:", error);
         if (isMountedRef.current) {
           setIsLoading(false);
         }
@@ -52,7 +56,23 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     
     const fetchJobData = async () => {
       try {
-        // Optimized query with proper UUID handling
+        console.log("🔍 Fetching job data for jobId:", jobId);
+        
+        // First, let's check if the user is authenticated
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("❌ Auth error:", authError);
+          throw new Error("Authentication failed");
+        }
+        
+        if (!user) {
+          console.error("❌ No authenticated user");
+          throw new Error("No authenticated user");
+        }
+        
+        console.log("✅ User authenticated:", user.id);
+        
+        // Try a more explicit query approach
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
@@ -60,18 +80,47 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
             clients(*)
           `)
           .eq('id', jobId)
-          .maybeSingle();
+          .single();
         
         if (jobError) {
-          console.error("Error fetching job:", jobError);
-          toast.error("Error loading job details");
+          console.error("❌ Error fetching job:", jobError);
+          console.error("Error details:", {
+            code: jobError.code,
+            message: jobError.message,
+            details: jobError.details,
+            hint: jobError.hint
+          });
+          
+          // Try to fetch the job without the client join to see if it's a join issue
+          const { data: jobOnlyData, error: jobOnlyError } = await supabase
+            .from('jobs')
+            .select('*')
+            .eq('id', jobId)
+            .single();
+            
+          if (jobOnlyError) {
+            console.error("❌ Job doesn't exist or access denied:", jobOnlyError);
+            toast.error(`Job ${jobId} not found or access denied`);
+            throw new Error(`Job not found: ${jobId}`);
+          } else {
+            console.log("✅ Job exists but client join failed:", jobOnlyData);
+          }
+          
           throw jobError;
         }
         
         if (!jobData) {
-          toast.error("Job not found");
+          console.error("❌ No job data returned for jobId:", jobId);
+          toast.error(`Job ${jobId} not found`);
           throw new Error("Job not found");
         }
+        
+        console.log("✅ Job data fetched successfully:", {
+          jobId: jobData.id,
+          title: jobData.title,
+          clientId: jobData.client_id,
+          hasClient: !!jobData.clients
+        });
         
         // Extract client information with type safety
         const client = jobData.clients || { 
@@ -132,11 +181,15 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         };
         
         // Batch fetch payments for this job to calculate balance
-        const { data: paymentsData } = await supabase
+        const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select('amount')
           .eq('invoice_id', jobId);
           
+        if (paymentsError) {
+          console.warn("⚠️ Could not fetch payments:", paymentsError);
+        }
+        
         const totalPayments = paymentsData 
           ? paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0) 
           : 0;
@@ -148,11 +201,23 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           balance: (jobData.revenue || 0) - totalPayments
         };
         
+        console.log("✅ Job data processing complete:", {
+          jobId: result.jobInfo.id,
+          client: result.jobInfo.client,
+          status: result.status,
+          invoiceAmount: result.invoiceAmount,
+          balance: result.balance
+        });
+        
         return result;
         
       } catch (error) {
-        console.error("Error in fetching job details:", error);
-        toast.error("Error loading job details");
+        console.error("❌ Error in fetchJobData:", error);
+        if (error instanceof Error) {
+          toast.error(`Failed to load job: ${error.message}`);
+        } else {
+          toast.error("Failed to load job data");
+        }
         throw error;
       }
     };
@@ -164,20 +229,22 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     requestPromise
       .then((result) => {
         if (isMountedRef.current) {
+          console.log("✅ Setting job data in state");
           setJob(result.jobInfo);
           setCurrentStatus(result.status);
           setInvoiceAmount(result.invoiceAmount);
           setBalance(result.balance);
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("❌ Final error handling:", error);
         // Error already handled in fetchJobData
       })
       .finally(() => {
         // Keep cache longer for better performance
         setTimeout(() => {
           jobRequestCache.delete(cacheKey);
-        }, 900000); // 15 minutes
+        }, 300000); // 5 minutes
         if (isMountedRef.current) {
           setIsLoading(false);
         }

@@ -25,6 +25,8 @@ export const useRealtimeSync = ({
   useEffect(() => {
     if (!enabled) return;
     
+    console.log("🔄 Setting up real-time sync for tables:", tables);
+    
     // Store all channels so we can clean them up later
     const channels = tables.map(table => {
       // Map display names to actual table names
@@ -51,9 +53,13 @@ export const useRealtimeSync = ({
         }
       }
       
+      console.log(`📡 Creating real-time channel for table: ${actualTableName}`, {
+        filter: filterString
+      });
+      
       // Create and subscribe to the channel
       const channel = supabase
-        .channel(`realtime-${actualTableName}`)
+        .channel(`realtime-${actualTableName}-${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -63,18 +69,30 @@ export const useRealtimeSync = ({
             filter: filterString
           },
           (payload) => {
-            console.log(`${actualTableName} changed:`, payload);
+            console.log(`🔔 Real-time update for ${actualTableName}:`, {
+              event: payload.eventType,
+              table: payload.table,
+              old: payload.old,
+              new: payload.new
+            });
             onUpdate();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`📡 Subscription status for ${actualTableName}:`, status);
+        });
         
       return channel;
     });
     
     // Clean up all subscriptions when component unmounts
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      console.log("🧹 Cleaning up real-time subscriptions");
+      channels.forEach(channel => {
+        if (channel) {
+          supabase.removeChannel(channel);
+        }
+      });
     };
   }, [tables, onUpdate, filter, enabled]);
 };
