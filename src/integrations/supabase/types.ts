@@ -643,8 +643,13 @@ export type Database = {
           created_at: string | null
           document_id: string
           document_type: string
+          domain_restriction: string | null
           expires_at: string
           id: string
+          ip_restrictions: string[] | null
+          max_uses: number | null
+          permissions: Json | null
+          use_count: number | null
           used_at: string | null
         }
         Insert: {
@@ -653,8 +658,13 @@ export type Database = {
           created_at?: string | null
           document_id: string
           document_type: string
+          domain_restriction?: string | null
           expires_at: string
           id?: string
+          ip_restrictions?: string[] | null
+          max_uses?: number | null
+          permissions?: Json | null
+          use_count?: number | null
           used_at?: string | null
         }
         Update: {
@@ -663,8 +673,13 @@ export type Database = {
           created_at?: string | null
           document_id?: string
           document_type?: string
+          domain_restriction?: string | null
           expires_at?: string
           id?: string
+          ip_restrictions?: string[] | null
+          max_uses?: number | null
+          permissions?: Json | null
+          use_count?: number | null
           used_at?: string | null
         }
         Relationships: []
@@ -2513,6 +2528,266 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_activity_logs: {
+        Row: {
+          action: string
+          client_id: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_activity_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_activity_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "portal_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_documents: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          document_type: string
+          expires_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_downloadable: boolean | null
+          mime_type: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          document_type: string
+          expires_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_downloadable?: boolean | null
+          mime_type?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          document_type?: string
+          expires_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_downloadable?: boolean | null
+          mime_type?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_messages: {
+        Row: {
+          attachments: Json | null
+          client_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          job_id: string | null
+          message: string
+          reply_to: string | null
+          sender_name: string
+          sender_type: string
+          subject: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          client_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          job_id?: string | null
+          message: string
+          reply_to?: string | null
+          sender_name: string
+          sender_type: string
+          subject?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          job_id?: string | null
+          message?: string
+          reply_to?: string | null
+          sender_name?: string
+          sender_type?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "portal_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_preferences: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          language: string | null
+          notification_preferences: Json | null
+          theme: string | null
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          notification_preferences?: Json | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          notification_preferences?: Json | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_sessions: {
+        Row: {
+          access_token: string
+          client_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          last_accessed_at: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_token: string
+          client_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -3410,6 +3685,15 @@ export type Database = {
         Args: { p_entity_type: string }
         Returns: string
       }
+      generate_portal_access: {
+        Args: {
+          p_client_id: string
+          p_permissions?: Json
+          p_hours_valid?: number
+          p_domain_restriction?: string
+        }
+        Returns: string
+      }
       get_popular_warranties_by_job_type: {
         Args: { p_job_type: string; p_limit?: number }
         Returns: {
@@ -3466,6 +3750,14 @@ export type Database = {
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
+      }
+      validate_portal_access: {
+        Args: {
+          p_access_token: string
+          p_ip_address?: string
+          p_user_agent?: string
+        }
+        Returns: Json
       }
     }
     Enums: {

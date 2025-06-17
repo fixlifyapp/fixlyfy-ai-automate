@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Copy, Mail, MessageSquare, ExternalLink } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Copy, Mail, MessageSquare, ExternalLink, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,24 +31,32 @@ export const GeneratePortalLinkDialog = ({
   const [portalLink, setPortalLink] = useState<string>("");
   const [sendMethod, setSendMethod] = useState<"copy" | "email" | "sms">("copy");
   const [customMessage, setCustomMessage] = useState("");
+  const [validHours, setValidHours] = useState(72);
+  const [permissions, setPermissions] = useState({
+    view_estimates: true,
+    view_invoices: true,
+    make_payments: false
+  });
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const generatePortalLink = async () => {
     try {
       setIsGenerating(true);
       
-      const { data, error } = await supabase.functions.invoke('generate-portal-link', {
+      const { data, error } = await supabase.functions.invoke('generate-enhanced-portal-link', {
         body: {
           clientId,
-          validHours: 72 // 3 days
+          validHours,
+          permissions,
+          domainRestriction: 'portal.fixlify.app'
         }
       });
 
       if (error) throw error;
       
-      if (data?.accessLink) {
-        const fullLink = `${window.location.origin}/portal/${data.accessLink}`;
-        setPortalLink(fullLink);
-        toast.success('Portal link generated successfully!');
+      if (data?.portalUrl) {
+        setPortalLink(data.portalUrl);
+        toast.success('Enhanced portal link generated successfully!');
       }
     } catch (err: any) {
       console.error('Generate portal link error:', err);
@@ -66,7 +75,7 @@ export const GeneratePortalLinkDialog = ({
     if (!portalLink) return;
 
     try {
-      const message = customMessage || `Hi ${clientName}! Access your client portal here: ${portalLink}`;
+      const message = customMessage || `Hi ${clientName}! Access your secure client portal here: ${portalLink}`;
 
       if (sendMethod === "email" && clientEmail) {
         const { error } = await supabase.functions.invoke('send-portal-link', {
@@ -109,27 +118,100 @@ export const GeneratePortalLinkDialog = ({
     }
   };
 
+  const handlePermissionChange = (permission: string, checked: boolean) => {
+    setPermissions(prev => ({
+      ...prev,
+      [permission]: checked
+    }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Generate Client Portal Link</DialogTitle>
+          <DialogTitle>Generate Enhanced Client Portal Link</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           <div className="text-sm text-gray-600">
-            Generate a secure access link for <strong>{clientName}</strong> to view their estimates and invoices.
+            Generate a secure access link for <strong>{clientName}</strong> to access their client portal at{" "}
+            <span className="font-mono text-blue-600">portal.fixlify.app</span>
           </div>
 
-          {!portalLink ? (
-            <Button 
-              onClick={generatePortalLink}
-              disabled={isGenerating}
-              className="w-full"
-            >
-              {isGenerating ? "Generating..." : "Generate Portal Link"}
-            </Button>
-          ) : (
+          {!portalLink && (
+            <>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="validHours">Link Valid For (hours)</Label>
+                  <Input
+                    id="validHours"
+                    type="number"
+                    value={validHours}
+                    onChange={(e) => setValidHours(parseInt(e.target.value) || 72)}
+                    min="1"
+                    max="168"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Default: 72 hours (3 days)</p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Label>Client Permissions</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      {showAdvanced ? 'Hide' : 'Show'} Advanced
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="view_estimates"
+                        checked={permissions.view_estimates}
+                        onCheckedChange={(checked) => handlePermissionChange('view_estimates', checked as boolean)}
+                      />
+                      <Label htmlFor="view_estimates">View Estimates</Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="view_invoices"
+                        checked={permissions.view_invoices}
+                        onCheckedChange={(checked) => handlePermissionChange('view_invoices', checked as boolean)}
+                      />
+                      <Label htmlFor="view_invoices">View Invoices</Label>
+                    </div>
+
+                    {showAdvanced && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="make_payments"
+                          checked={permissions.make_payments}
+                          onCheckedChange={(checked) => handlePermissionChange('make_payments', checked as boolean)}
+                        />
+                        <Label htmlFor="make_payments">Make Payments (Coming Soon)</Label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={generatePortalLink}
+                disabled={isGenerating}
+                className="w-full"
+              >
+                {isGenerating ? "Generating..." : "Generate Enhanced Portal Link"}
+              </Button>
+            </>
+          )}
+
+          {portalLink && (
             <div className="space-y-4">
               <div className="p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between gap-2">
@@ -154,6 +236,11 @@ export const GeneratePortalLinkDialog = ({
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   </div>
+                </div>
+                
+                <div className="mt-2 text-xs text-gray-500">
+                  <p>Valid for {validHours} hours • Domain: portal.fixlify.app</p>
+                  <p>Permissions: {Object.entries(permissions).filter(([_, value]) => value).map(([key]) => key.replace('_', ' ')).join(', ')}</p>
                 </div>
               </div>
 
@@ -193,7 +280,7 @@ export const GeneratePortalLinkDialog = ({
                   <Input
                     value={customMessage}
                     onChange={(e) => setCustomMessage(e.target.value)}
-                    placeholder={`Hi ${clientName}! Access your client portal here: ${portalLink}`}
+                    placeholder={`Hi ${clientName}! Access your secure client portal here: ${portalLink}`}
                   />
                 </div>
               )}

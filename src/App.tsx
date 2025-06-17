@@ -70,8 +70,9 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
-              {/* Public client portal route - no authentication required */}
+              {/* Public client portal routes - no authentication required */}
               <Route path="/portal/:accessId" element={<ClientPortal />} />
+              <Route path="/enhanced-portal/:accessId" element={<EnhancedClientPortal />} />
               
               {/* Protected routes */}
               <Route path="/" element={<ProtectedRouteWithProviders><Index /></ProtectedRouteWithProviders>} />
