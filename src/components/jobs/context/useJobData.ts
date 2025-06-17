@@ -87,8 +87,9 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         
         console.log("✅ Job exists:", jobExists);
         
-        // Now try to get the full job data with client
-        const { data: jobData, error: jobError } = await supabase
+        // Now try to get the full job data with client - use let instead of const
+        let jobData: any = null;
+        const { data: jobDataResult, error: jobError } = await supabase
           .from('jobs')
           .select(`
             *,
@@ -129,6 +130,8 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           
           // Use the separated data
           jobData = { ...jobOnly, clients: clientData };
+        } else {
+          jobData = jobDataResult;
         }
         
         if (!jobData) {
