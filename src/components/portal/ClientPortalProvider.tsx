@@ -55,33 +55,32 @@ export function ClientPortalProvider({
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🔐 Starting portal authentication with token:', loginToken.substring(0, 10) + '...');
+      console.log('🔐 Starting portal authentication...');
       
-      // Validate token format
       if (!loginToken || loginToken.length < 10) {
-        throw new Error('Invalid token format');
+        throw new Error('Invalid access link format');
       }
 
-      console.log('📡 Calling portal-auth edge function...');
+      console.log('📡 Calling portal-auth function...');
       const { data: authResult, error: authError } = await supabase.functions.invoke('portal-auth', {
         body: { token: loginToken }
       });
 
-      console.log('🔐 Portal auth response:', authResult, authError);
+      console.log('🔐 Portal auth response:', { success: authResult?.success, error: authError });
 
       if (authError) {
-        console.error('❌ Portal auth error:', authError);
-        throw new Error(`Authentication failed: ${authError.message}`);
+        console.error('❌ Portal auth network error:', authError);
+        throw new Error('Unable to connect to authentication service');
       }
 
       if (!authResult?.success) {
         console.error('❌ Portal auth failed:', authResult?.error);
-        throw new Error(authResult?.error || 'Invalid or expired access link');
+        throw new Error(authResult?.error || 'Access link is invalid or expired');
       }
 
+      console.log('✅ Portal authentication successful for:', authResult.session.email);
       setSession(authResult.session);
       setIsAuthenticated(true);
-      console.log('✅ Portal authentication successful');
       
       // Load dashboard data
       await loadDashboardData(loginToken);
@@ -91,9 +90,11 @@ export function ClientPortalProvider({
       console.error('💥 Login error:', error);
       const errorMessage = error?.message || 'Authentication failed';
       setError(errorMessage);
+      setIsAuthenticated(false);
+      setSession(null);
       
-      // Don't show toast for network errors during initial load
-      if (!errorMessage.includes('fetch')) {
+      // Only show toast for non-network errors
+      if (!errorMessage.includes('fetch') && !errorMessage.includes('connect')) {
         toast.error(errorMessage);
       }
       
@@ -111,11 +112,11 @@ export function ClientPortalProvider({
         body: { token: authToken }
       });
 
-      console.log('📊 Dashboard response:', dashboardData, error);
+      console.log('📊 Dashboard response:', { success: dashboardData?.success, error });
 
       if (error) {
-        console.error('❌ Dashboard data error:', error);
-        throw new Error(`Failed to load dashboard data: ${error.message}`);
+        console.error('❌ Dashboard data network error:', error);
+        throw new Error('Unable to load your data');
       }
 
       if (!dashboardData?.success) {
@@ -123,17 +124,18 @@ export function ClientPortalProvider({
         throw new Error(dashboardData?.error || 'Failed to load dashboard data');
       }
 
-      setData(dashboardData.data);
       console.log('✅ Dashboard data loaded successfully');
+      setData(dashboardData.data);
     } catch (error: any) {
       console.error('💥 Dashboard data error:', error);
-      const errorMessage = error?.message || 'Failed to load dashboard data';
+      const errorMessage = error?.message || 'Failed to load your information';
       setError(errorMessage);
       toast.error(errorMessage);
     }
   };
 
   const logout = () => {
+    console.log('🚪 Logging out of client portal');
     setSession(null);
     setData(null);
     setIsAuthenticated(false);
@@ -144,17 +146,19 @@ export function ClientPortalProvider({
 
   const refreshData = async () => {
     if (session?.token) {
+      console.log('🔄 Refreshing portal data...');
       await loadDashboardData(session.token);
     }
   };
 
   const retryAuth = () => {
     if (token && retryCount < 3) {
+      console.log('🔄 Retrying authentication, attempt:', retryCount + 1);
       setRetryCount(prev => prev + 1);
       setError(null);
       login(token);
     } else {
-      setError('Maximum retry attempts reached. Please check your link.');
+      setError('Maximum retry attempts reached. Please try a new access link.');
     }
   };
 
@@ -162,18 +166,20 @@ export function ClientPortalProvider({
     let mounted = true;
     
     if (token) {
-      console.log('🚀 Starting portal authentication process with token:', token.substring(0, 10) + '...');
+      console.log('🚀 Initializing client portal with token');
       login(token).then(success => {
         if (!mounted) return;
-        if (!success && retryCount < 2) {
+        
+        if (!success && retryCount === 0) {
           // Auto-retry once for network issues
+          console.log('🔄 Auto-retrying authentication...');
           setTimeout(() => {
             if (mounted) retryAuth();
-          }, 1000);
+          }, 2000);
         }
       });
     } else {
-      console.log('⚠️ No token provided');
+      console.log('⚠️ No access token provided');
       setIsLoading(false);
       setError('No access token provided');
     }

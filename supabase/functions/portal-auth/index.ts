@@ -13,19 +13,17 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🔐 Portal auth function called with method:', req.method);
+    console.log('🔐 Portal auth function called');
     
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get token from request body
     const requestBody = await req.json()
-    console.log('📥 Request body received:', requestBody);
-    
     const { token } = requestBody
-    console.log('🔑 Received token:', token?.substring(0, 10) + '...');
+    
+    console.log('🔑 Received token for validation');
     
     if (!token) {
       console.error('❌ No token provided');
@@ -39,27 +37,27 @@ serve(async (req) => {
     }
 
     // Validate the token and get session info
-    console.log('🔍 Validating token...');
+    console.log('🔍 Validating token with database...');
     const { data: sessionData, error } = await supabaseAdmin
       .rpc('validate_client_portal_session', { p_token: token })
 
-    console.log('🔍 Session validation result:', sessionData, error);
+    console.log('🔍 Session validation result:', { sessionData, error });
 
     if (error) {
       console.error('❌ Session validation error:', error);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or expired token' }),
+        JSON.stringify({ success: false, error: 'Database validation failed' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
+          status: 500 
         }
       )
     }
 
     if (!sessionData || sessionData.length === 0) {
-      console.error('❌ No session data found');
+      console.error('❌ No session data found for token');
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or expired token' }),
+        JSON.stringify({ success: false, error: 'Invalid or expired access link' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
@@ -68,12 +66,12 @@ serve(async (req) => {
     }
 
     const session = sessionData[0]
-    console.log('✅ Session found:', session);
+    console.log('✅ Session found for client:', session.client_id);
     
     if (!session.is_valid) {
-      console.error('❌ Session expired');
+      console.error('❌ Session has expired');
       return new Response(
-        JSON.stringify({ success: false, error: 'Session expired' }),
+        JSON.stringify({ success: false, error: 'Access link has expired' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
@@ -110,7 +108,7 @@ serve(async (req) => {
       console.warn('⚠️ Failed to update last login:', updateError);
     }
 
-    console.log('✅ Portal authentication successful');
+    console.log('✅ Portal authentication successful for:', session.email);
 
     return new Response(
       JSON.stringify({
@@ -131,7 +129,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Portal auth error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Internal server error' }),
+      JSON.stringify({ success: false, error: 'Authentication service temporarily unavailable' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 

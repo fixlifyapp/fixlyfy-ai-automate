@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ClientPortalDashboard } from '@/components/portal/ClientPortalDashboard';
+import { ModernClientPortal } from '@/components/portal/ModernClientPortal';
 import { ClientPortalLogin } from '@/components/portal/ClientPortalLogin';
 import { ClientPortalProvider } from '@/components/portal/ClientPortalProvider';
 import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary';
@@ -16,7 +16,6 @@ export default function ClientPortalPage() {
     if (token) {
       console.log('🔑 Token preview:', token.substring(0, 10) + '...');
     }
-    // Always show loading initially to validate token
     setIsLoading(false);
   }, [token]);
 
@@ -40,9 +39,7 @@ export default function ClientPortalPage() {
   return (
     <AppErrorBoundary>
       <ClientPortalProvider token={token}>
-        <div className="min-h-screen bg-gray-50">
-          <ClientPortalDashboard />
-        </div>
+        <ModernClientPortal />
       </ClientPortalProvider>
     </AppErrorBoundary>
   );
