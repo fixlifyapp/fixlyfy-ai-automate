@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Loader2, LogOut, RefreshCw, FileText, CreditCard, Calendar, Activity, Download, Eye, Menu, X } from 'lucide-react';
+import { AlertCircle, Loader2, LogOut, RefreshCw, FileText, CreditCard, Calendar, Activity, Download, Eye } from 'lucide-react';
 
 function MobileDocumentCard({ title, number, date, amount, status, type, onView, onDownload }: {
   title: string;
@@ -69,7 +69,7 @@ function MobileDocumentCard({ title, number, date, amount, status, type, onView,
 }
 
 export function MobileClientPortal() {
-  const { session, data, isLoading, isAuthenticated, error, logout, refreshData } = useClientPortal();
+  const { session, data, isLoading, isAuthenticated, error, logout, refreshData, retryAuth } = useClientPortal();
   const [activeTab, setActiveTab] = useState('overview');
 
   if (isLoading) {
@@ -106,7 +106,7 @@ export function MobileClientPortal() {
             </p>
             <div className="space-y-2">
               <Button 
-                onClick={() => window.location.reload()} 
+                onClick={retryAuth} 
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />

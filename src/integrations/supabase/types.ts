@@ -3590,7 +3590,6 @@ export type Database = {
           name: string
           document_type: string
           document_id: string
-          is_valid: boolean
         }[]
       }
     }

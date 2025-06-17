@@ -93,7 +93,7 @@ export function ClientPortalProvider({
       setIsAuthenticated(false);
       setSession(null);
       
-      // Only show toast for critical errors
+      // Only show toast for critical errors, not network issues
       if (!errorMessage.includes('fetch') && !errorMessage.includes('connect')) {
         toast.error(errorMessage);
       }
