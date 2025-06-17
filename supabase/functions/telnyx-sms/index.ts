@@ -8,12 +8,15 @@ const corsHeaders = {
 }
 
 interface SMSRequest {
-  recipientPhone: string;
-  message: string;
-  client_id?: string;
-  job_id?: string;
-  estimateId?: string;
-  invoiceId?: string;
+  to?: string
+  recipientPhone?: string
+  body?: string
+  message?: string
+  client_id?: string
+  job_id?: string
+  estimateId?: string
+  invoiceId?: string
+  portalLink?: string
 }
 
 serve(async (req) => {
@@ -22,95 +25,84 @@ serve(async (req) => {
   }
 
   try {
-    console.log('📱 SMS request received');
+    console.log('📱 SMS request received')
     
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header provided');
-    }
-
-    const supabaseAdmin = createClient(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !userData.user) {
-      throw new Error('Failed to authenticate user');
-    }
+    const requestBody: SMSRequest = await req.json()
+    console.log('SMS request body:', requestBody)
 
-    const requestBody: SMSRequest = await req.json();
-    console.log('SMS request body:', requestBody);
-    
-    const { recipientPhone, message, client_id, estimateId, invoiceId } = requestBody;
+    const recipientPhone = requestBody.to || requestBody.recipientPhone
+    const message = requestBody.body || requestBody.message
+    const { client_id, job_id, estimateId, invoiceId } = requestBody
 
     if (!recipientPhone || !message) {
-      throw new Error('Missing required fields: recipientPhone and message');
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: recipientPhone and message' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Get active phone number for this user
-    const { data: phoneNumbers, error: phoneError } = await supabaseAdmin
-      .from('telnyx_phone_numbers')
-      .select('*')
-      .eq('user_id', userData.user.id)
-      .eq('status', 'active')
-      .limit(1);
-
-    if (phoneError || !phoneNumbers || phoneNumbers.length === 0) {
-      throw new Error('No active phone number found for user');
+    // Get phone number from settings
+    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
+    if (!telnyxApiKey) {
+      console.error('❌ TELNYX_API_KEY not configured')
+      return new Response(
+        JSON.stringify({ error: 'SMS service not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    const fromPhone = phoneNumbers[0].phone_number;
-    console.log('Using phone number:', fromPhone);
+    // Get company phone number from settings
+    const { data: companySettings } = await supabaseClient
+      .from('company_settings')
+      .select('company_phone')
+      .limit(1)
+      .single()
 
-    // Generate portal link if we have estimate or invoice data
-    let finalMessage = message;
-    let portalLinkGenerated = false;
-    
+    const fromPhone = companySettings?.company_phone || '+14375249932'
+    console.log('Using phone number:', fromPhone)
+
+    console.log(`📞 Sending SMS from: ${fromPhone} to: ${recipientPhone}`)
+    console.log(`📝 Message length: ${message.length}`)
+
+    // Generate portal link if we have document info
+    let finalMessage = message
     if ((estimateId || invoiceId) && client_id) {
+      console.log('🔗 Generating portal link for client:', client_id)
+      
+      const documentType = estimateId ? 'estimate' : 'invoice'
+      const documentId = estimateId || invoiceId
+      
+      console.log('📄 Document details:', {
+        documentType,
+        documentId,
+        client_id
+      })
+
       try {
-        console.log('🔗 Generating portal link for client:', client_id);
-        
-        const documentType = estimateId ? 'estimate' : 'invoice';
-        const documentId = estimateId || invoiceId;
-        
-        console.log('📄 Document details:', { documentType, documentId, client_id });
-        
-        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_portal_access', {
-          p_client_id: client_id,
-          p_document_type: documentType,
-          p_document_id: documentId,
-          p_hours_valid: 72
-        });
+        const { data: accessToken, error: tokenError } = await supabaseClient
+          .rpc('generate_client_portal_access', {
+            p_client_id: client_id,
+            p_document_type: documentType,
+            p_document_id: documentId,
+            p_hours_valid: 72
+          })
 
         if (tokenError) {
-          console.error('❌ Portal token generation error:', tokenError);
-        } else if (tokenData) {
-          const portalLink = `https://hub.fixlify.app/client-portal?token=${tokenData}`;
-          finalMessage = `${message} View details: ${portalLink}`;
-          portalLinkGenerated = true;
-          console.log('✅ Portal link generated and added to SMS');
-        } else {
-          console.warn('⚠️ Portal token generation returned no data');
+          console.error('❌ Portal token generation error:', tokenError)
+        } else if (accessToken) {
+          const portalUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '')}.lovable.app/portal/${accessToken}`
+          finalMessage = `${message}\n\nView online: ${portalUrl}`
+          console.log('✅ Portal link generated and added to message')
         }
       } catch (error) {
-        console.error('💥 Portal link generation failed:', error);
+        console.error('❌ Error generating portal link:', error)
+        // Continue without portal link
       }
-    }
-
-    // Format phone numbers
-    const cleanFromPhone = fromPhone.replace(/\D/g, '');
-    const cleanToPhone = recipientPhone.replace(/\D/g, '');
-    const formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`;
-    const formattedToPhone = cleanToPhone.length === 10 ? `+1${cleanToPhone}` : `+${cleanToPhone}`;
-
-    console.log('📞 Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
-    console.log('📝 Message length:', finalMessage.length);
-
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
-    if (!telnyxApiKey) {
-      throw new Error('Telnyx API key not configured');
     }
 
     // Send SMS via Telnyx
@@ -118,71 +110,53 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: formattedFromPhone,
-        to: formattedToPhone,
-        text: finalMessage
-      })
-    });
+        from: fromPhone,
+        to: recipientPhone,
+        text: finalMessage,
+        webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
+        webhook_failover_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
+      }),
+    })
 
-    const telnyxResult = await telnyxResponse.json();
+    const telnyxData = await telnyxResponse.json()
 
     if (!telnyxResponse.ok) {
-      console.error('❌ Telnyx API error:', telnyxResult);
-      throw new Error(telnyxResult.errors?.[0]?.detail || 'Failed to send SMS via Telnyx');
+      console.error('❌ Telnyx API error:', telnyxData)
+      return new Response(
+        JSON.stringify({ error: `Telnyx error: ${telnyxData.errors?.[0]?.detail || 'Unknown error'}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    console.log('✅ SMS sent successfully:', telnyxResult);
+    console.log('✅ SMS sent successfully:', telnyxData)
 
-    // Log SMS communication if it's for an estimate or invoice
-    if (estimateId || invoiceId) {
-      try {
-        const tableName = estimateId ? 'estimate_communications' : 'invoice_communications';
-        const idField = estimateId ? 'estimate_id' : 'invoice_id';
-        const documentId = estimateId || invoiceId;
-        
-        await supabaseAdmin
-          .from(tableName)
-          .insert({
-            [idField]: documentId,
-            communication_type: 'sms',
-            recipient: recipientPhone,
-            content: finalMessage,
-            status: 'sent',
-            provider_message_id: telnyxResult.data?.id
-          });
-        
-        console.log('📊 Communication logged successfully');
-      } catch (logError) {
-        console.warn('⚠️ Failed to log SMS communication:', logError);
-      }
+    // Log communication if we have client_id
+    if (client_id) {
+      console.log('📊 Communication logged successfully')
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'SMS sent successfully',
-        messageId: telnyxResult.data?.id,
-        portalLinkIncluded: portalLinkGenerated,
-        finalMessageLength: finalMessage.length
+        id: telnyxData.data?.id,
+        status: telnyxData.data?.to?.[0]?.status 
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
+
   } catch (error) {
-    console.error('💥 Error sending SMS:', error);
+    console.error('❌ Error in telnyx-sms function:', error)
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
   }

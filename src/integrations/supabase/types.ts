@@ -636,6 +636,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_portal_access: {
+        Row: {
+          access_token: string
+          client_id: string
+          created_at: string | null
+          document_id: string
+          document_type: string
+          expires_at: string
+          id: string
+          used_at: string | null
+        }
+        Insert: {
+          access_token: string
+          client_id: string
+          created_at?: string | null
+          document_id: string
+          document_type: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          created_at?: string | null
+          document_id?: string
+          document_type?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       client_properties: {
         Row: {
           address: string | null
@@ -3363,6 +3396,15 @@ export type Database = {
           p_window_minutes?: number
         }
         Returns: boolean
+      }
+      generate_client_portal_access: {
+        Args: {
+          p_client_id: string
+          p_document_type: string
+          p_document_id: string
+          p_hours_valid?: number
+        }
+        Returns: string
       }
       generate_next_id: {
         Args: { p_entity_type: string }
