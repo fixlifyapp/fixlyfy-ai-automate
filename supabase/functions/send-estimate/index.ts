@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -183,13 +182,22 @@ serve(async (req) => {
 
     console.log('🏢 Company settings loaded:', !!companySettings);
 
+    // Get active Telnyx phone number for display in email (not for sending)
+    const { data: telnyxNumbers, error: telnyxError } = await supabaseAdmin
+      .from('telnyx_phone_numbers')
+      .select('phone_number')
+      .eq('status', 'active')
+      .limit(1);
+
+    const activePhone = telnyxNumbers?.[0]?.phone_number || companySettings?.company_phone;
+
     // Generate simple portal link using client ID directly
     const portalLink = `https://hub.fixlify.app/portal/${client.id}`;
     console.log('✅ Portal link generated:', portalLink);
 
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
     const companyLogo = companySettings?.company_logo_url;
-    const companyPhone = companySettings?.company_phone;
+    const companyPhone = activePhone; // Use active Telnyx number for display
     const companyEmail = companySettings?.company_email;
 
     let subject, emailBody;

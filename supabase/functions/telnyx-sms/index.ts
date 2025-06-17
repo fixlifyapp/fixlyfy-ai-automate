@@ -46,7 +46,7 @@ serve(async (req) => {
       )
     }
 
-    // Get phone number from settings
+    // Get Telnyx API key
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
     if (!telnyxApiKey) {
       console.error('❌ TELNYX_API_KEY not configured')
@@ -56,24 +56,32 @@ serve(async (req) => {
       )
     }
 
-    // Get company phone number from settings
-    const { data: companySettings } = await supabaseClient
-      .from('company_settings')
-      .select('company_phone')
+    // Get active Telnyx phone number from telnyx_phone_numbers table
+    console.log('🔍 Getting active Telnyx phone number...')
+    const { data: telnyxNumbers, error: telnyxError } = await supabaseClient
+      .from('telnyx_phone_numbers')
+      .select('phone_number')
+      .eq('status', 'active')
       .limit(1)
-      .single()
 
-    let fromPhone = companySettings?.company_phone || '+14375249932'
-    
-    // Validate and clean the phone number
-    if (fromPhone && fromPhone.includes('(') && fromPhone.includes(')')) {
-      // This is a formatted number like (555) 123-4567, which is likely invalid for Telnyx
-      console.warn('⚠️ Company phone number appears to be a placeholder/formatted number:', fromPhone)
-      console.warn('⚠️ Using fallback number for SMS sending')
-      fromPhone = '+14375249932' // Use a fallback number
+    if (telnyxError) {
+      console.error('❌ Error fetching Telnyx phone numbers:', telnyxError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to get SMS phone number configuration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
-    
-    console.log('Using phone number:', fromPhone)
+
+    if (!telnyxNumbers || telnyxNumbers.length === 0) {
+      console.error('❌ No active Telnyx phone numbers found')
+      return new Response(
+        JSON.stringify({ error: 'No active SMS phone number configured. Please set up a Telnyx phone number first.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const fromPhone = telnyxNumbers[0].phone_number
+    console.log('✅ Using active Telnyx phone number:', fromPhone)
 
     console.log(`📞 Sending SMS from: ${fromPhone} to: ${recipientPhone}`)
     console.log(`📝 Message length: ${message.length}`)
@@ -83,60 +91,50 @@ serve(async (req) => {
     if (client_id && (estimateId || invoiceId)) {
       console.log('🔗 Adding portal link for client:', client_id)
       
-      // Use simple client ID based portal link
       const portalUrl = `https://hub.fixlify.app/portal/${client_id}`
       finalMessage = `${message}\n\nView online: ${portalUrl}`
       console.log('✅ Portal link added to message')
     }
 
-    // Only attempt to send SMS if we have a valid Telnyx phone number
-    if (fromPhone === '+14375249932' || fromPhone.startsWith('+1')) {
-      // Send SMS via Telnyx
-      const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromPhone,
-          to: recipientPhone,
-          text: finalMessage,
-          webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
-          webhook_failover_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
-        }),
-      })
+    // Send SMS via Telnyx
+    const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${telnyxApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromPhone,
+        to: recipientPhone,
+        text: finalMessage,
+        webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
+        webhook_failover_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sms-receiver`,
+      }),
+    })
 
-      const telnyxData = await telnyxResponse.json()
+    const telnyxData = await telnyxResponse.json()
 
-      if (!telnyxResponse.ok) {
-        console.error('❌ Telnyx API error:', telnyxData)
-        return new Response(
-          JSON.stringify({ error: `SMS service error: ${telnyxData.errors?.[0]?.detail || 'Unable to send SMS. Please check phone number configuration.'}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      console.log('✅ SMS sent successfully:', telnyxData)
-
+    if (!telnyxResponse.ok) {
+      console.error('❌ Telnyx API error:', telnyxData)
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          id: telnyxData.data?.id,
-          status: telnyxData.data?.to?.[0]?.status 
-        }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    } else {
-      console.error('❌ Invalid phone number configuration:', fromPhone)
-      return new Response(
-        JSON.stringify({ error: 'SMS service not properly configured. Please contact administrator to set up a valid phone number.' }),
+        JSON.stringify({ error: `SMS service error: ${telnyxData.errors?.[0]?.detail || 'Unable to send SMS'}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('✅ SMS sent successfully:', telnyxData)
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        id: telnyxData.data?.id,
+        status: telnyxData.data?.to?.[0]?.status 
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
 
   } catch (error) {
     console.error('❌ Error in telnyx-sms function:', error)
