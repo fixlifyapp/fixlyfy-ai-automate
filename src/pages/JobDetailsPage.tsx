@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
 import { Card } from "@/components/ui/card";
@@ -15,13 +15,19 @@ import { ModernJobInvoicesTab } from "@/components/jobs/overview/ModernJobInvoic
 import { ModernJobPaymentsTab } from "@/components/jobs/overview/ModernJobPaymentsTab";
 import { JobHistory } from "@/components/jobs/JobHistory";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>("overview");
   const { hasPermission } = useRBAC();
   const isMobile = useIsMobile();
+  
+  console.log("🔍 JobDetailsPage - params:", { id });
+  console.log("🔍 JobDetailsPage - location:", location);
   
   useEffect(() => {
     if (location.state && location.state.activeTab) {
@@ -35,18 +41,59 @@ const JobDetailsPage = () => {
     toast.success('Estimate converted to invoice successfully');
   };
   
+  // Validate job ID format
+  const isValidJobId = (jobId: string) => {
+    // Job IDs should start with J- followed by numbers
+    return /^J-\d+$/.test(jobId);
+  };
+  
   if (!id) {
+    console.error("❌ JobDetailsPage - No job ID provided");
     return (
       <PageLayout>
         <div className="container mx-auto px-2 sm:px-4">
           <div className="text-center py-8">
             <h1 className="text-xl sm:text-2xl font-bold text-red-600">Job not found</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">Invalid job ID provided.</p>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">No job ID provided.</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => navigate('/jobs')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Jobs
+            </Button>
           </div>
         </div>
       </PageLayout>
     );
   }
+  
+  if (!isValidJobId(id)) {
+    console.error("❌ JobDetailsPage - Invalid job ID format:", id);
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-2 sm:px-4">
+          <div className="text-center py-8">
+            <h1 className="text-xl sm:text-2xl font-bold text-red-600">Invalid Job ID</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+              Job ID "{id}" is not in the correct format. Expected format: J-####
+            </p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => navigate('/jobs')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Jobs
+            </Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+  
+  console.log("✅ JobDetailsPage - Valid job ID, rendering job details for:", id);
   
   return (
     <PageLayout>

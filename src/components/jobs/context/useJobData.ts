@@ -72,7 +72,22 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         
         console.log("✅ User authenticated:", user.id);
         
-        // Try a more explicit query approach
+        // Check if job exists first with simple query
+        const { data: jobExists, error: jobExistsError } = await supabase
+          .from('jobs')
+          .select('id, title, client_id')
+          .eq('id', jobId)
+          .single();
+        
+        if (jobExistsError || !jobExists) {
+          console.error("❌ Job doesn't exist:", jobExistsError);
+          toast.error(`Job ${jobId} not found`);
+          throw new Error(`Job not found: ${jobId}`);
+        }
+        
+        console.log("✅ Job exists:", jobExists);
+        
+        // Now try to get the full job data with client
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
@@ -83,30 +98,37 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           .single();
         
         if (jobError) {
-          console.error("❌ Error fetching job:", jobError);
-          console.error("Error details:", {
-            code: jobError.code,
-            message: jobError.message,
-            details: jobError.details,
-            hint: jobError.hint
-          });
+          console.error("❌ Error fetching job with client:", jobError);
           
-          // Try to fetch the job without the client join to see if it's a join issue
-          const { data: jobOnlyData, error: jobOnlyError } = await supabase
+          // Fallback: get job without client join
+          const { data: jobOnly, error: jobOnlyError } = await supabase
             .from('jobs')
             .select('*')
             .eq('id', jobId)
             .single();
             
           if (jobOnlyError) {
-            console.error("❌ Job doesn't exist or access denied:", jobOnlyError);
-            toast.error(`Job ${jobId} not found or access denied`);
-            throw new Error(`Job not found: ${jobId}`);
-          } else {
-            console.log("✅ Job exists but client join failed:", jobOnlyData);
+            throw new Error(`Failed to fetch job: ${jobOnlyError.message}`);
           }
           
-          throw jobError;
+          // Get client separately if job has client_id
+          let clientData = null;
+          if (jobOnly.client_id) {
+            const { data: client, error: clientError } = await supabase
+              .from('clients')
+              .select('*')
+              .eq('id', jobOnly.client_id)
+              .single();
+              
+            if (!clientError && client) {
+              clientData = client;
+            } else {
+              console.warn("⚠️ Could not fetch client data:", clientError);
+            }
+          }
+          
+          // Use the separated data
+          jobData = { ...jobOnly, clients: clientData };
         }
         
         if (!jobData) {
@@ -124,7 +146,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         
         // Extract client information with type safety
         const client = jobData.clients || { 
-          id: "",
+          id: jobData.client_id || "",
           name: "Unknown Client",
           email: "",
           phone: "",
@@ -162,9 +184,9 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         // Create job info object
         const jobInfo: JobInfo = {
           id: jobData.id,
-          clientId: client.id || "",
+          clientId: client.id || jobData.client_id || "",
           client: client.name || "Unknown Client",
-          service: jobData.service || "General Service",
+          service: jobData.service || jobData.job_type || "General Service",
           address: formattedAddress || jobData.address || "",
           phone: client.phone || "",
           email: client.email || "",
@@ -184,7 +206,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select('amount')
-          .eq('invoice_id', jobId);
+          .eq('job_id', jobId);
           
         if (paymentsError) {
           console.warn("⚠️ Could not fetch payments:", paymentsError);
