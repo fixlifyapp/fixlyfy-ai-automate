@@ -47,6 +47,7 @@ import { AppProviders } from "@/components/ui/AppProviders";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import ClientPortal from "@/pages/ClientPortal";
+import EnhancedClientPortal from "@/pages/EnhancedClientPortal";
 
 const queryClient = new QueryClient();
 
