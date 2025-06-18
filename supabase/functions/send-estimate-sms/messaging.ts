@@ -21,8 +21,8 @@ export const createSMSMessage = (
   const estimateTotal = estimate.total?.toFixed(2) || '0.00';
   
   if (customMessage) {
-    return portalLink 
-      ? `${customMessage} View details: ${portalLink}`
+    return portalLink && !customMessage.includes('portal.fixlify.app')
+      ? `${customMessage}\n\nView details: ${portalLink}`
       : customMessage;
   }
 
