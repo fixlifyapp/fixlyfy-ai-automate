@@ -34,7 +34,7 @@ serve(async (req) => {
     const requestBody = await req.json()
     console.log('Request body:', requestBody);
     
-    const { invoiceId, recipientPhone, message } = requestBody;
+    const { invoiceId, recipientPhone, message, hoursValid = 72 } = requestBody;
 
     if (!invoiceId || !recipientPhone) {
       throw new Error('Missing required fields: invoiceId and recipientPhone');
@@ -77,6 +77,44 @@ serve(async (req) => {
       }
     }
 
+    // Generate secure portal access token
+    const accessToken = btoa(Math.random().toString()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+    const expiresAt = new Date(Date.now() + (hoursValid * 60 * 60 * 1000));
+
+    // Store portal access in database
+    const { error: portalError } = await supabaseAdmin
+      .from('client_portal_access')
+      .insert({
+        access_token: accessToken,
+        client_id: client?.id || '',
+        document_type: 'invoice',
+        document_id: invoiceId,
+        expires_at: expiresAt.toISOString(),
+        permissions: {
+          view_estimates: true,
+          view_invoices: true,
+          make_payments: false
+        },
+        domain_restriction: 'portal.fixlify.app'
+      });
+
+    if (portalError) {
+      console.error('Error creating portal access:', portalError);
+    }
+
+    // Update invoice with portal access token
+    await supabaseAdmin
+      .from('invoices')
+      .update({ portal_access_token: accessToken })
+      .eq('id', invoiceId);
+
+    // Generate new portal URL
+    const portalUrl = job?.id 
+      ? `https://portal.fixlify.app/portal/${accessToken}/${job.id}`
+      : `https://portal.fixlify.app/portal/${accessToken}`;
+
+    console.log('Generated portal URL:', portalUrl);
+
     // Get company settings for branding
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
@@ -116,29 +154,19 @@ serve(async (req) => {
 
     console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
 
-    // Generate portal link - prioritize job portal for direct access
-    let viewLink = '';
-    if (job?.id) {
-      viewLink = `https://portal.fixlify.app/client/${job.id}`;
-      console.log('Direct job portal link generated:', viewLink);
-    } else if (client?.id) {
-      viewLink = `https://portal.fixlify.app/portal/${client.id}`;
-      console.log('Enhanced portal link generated:', viewLink);
-    }
-
-    // Create SMS message with portal link
+    // Create SMS message with new portal link
     const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
     
     let smsMessage;
     if (message) {
       smsMessage = message;
       // Add portal link to custom message if not already included
-      if (viewLink && !message.includes('portal.fixlify.app')) {
-        smsMessage = `${message}\n\nView & pay: ${viewLink}`;
+      if (portalUrl && !message.includes('portal.fixlify.app')) {
+        smsMessage = `${message}\n\nView & pay: ${portalUrl}`;
       }
     } else {
-      if (viewLink) {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. View & pay: ${viewLink}`;
+      if (portalUrl) {
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. View & pay: ${portalUrl}`;
       } else {
         smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Contact us for payment.`;
       }
@@ -183,7 +211,7 @@ serve(async (req) => {
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!viewLink
+          portal_link_included: !!portalUrl
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
@@ -196,7 +224,7 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: telnyxResult.data?.id,
-        secureViewLinkIncluded: !!viewLink,
+        portalUrl: portalUrl,
         smsContent: smsMessage
       }),
       {

@@ -600,6 +600,45 @@ export type Database = {
         }
         Relationships: []
       }
+      client_documents: {
+        Row: {
+          client_id: string
+          created_at: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          job_id: string | null
+          mime_type: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          job_id?: string | null
+          mime_type?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          job_id?: string | null
+          mime_type?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       client_notifications: {
         Row: {
           client_id: string
@@ -797,6 +836,60 @@ export type Database = {
           type?: string | null
           updated_at?: string | null
           zip?: string | null
+        }
+        Relationships: []
+      }
+      communication_logs: {
+        Row: {
+          clicked_at: string | null
+          client_id: string
+          content: string | null
+          created_at: string
+          delivered_at: string | null
+          external_id: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          provider: string
+          recipient: string
+          sent_at: string | null
+          status: string | null
+          subject: string | null
+          type: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          client_id: string
+          content?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          provider: string
+          recipient: string
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          type: string
+        }
+        Update: {
+          clicked_at?: string | null
+          client_id?: string
+          content?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          provider?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          type?: string
         }
         Relationships: []
       }
@@ -1326,6 +1419,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           client_id: string | null
+          client_signature: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1335,7 +1429,10 @@ export type Database = {
           items: Json | null
           job_id: string
           notes: string | null
+          portal_access_token: string | null
           sent_at: string | null
+          signature_ip: string | null
+          signature_timestamp: string | null
           status: string
           subtotal: number
           tax_amount: number | null
@@ -1349,6 +1446,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           client_id?: string | null
+          client_signature?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1358,7 +1456,10 @@ export type Database = {
           items?: Json | null
           job_id: string
           notes?: string | null
+          portal_access_token?: string | null
           sent_at?: string | null
+          signature_ip?: string | null
+          signature_timestamp?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number | null
@@ -1372,6 +1473,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           client_id?: string | null
+          client_signature?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1381,7 +1483,10 @@ export type Database = {
           items?: Json | null
           job_id?: string
           notes?: string | null
+          portal_access_token?: string | null
           sent_at?: string | null
+          signature_ip?: string | null
+          signature_timestamp?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number | null
@@ -1516,6 +1621,9 @@ export type Database = {
           job_id: string
           notes: string | null
           paid_at: string | null
+          payment_link: string | null
+          payment_status: string | null
+          portal_access_token: string | null
           sent_at: string | null
           status: string
           subtotal: number
@@ -1545,6 +1653,9 @@ export type Database = {
           job_id: string
           notes?: string | null
           paid_at?: string | null
+          payment_link?: string | null
+          payment_status?: string | null
+          portal_access_token?: string | null
           sent_at?: string | null
           status?: string
           subtotal?: number
@@ -1574,6 +1685,9 @@ export type Database = {
           job_id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_link?: string | null
+          payment_status?: string | null
+          portal_access_token?: string | null
           sent_at?: string | null
           status?: string
           subtotal?: number
@@ -3621,6 +3735,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      webhook_events: {
+        Row: {
+          attempts: number | null
+          created_at: string
+          data: Json
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          last_attempt_at: string | null
+          status: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string
+          data: Json
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          last_attempt_at?: string | null
+          status?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string
+          data?: Json
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          last_attempt_at?: string | null
+          status?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

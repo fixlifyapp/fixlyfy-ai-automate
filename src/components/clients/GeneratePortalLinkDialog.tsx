@@ -43,21 +43,29 @@ export const GeneratePortalLinkDialog = ({
     try {
       setIsGenerating(true);
       
-      const { data, error } = await supabase.functions.invoke('generate-enhanced-portal-link', {
-        body: {
-          clientId,
-          validHours,
+      // Generate secure access token
+      const accessToken = btoa(Math.random().toString()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+      const expiresAt = new Date(Date.now() + (validHours * 60 * 60 * 1000));
+
+      // Store portal access in database
+      const { error } = await supabase
+        .from('client_portal_access')
+        .insert({
+          access_token: accessToken,
+          client_id: clientId,
+          document_type: 'portal',
+          document_id: crypto.randomUUID(),
+          expires_at: expiresAt.toISOString(),
           permissions,
-          domainRestriction: 'portal.fixlify.app'
-        }
-      });
+          domain_restriction: 'portal.fixlify.app'
+        });
 
       if (error) throw error;
       
-      if (data?.portalUrl) {
-        setPortalLink(data.portalUrl);
-        toast.success('Enhanced portal link generated successfully!');
-      }
+      // Generate new portal URL format
+      const portalUrl = `https://portal.fixlify.app/portal/${accessToken}`;
+      setPortalLink(portalUrl);
+      toast.success('Enhanced portal link generated successfully!');
     } catch (err: any) {
       console.error('Generate portal link error:', err);
       toast.error('Failed to generate portal link');
@@ -78,26 +86,22 @@ export const GeneratePortalLinkDialog = ({
       const message = customMessage || `Hi ${clientName}! Access your secure client portal here: ${portalLink}`;
 
       if (sendMethod === "email" && clientEmail) {
-        const { error } = await supabase.functions.invoke('send-portal-link', {
+        const { error } = await supabase.functions.invoke('telnyx-sms', {
           body: {
-            method: 'email',
-            recipient: clientEmail,
+            recipientPhone: clientEmail,
             message,
-            clientName,
-            portalLink
+            client_id: clientId
           }
         });
         
         if (error) throw error;
         toast.success('Portal link sent via email!');
       } else if (sendMethod === "sms" && clientPhone) {
-        const { error } = await supabase.functions.invoke('send-portal-link', {
+        const { error } = await supabase.functions.invoke('telnyx-sms', {
           body: {
-            method: 'sms',
-            recipient: clientPhone,
+            recipientPhone: clientPhone,
             message,
-            clientName,
-            portalLink
+            client_id: clientId
           }
         });
         
@@ -252,16 +256,6 @@ export const GeneratePortalLinkDialog = ({
                     <Label htmlFor="copy">Copy to clipboard only</Label>
                   </div>
                   
-                  {clientEmail && (
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="email" id="email" />
-                      <Label htmlFor="email" className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        Send via Email ({clientEmail})
-                      </Label>
-                    </div>
-                  )}
-                  
                   {clientPhone && (
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="sms" id="sms" />
@@ -274,7 +268,7 @@ export const GeneratePortalLinkDialog = ({
                 </RadioGroup>
               </div>
 
-              {(sendMethod === "email" || sendMethod === "sms") && (
+              {sendMethod === "sms" && (
                 <div className="space-y-2">
                   <Label>Custom Message (optional)</Label>
                   <Input

@@ -44,10 +44,53 @@ export const sendClientMessage = async ({
   try {
     console.log("Calling telnyx-sms function...");
     
+    // Check if content already contains a portal.fixlify.app link
+    const hasPortalLink = content.includes('portal.fixlify.app');
+    let finalContent = content;
+    
+    // If no portal link exists and we have client/job info, generate one
+    if (!hasPortalLink && (clientId || jobId)) {
+      try {
+        // Generate secure access token
+        const accessToken = btoa(Math.random().toString()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+        const expiresAt = new Date(Date.now() + (72 * 60 * 60 * 1000)); // 72 hours
+
+        // Store portal access in database
+        const { error: portalError } = await supabase
+          .from('client_portal_access')
+          .insert({
+            access_token: accessToken,
+            client_id: clientId || '',
+            document_type: 'portal',
+            document_id: crypto.randomUUID(),
+            expires_at: expiresAt.toISOString(),
+            permissions: {
+              view_estimates: true,
+              view_invoices: true,
+              make_payments: false
+            },
+            domain_restriction: 'portal.fixlify.app'
+          });
+
+        if (!portalError) {
+          // Generate new portal URL format
+          const portalUrl = jobId 
+            ? `https://portal.fixlify.app/portal/${accessToken}/${jobId}`
+            : `https://portal.fixlify.app/portal/${accessToken}`;
+          
+          finalContent = `${content}\n\nView details: ${portalUrl}`;
+          console.log("Added portal link to message:", portalUrl);
+        }
+      } catch (portalError) {
+        console.warn("Failed to generate portal link:", portalError);
+        // Continue with original message if portal generation fails
+      }
+    }
+    
     const { data, error } = await supabase.functions.invoke('telnyx-sms', {
       body: {
         recipientPhone: clientPhone,
-        message: content.trim(),
+        message: finalContent,
         client_id: clientId || '',
         job_id: jobId || ''
       }
