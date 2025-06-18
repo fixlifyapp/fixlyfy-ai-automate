@@ -67,12 +67,12 @@ serve(async (req) => {
     // Add portal link - prioritize job_id for direct job access
     if (job_id) {
       console.log('🔗 Adding job portal link for job:', job_id);
-      const jobPortalLink = `https://hub.fixlify.app/client/${job_id}`;
+      const jobPortalLink = `https://portal.fixlify.app/client/${job_id}`;
       finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
       console.log('✅ Job portal link added to message');
     } else if (client_id) {
       console.log('🔗 Adding enhanced portal link for client:', client_id);
-      const portalLink = `https://hub.fixlify.app/portal/${client_id}`;
+      const portalLink = `https://portal.fixlify.app/portal/${client_id}`;
       finalMessage = `${message}\n\nView portal: ${portalLink}`;
       console.log('✅ Enhanced portal link added to message');
     }

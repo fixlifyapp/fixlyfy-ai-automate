@@ -104,10 +104,10 @@ serve(async (req) => {
     const client = job?.clients;
     
     if (job?.id) {
-      viewLink = `https://hub.fixlify.app/client/${job.id}`;
+      viewLink = `https://portal.fixlify.app/client/${job.id}`;
       console.log('Direct job portal link generated:', viewLink);
     } else if (client?.id) {
-      viewLink = `https://hub.fixlify.app/portal/${client.id}`;
+      viewLink = `https://portal.fixlify.app/portal/${client.id}`;
       console.log('Enhanced portal link generated:', viewLink);
     }
 
@@ -118,7 +118,7 @@ serve(async (req) => {
     if (message) {
       smsMessage = message;
       // Add portal link to custom message if not already included
-      if (viewLink && !message.includes('hub.fixlify.app')) {
+      if (viewLink && !message.includes('portal.fixlify.app')) {
         smsMessage = `${message}\n\nView details: ${viewLink}`;
       }
     } else {
