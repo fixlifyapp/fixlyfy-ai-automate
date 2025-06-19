@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +60,7 @@ const ClientPortal = () => {
       }
 
       // Type the validation response properly
-      const validation = validationData as PortalValidationResponse;
+      const validation = validationData as unknown as PortalValidationResponse;
 
       if (!validation.valid) {
         setError(validation.error || "Invalid or expired portal link");
