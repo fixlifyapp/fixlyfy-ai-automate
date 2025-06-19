@@ -112,6 +112,8 @@ serve(async (req) => {
       )
     }
 
+    console.log('📋 Loading data for client:', client.name, 'ID:', clientId)
+
     // Get client's jobs
     const { data: jobs, error: jobsError } = await supabaseClient
       .from('jobs')
@@ -123,35 +125,72 @@ serve(async (req) => {
       console.warn('Warning: Error fetching jobs:', jobsError)
     }
 
-    // Get client's estimates
+    const jobIds = jobs?.map(job => job.id) || []
+    console.log('🔧 Found jobs:', jobIds.length)
+
+    // Get client's estimates with proper data
     const { data: estimates, error: estimatesError } = await supabaseClient
       .from('estimates')
       .select('*')
-      .in('job_id', jobs?.map(job => job.id) || [])
+      .in('job_id', jobIds.length > 0 ? jobIds : ['no-jobs'])
       .order('created_at', { ascending: false })
 
     if (estimatesError) {
       console.warn('Warning: Error fetching estimates:', estimatesError)
     }
 
-    // Get client's invoices
+    console.log('📋 Found estimates:', estimates?.length || 0)
+    if (estimates && estimates.length > 0) {
+      console.log('💰 Estimate totals:', estimates.map(e => ({ id: e.id, total: e.total, status: e.status })))
+    }
+
+    // Get client's invoices with proper data
     const { data: invoices, error: invoicesError } = await supabaseClient
       .from('invoices')
       .select('*')
-      .in('job_id', jobs?.map(job => job.id) || [])
+      .in('job_id', jobIds.length > 0 ? jobIds : ['no-jobs'])
       .order('created_at', { ascending: false })
 
     if (invoicesError) {
       console.warn('Warning: Error fetching invoices:', invoicesError)
     }
 
-    console.log('✅ Portal data loaded successfully for client:', client.name)
-    console.log('📊 Data summary:', {
-      client: client.name,
-      jobs: jobs?.length || 0,
-      estimates: estimates?.length || 0,
-      invoices: invoices?.length || 0
+    console.log('📄 Found invoices:', invoices?.length || 0)
+    if (invoices && invoices.length > 0) {
+      console.log('💰 Invoice totals:', invoices.map(i => ({ 
+        id: i.id, 
+        total: i.total, 
+        status: i.status, 
+        payment_status: i.payment_status 
+      })))
+    }
+
+    // Calculate actual totals
+    const estimateCount = estimates?.length || 0
+    const estimateValue = estimates?.reduce((sum, est) => sum + (parseFloat(est.total) || 0), 0) || 0
+    
+    const invoiceCount = invoices?.length || 0
+    const invoiceValue = invoices?.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0) || 0
+    
+    const paidInvoices = invoices?.filter(inv => 
+      inv.status === 'paid' || inv.payment_status === 'paid'
+    ) || []
+    const paidCount = paidInvoices.length
+    const paidValue = paidInvoices.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0)
+    
+    const pendingInvoices = invoices?.filter(inv => 
+      inv.status !== 'paid' && inv.payment_status !== 'paid'
+    ) || []
+    const pendingCount = pendingInvoices.length
+
+    console.log('📊 Calculated totals:', {
+      estimates: { count: estimateCount, value: estimateValue },
+      invoices: { count: invoiceCount, value: invoiceValue },
+      paid: { count: paidCount, value: paidValue },
+      pending: { count: pendingCount }
     })
+
+    console.log('✅ Portal data loaded successfully for client:', client.name)
 
     // Log the access for audit purposes
     await supabaseClient
@@ -163,7 +202,13 @@ serve(async (req) => {
         user_agent: req.headers.get('user-agent') || 'unknown',
         metadata: { 
           access_method: accessToken.startsWith('C-') ? 'direct' : 'token',
-          data_loaded: true
+          data_loaded: true,
+          totals: {
+            estimates: estimateCount,
+            invoices: invoiceCount,
+            paid: paidCount,
+            pending: pendingCount
+          }
         }
       })
 
@@ -184,7 +229,25 @@ serve(async (req) => {
         invoices: invoices || [],
         messages: [], // Not implemented yet
         documents: [], // Not implemented yet
-        permissions: permissions
+        permissions: permissions,
+        // Add calculated totals for easier frontend access
+        totals: {
+          estimates: {
+            count: estimateCount,
+            value: estimateValue
+          },
+          invoices: {
+            count: invoiceCount,
+            value: invoiceValue
+          },
+          paid: {
+            count: paidCount,
+            value: paidValue
+          },
+          pending: {
+            count: pendingCount
+          }
+        }
       }),
       { 
         status: 200, 

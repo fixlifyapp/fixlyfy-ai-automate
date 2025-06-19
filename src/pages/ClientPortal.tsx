@@ -30,6 +30,23 @@ interface PortalData {
     view_invoices: boolean;
     make_payments: boolean;
   };
+  totals?: {
+    estimates: {
+      count: number;
+      value: number;
+    };
+    invoices: {
+      count: number;
+      value: number;
+    };
+    paid: {
+      count: number;
+      value: number;
+    };
+    pending: {
+      count: number;
+    };
+  };
 }
 
 const ClientPortal = () => {
@@ -137,23 +154,48 @@ const ClientPortal = () => {
   };
 
   const calculateTotals = () => {
+    // Use backend-calculated totals if available, fallback to client-side calculation
+    if (portalData?.totals) {
+      console.log("📊 Using backend-calculated totals:", portalData.totals);
+      return {
+        totalEstimates: portalData.totals.estimates.count,
+        totalEstimateValue: portalData.totals.estimates.value,
+        totalInvoices: portalData.totals.invoices.count,
+        totalInvoiceValue: portalData.totals.invoices.value,
+        paidInvoices: portalData.totals.paid.count,
+        paidValue: portalData.totals.paid.value,
+        pendingInvoices: portalData.totals.pending.count
+      };
+    }
+
+    // Fallback to client-side calculation
     const estimates = portalData?.estimates || [];
     const invoices = portalData?.invoices || [];
     
     const totalEstimates = estimates.length;
-    const totalEstimateValue = estimates.reduce((sum, est) => sum + (est.total || 0), 0);
+    const totalEstimateValue = estimates.reduce((sum, est) => sum + (parseFloat(est.total) || 0), 0);
     
     const totalInvoices = invoices.length;
-    const totalInvoiceValue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+    const totalInvoiceValue = invoices.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);
     
     const paidInvoices = invoices.filter(inv => inv.status === 'paid' || inv.payment_status === 'paid').length;
     const paidValue = invoices
       .filter(inv => inv.status === 'paid' || inv.payment_status === 'paid')
-      .reduce((sum, inv) => sum + (inv.total || 0), 0);
+      .reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);
     
     const pendingInvoices = invoices.filter(inv => 
       inv.status !== 'paid' && inv.payment_status !== 'paid'
     ).length;
+
+    console.log("📊 Using client-side calculated totals:", {
+      totalEstimates,
+      totalEstimateValue,
+      totalInvoices,
+      totalInvoiceValue,
+      paidInvoices,
+      paidValue,
+      pendingInvoices
+    });
 
     return {
       totalEstimates,
@@ -244,7 +286,7 @@ const ClientPortal = () => {
                           </div>
                           <div className="text-right flex-shrink-0 ml-2">
                             <div className="font-semibold text-sm sm:text-base">
-                              {formatCurrency(item.total)}
+                              {formatCurrency(parseFloat(item.total) || 0)}
                             </div>
                             <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(item.status)}`}>
                               {item.status || 'draft'}
@@ -313,7 +355,7 @@ const ClientPortal = () => {
                           </div>
                           <div className="text-right flex-shrink-0">
                             <div className="font-semibold text-sm sm:text-base">
-                              {formatCurrency(item.total)}
+                              {formatCurrency(parseFloat(item.total) || 0)}
                             </div>
                             <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(item.status)}`}>
                               {item.status || 'draft'}
