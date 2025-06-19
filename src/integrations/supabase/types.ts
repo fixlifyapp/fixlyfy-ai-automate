@@ -1128,6 +1128,69 @@ export type Database = {
         }
         Relationships: []
       }
+      document_approvals: {
+        Row: {
+          approval_token: string
+          approved_at: string | null
+          client_email: string | null
+          client_id: string
+          client_name: string | null
+          client_phone: string | null
+          client_response: string | null
+          created_at: string
+          document_id: string
+          document_number: string
+          document_type: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          signature_data: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          approval_token: string
+          approved_at?: string | null
+          client_email?: string | null
+          client_id: string
+          client_name?: string | null
+          client_phone?: string | null
+          client_response?: string | null
+          created_at?: string
+          document_id: string
+          document_number: string
+          document_type: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          approval_token?: string
+          approved_at?: string | null
+          client_email?: string | null
+          client_id?: string
+          client_name?: string | null
+          client_phone?: string | null
+          client_response?: string | null
+          created_at?: string
+          document_id?: string
+          document_number?: string
+          document_type?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       email_conversations: {
         Row: {
           client_id: string | null
@@ -2161,6 +2224,45 @@ export type Database = {
           taxable?: boolean
           unit_price?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      message_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          message_content: string
+          template_name: string
+          template_type: string
+          updated_at: string
+          user_id: string
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          message_content: string
+          template_name: string
+          template_type: string
+          updated_at?: string
+          user_id: string
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          message_content?: string
+          template_name?: string
+          template_type?: string
+          updated_at?: string
+          user_id?: string
+          variables?: Json | null
         }
         Relationships: []
       }
@@ -3827,6 +3929,18 @@ export type Database = {
           p_window_minutes?: number
         }
         Returns: boolean
+      }
+      generate_approval_token: {
+        Args: {
+          p_document_type: string
+          p_document_id: string
+          p_document_number: string
+          p_client_id: string
+          p_client_name?: string
+          p_client_email?: string
+          p_client_phone?: string
+        }
+        Returns: string
       }
       generate_client_portal_access: {
         Args: {
