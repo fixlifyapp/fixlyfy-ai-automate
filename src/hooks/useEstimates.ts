@@ -2,10 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Estimate } from "@/types/documents";
-
-// Export the type for backward compatibility
-export type { Estimate };
+import { Estimate, LineItem } from "@/types/documents";
 
 export const useEstimates = (jobId: string) => {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
@@ -34,8 +31,16 @@ export const useEstimates = (jobId: string) => {
       // Transform data to match Estimate interface
       const transformedEstimates: Estimate[] = (data || []).map(item => ({
         ...item,
-        status: item.status as Estimate['status'], // Type assertion for status
-        items: Array.isArray(item.items) ? item.items : [], // Ensure items is always an array
+        status: (item.status as Estimate['status']) || 'draft',
+        items: Array.isArray(item.items) ? 
+          (item.items as any[]).map((lineItem: any) => ({
+            id: lineItem.id || `item-${Math.random()}`,
+            description: lineItem.description || '',
+            quantity: lineItem.quantity || 1,
+            unitPrice: lineItem.unitPrice || lineItem.unit_price || 0,
+            taxable: lineItem.taxable !== false,
+            total: (lineItem.quantity || 1) * (lineItem.unitPrice || lineItem.unit_price || 0)
+          } as LineItem)) : [],
         subtotal: item.subtotal || 0,
         total: item.total || 0,
         tax_rate: item.tax_rate || 0,
