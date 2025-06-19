@@ -19,12 +19,41 @@ serve(async (req) => {
     )
 
     const { accessToken } = await req.json()
-    console.log('📊 Loading enhanced portal data for client:', accessToken)
+    console.log('📊 Loading enhanced portal data for token:', accessToken)
 
-    // For portal domain, accessToken is actually the client_id
-    if (!accessToken || !accessToken.startsWith('C-')) {
+    let clientId: string | null = null
+
+    // Check if this is a direct client ID (legacy)
+    if (accessToken && accessToken.startsWith('C-')) {
+      clientId = accessToken
+      console.log('📌 Using direct client ID:', clientId)
+    } else if (accessToken) {
+      // It's a token, validate it to get the client ID
+      console.log('🔍 Validating token to get client ID...')
+      
+      const { data: validationResult, error: validationError } = await supabaseClient
+        .functions.invoke('validate-portal-access', {
+          body: {
+            accessId: accessToken
+          }
+        })
+
+      if (validationError || !validationResult || !validationResult.valid) {
+        console.log('❌ Token validation failed:', validationError)
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired token' }),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      clientId = validationResult.client.id
+      console.log('✅ Token validated, client ID:', clientId)
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Invalid client ID' }),
+        JSON.stringify({ error: 'No access token provided' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -32,7 +61,15 @@ serve(async (req) => {
       )
     }
 
-    const clientId = accessToken
+    if (!clientId) {
+      return new Response(
+        JSON.stringify({ error: 'Could not determine client ID' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
 
     // Get client data
     const { data: client, error: clientError } = await supabaseClient
