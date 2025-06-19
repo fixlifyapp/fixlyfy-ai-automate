@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useDocumentSending } from "@/hooks/useDocumentSending";
 
 interface UniversalSendDialogProps {
   isOpen: boolean;
@@ -38,8 +37,9 @@ export const UniversalSendDialog = ({
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
   const [customNote, setCustomNote] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [validationError, setValidationError] = useState("");
+
+  const { sendDocument, isProcessing } = useDocumentSending();
 
   // Set default values when dialog opens
   useEffect(() => {
@@ -90,67 +90,20 @@ export const UniversalSendDialog = ({
   const handleSend = async () => {
     if (!validateInput()) return;
 
-    setIsProcessing(true);
-    
-    try {
-      console.log(`🚀 Sending ${documentType} via ${sendMethod}...`);
-      console.log(`Document ID: ${documentId}, Number: ${documentNumber}`);
-      console.log(`Send to: ${sendTo}`);
+    const result = await sendDocument({
+      documentType,
+      documentId,
+      sendMethod,
+      sendTo,
+      customMessage: customNote || undefined,
+      contactInfo
+    });
 
-      if (sendMethod === "email") {
-        // Call email sending edge function
-        const functionName = documentType === "estimate" ? "send-estimate" : "send-invoice";
-        
-        const { data, error } = await supabase.functions.invoke(functionName, {
-          body: {
-            [`${documentType}Id`]: documentId,
-            recipientEmail: sendTo,
-            customMessage: customNote || undefined
-          }
-        });
-
-        if (error) {
-          console.error(`❌ Error from ${functionName}:`, error);
-          throw new Error(error.message || `Failed to send ${documentType} via email`);
-        }
-
-        console.log(`✅ Email sent successfully:`, data);
-        toast.success(`${documentType === "estimate" ? "Estimate" : "Invoice"} sent via email successfully!`);
-        
-      } else {
-        // Call SMS sending edge function (specialized functions that generate portal links)
-        const functionName = documentType === "estimate" ? "send-estimate-sms" : "send-invoice-sms";
-        
-        const { data, error } = await supabase.functions.invoke(functionName, {
-          body: {
-            [`${documentType}Id`]: documentId,
-            recipientPhone: sendTo,
-            message: customNote || undefined
-          }
-        });
-
-        if (error) {
-          console.error(`❌ Error from ${functionName}:`, error);
-          throw new Error(error.message || `Failed to send ${documentType} via SMS`);
-        }
-
-        console.log(`✅ SMS sent successfully:`, data);
-        toast.success(`${documentType === "estimate" ? "Estimate" : "Invoice"} sent via SMS successfully!`);
-      }
-
-      // Always close the dialog after successful send
+    if (result.success) {
       onClose();
-      
-      // Call success callback if provided
       if (onSuccess) {
         onSuccess();
       }
-
-    } catch (error: any) {
-      console.error(`❌ Failed to send ${documentType}:`, error);
-      toast.error(`Failed to send ${documentType}: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
     }
   };
 

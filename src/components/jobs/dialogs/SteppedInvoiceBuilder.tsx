@@ -12,7 +12,6 @@ import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
 import { UniversalSendDialog } from "./shared/UniversalSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
-import { useInvoiceSending } from "./shared/hooks/useInvoiceSending";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
@@ -40,7 +39,6 @@ export const SteppedInvoiceBuilder = ({
   onInvoiceCreated
 }: SteppedInvoiceBuilderProps) => {
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
-  const [isCompleting, setIsCompleting] = useState(false);
   const [savedInvoice, setSavedInvoice] = useState<Invoice | null>(null);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
@@ -58,8 +56,6 @@ export const SteppedInvoiceBuilder = ({
     notes,
     setNotes,
     documentNumber,
-    setDocumentNumber,
-    isInitialized,
     isSubmitting,
     handleAddProduct,
     handleRemoveLineItem,
@@ -336,15 +332,14 @@ export const SteppedInvoiceBuilder = ({
                 documentTotal={calculateGrandTotal()}
                 onContinue={handleUpsellContinue}
                 onBack={() => setCurrentStep("items")}
-                existingUpsellItems={selectedUpsells}
-                estimateToConvert={estimateToConvert}
                 jobContext={jobContext}
               />
             )}
           </div>
         </DialogContent>
       </Dialog>
-      
+
+      {/* Universal Send Dialog */}
       <UniversalSendDialog
         isOpen={currentStep === "send"}
         onClose={handleSendDialogClose}

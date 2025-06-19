@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, FileText, Send, ArrowLeft } from "lucide-react";
 import { LineItem } from "../../builder/types";
 import { SendMethodStep } from "../estimate-builder/steps/SendMethodStep";
-import { useInvoiceSending } from "./hooks/useInvoiceSending";
+import { useDocumentSending } from "@/hooks/useDocumentSending";
 import { useJobData } from "../unified/hooks/useJobData";
 
 interface InvoiceSendStepProps {
@@ -23,7 +23,7 @@ interface InvoiceSendStepProps {
     email: string;
     phone: string;
   };
-  invoiceId?: string; // Add invoice ID prop
+  invoiceId?: string;
 }
 
 export const InvoiceSendStep = ({
@@ -41,7 +41,7 @@ export const InvoiceSendStep = ({
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
   const [validationError, setValidationError] = useState("");
-  const { sendInvoice, isProcessing } = useInvoiceSending();
+  const { sendDocument, isProcessing } = useDocumentSending();
   
   // Fetch job and client data
   const { clientInfo, loading } = useJobData(jobId);
@@ -77,17 +77,23 @@ export const InvoiceSendStep = ({
   const hasValidPhone = contactInfo?.phone && isValidPhoneNumber(contactInfo.phone);
 
   const handleSend = async () => {
-    const result = await sendInvoice({
+    // First save the invoice
+    const saveSuccess = await onSave();
+    if (!saveSuccess) {
+      return;
+    }
+
+    if (!invoiceId) {
+      console.error("Invoice ID is required for sending");
+      return;
+    }
+
+    const result = await sendDocument({
+      documentType: "invoice",
+      documentId: invoiceId,
       sendMethod,
       sendTo,
-      invoiceNumber,
-      invoiceDetails: { invoice_number: invoiceNumber },
-      lineItems,
-      contactInfo: contactInfo || { name: '', email: '', phone: '' },
-      customNote: notes,
-      jobId,
-      onSave,
-      existingInvoiceId: invoiceId || '' // Pass the invoice ID
+      contactInfo
     });
 
     if (result.success) {
