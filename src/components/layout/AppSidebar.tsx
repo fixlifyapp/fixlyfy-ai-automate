@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck, TestTube } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { TrackingWrapper } from "@/components/ui/TrackingWrapper";
 
@@ -68,6 +68,11 @@ export function AppSidebar() {
     icon: UserCheck,
     href: '/team',
     color: "text-fixlyfy"
+  }, {
+    label: 'Approval Test',
+    icon: TestTube,
+    href: '/test-approval',
+    color: "text-orange-500"
   }, {
     label: 'Settings',
     icon: Settings,
