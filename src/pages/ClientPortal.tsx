@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, AlertCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Clock, AlertCircle, FileText, DollarSign } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientPortalHeader } from "@/components/portal/ClientPortalHeader";
 import { ClientInfoCard } from "@/components/portal/ClientInfoCard";
 import { DashboardStats } from "@/components/portal/DashboardStats";
