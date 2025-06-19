@@ -19,7 +19,7 @@ serve(async (req) => {
     )
 
     const { documentType, documentId, documentNumber } = await req.json()
-    console.log(`📥 Downloading ${documentType}:`, { documentId, documentNumber })
+    console.log(`📥 Download request for ${documentType}:`, { documentId, documentNumber })
 
     // Get document data
     let document;
@@ -49,7 +49,7 @@ serve(async (req) => {
       throw new Error('Document not found');
     }
 
-    // Get job and client information for PDF generation
+    // Get job and client information
     const { data: job, error: jobError } = await supabaseClient
       .from('jobs')
       .select(`
@@ -61,26 +61,28 @@ serve(async (req) => {
 
     if (jobError) throw jobError;
 
-    // Get company settings for PDF generation
-    const { data: company, error: companyError } = await supabaseClient
-      .from('company_settings')
-      .select('*')
-      .limit(1)
-      .single()
-
-    if (companyError) {
-      console.warn('No company settings found, using defaults')
-    }
-
-    // Generate a simple PDF content (in production, use a proper PDF library)
-    const pdfContent = generateDocumentPDF(document, job, company, documentType)
-    
-    // For now, return a data URL (in production, you would upload to storage and return the URL)
+    // For now, return success with document data
+    // In a real implementation, you would generate a PDF here
     return new Response(
       JSON.stringify({
         success: true,
-        downloadUrl: `data:application/pdf;base64,${btoa(pdfContent)}`,
-        filename: `${documentType}-${documentNumber}.pdf`
+        message: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} #${documentNumber} download initiated`,
+        document: {
+          id: document.id,
+          number: documentType === 'estimate' ? document.estimate_number : document.invoice_number,
+          total: document.total,
+          status: document.status,
+          client: job.clients?.name
+        },
+        // For now, we'll return a placeholder download URL
+        // In production, this would be a real PDF file
+        downloadUrl: `data:text/plain;charset=utf-8,${encodeURIComponent(
+          `${documentType.toUpperCase()} #${documentNumber}\n` +
+          `Client: ${job.clients?.name}\n` +
+          `Total: $${document.total}\n` +
+          `Status: ${document.status}\n` +
+          `Date: ${new Date(document.created_at).toLocaleDateString()}`
+        )}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -102,31 +104,3 @@ serve(async (req) => {
     )
   }
 })
-
-function generateDocumentPDF(document: any, job: any, company: any, documentType: string) {
-  // This is a simplified PDF generation
-  // In production, use a proper PDF library like jsPDF or Puppeteer
-  const content = `
-${documentType.toUpperCase()} #${documentType === 'estimate' ? document.estimate_number : document.invoice_number}
-
-Company: ${company?.company_name || 'Fixlify Services'}
-Address: ${company?.company_address || '123 Business St'}
-Phone: ${company?.company_phone || '(555) 123-4567'}
-
-Client: ${job.clients?.name || 'Client Name'}
-Email: ${job.clients?.email || 'client@email.com'}
-${job.clients?.phone ? `Phone: ${job.clients.phone}` : ''}
-
-Job: ${job.title || 'Service Call'}
-${job.description ? `Description: ${job.description}` : ''}
-${job.address ? `Address: ${job.address}` : ''}
-
-Amount: $${document.total || 0}
-Status: ${document.status || 'draft'}
-Created: ${new Date(document.created_at).toLocaleDateString()}
-${documentType === 'invoice' && document.due_date ? `Due Date: ${new Date(document.due_date).toLocaleDateString()}` : ''}
-
-${document.notes ? `Notes: ${document.notes}` : ''}
-`
-  return content
-}

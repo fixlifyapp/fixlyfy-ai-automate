@@ -67,31 +67,9 @@ const ClientPortal = () => {
     }
 
     try {
-      console.log("🔐 Validating portal access token...");
+      console.log("🔐 Loading portal data with token...");
 
-      // First validate the token
-      const { data: validationData, error: validationError } = await supabase.functions.invoke(
-        'validate-portal-access',
-        {
-          body: { accessId: accessToken }
-        }
-      );
-
-      if (validationError) {
-        console.error("❌ Token validation failed:", validationError);
-        setError("Invalid or expired access token");
-        return;
-      }
-
-      if (!validationData || !validationData.valid) {
-        console.error("❌ Token validation failed:", validationData?.error);
-        setError(validationData?.error || "Invalid access token");
-        return;
-      }
-
-      console.log("✅ Token validated successfully");
-
-      // Now load portal data using the enhanced function
+      // Load portal data using the enhanced function
       const { data: portalDataResponse, error: portalError } = await supabase.functions.invoke(
         'enhanced-portal-data',
         {
@@ -154,7 +132,7 @@ const ClientPortal = () => {
   };
 
   const calculateTotals = () => {
-    // Use backend-calculated totals if available, fallback to client-side calculation
+    // Use backend-calculated totals if available
     if (portalData?.totals) {
       console.log("📊 Using backend-calculated totals:", portalData.totals);
       return {
@@ -168,34 +146,34 @@ const ClientPortal = () => {
       };
     }
 
-    // Fallback to client-side calculation
+    // Fallback to client-side calculation if backend totals not available
+    console.log("⚠️ Backend totals not available, using client-side calculation");
     const estimates = portalData?.estimates || [];
     const invoices = portalData?.invoices || [];
     
     const totalEstimates = estimates.length;
-    const totalEstimateValue = estimates.reduce((sum, est) => sum + (parseFloat(est.total) || 0), 0);
+    const totalEstimateValue = estimates.reduce((sum, est) => {
+      const total = typeof est.total === 'string' ? parseFloat(est.total) : (est.total || 0);
+      return sum + total;
+    }, 0);
     
     const totalInvoices = invoices.length;
-    const totalInvoiceValue = invoices.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);
+    const totalInvoiceValue = invoices.reduce((sum, inv) => {
+      const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0);
+      return sum + total;
+    }, 0);
     
     const paidInvoices = invoices.filter(inv => inv.status === 'paid' || inv.payment_status === 'paid').length;
     const paidValue = invoices
       .filter(inv => inv.status === 'paid' || inv.payment_status === 'paid')
-      .reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);
+      .reduce((sum, inv) => {
+        const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0);
+        return sum + total;
+      }, 0);
     
     const pendingInvoices = invoices.filter(inv => 
       inv.status !== 'paid' && inv.payment_status !== 'paid'
     ).length;
-
-    console.log("📊 Using client-side calculated totals:", {
-      totalEstimates,
-      totalEstimateValue,
-      totalInvoices,
-      totalInvoiceValue,
-      paidInvoices,
-      paidValue,
-      pendingInvoices
-    });
 
     return {
       totalEstimates,
@@ -266,6 +244,7 @@ const ClientPortal = () => {
                     .slice(0, 5)
                     .map((item: any) => {
                       const isEstimate = 'estimate_number' in item;
+                      const total = typeof item.total === 'string' ? parseFloat(item.total) : (item.total || 0);
                       return (
                         <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -286,7 +265,7 @@ const ClientPortal = () => {
                           </div>
                           <div className="text-right flex-shrink-0 ml-2">
                             <div className="font-semibold text-sm sm:text-base">
-                              {formatCurrency(parseFloat(item.total) || 0)}
+                              {formatCurrency(total)}
                             </div>
                             <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(item.status)}`}>
                               {item.status || 'draft'}
@@ -335,6 +314,7 @@ const ClientPortal = () => {
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .map((item: any) => {
                       const isEstimate = 'estimate_number' in item;
+                      const total = typeof item.total === 'string' ? parseFloat(item.total) : (item.total || 0);
                       return (
                         <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -355,7 +335,7 @@ const ClientPortal = () => {
                           </div>
                           <div className="text-right flex-shrink-0">
                             <div className="font-semibold text-sm sm:text-base">
-                              {formatCurrency(parseFloat(item.total) || 0)}
+                              {formatCurrency(total)}
                             </div>
                             <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(item.status)}`}>
                               {item.status || 'draft'}

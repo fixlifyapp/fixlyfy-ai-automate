@@ -141,7 +141,13 @@ serve(async (req) => {
 
     console.log('📋 Found estimates:', estimates?.length || 0)
     if (estimates && estimates.length > 0) {
-      console.log('💰 Estimate totals:', estimates.map(e => ({ id: e.id, total: e.total, status: e.status })))
+      console.log('💰 Estimate details:', estimates.map(e => ({ 
+        id: e.id, 
+        estimate_number: e.estimate_number,
+        total: e.total, 
+        status: e.status,
+        created_at: e.created_at
+      })))
     }
 
     // Get client's invoices with proper data
@@ -157,26 +163,37 @@ serve(async (req) => {
 
     console.log('📄 Found invoices:', invoices?.length || 0)
     if (invoices && invoices.length > 0) {
-      console.log('💰 Invoice totals:', invoices.map(i => ({ 
+      console.log('💰 Invoice details:', invoices.map(i => ({ 
         id: i.id, 
+        invoice_number: i.invoice_number,
         total: i.total, 
         status: i.status, 
-        payment_status: i.payment_status 
+        payment_status: i.payment_status,
+        created_at: i.created_at
       })))
     }
 
-    // Calculate actual totals
+    // Calculate actual totals with proper number conversion
     const estimateCount = estimates?.length || 0
-    const estimateValue = estimates?.reduce((sum, est) => sum + (parseFloat(est.total) || 0), 0) || 0
+    const estimateValue = estimates?.reduce((sum, est) => {
+      const total = typeof est.total === 'string' ? parseFloat(est.total) : (est.total || 0)
+      return sum + total
+    }, 0) || 0
     
     const invoiceCount = invoices?.length || 0
-    const invoiceValue = invoices?.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0) || 0
+    const invoiceValue = invoices?.reduce((sum, inv) => {
+      const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0)
+      return sum + total
+    }, 0) || 0
     
     const paidInvoices = invoices?.filter(inv => 
       inv.status === 'paid' || inv.payment_status === 'paid'
     ) || []
     const paidCount = paidInvoices.length
-    const paidValue = paidInvoices.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0)
+    const paidValue = paidInvoices.reduce((sum, inv) => {
+      const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0)
+      return sum + total
+    }, 0)
     
     const pendingInvoices = invoices?.filter(inv => 
       inv.status !== 'paid' && inv.payment_status !== 'paid'
