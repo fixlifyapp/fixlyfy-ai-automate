@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -100,12 +101,16 @@ function App() {
           <Route path="/approve/:token" element={<PublicRouteWithAuth><ApprovalPage /></PublicRouteWithAuth>} />
           <Route path="/approve/:token/success" element={<PublicRouteWithAuth><ApprovalSuccessPage /></PublicRouteWithAuth>} />
           
-          {/* Protected routes with authentication */}
+          {/* Root route - now public with auth context */}
           <Route path="/" element={
             <AuthProvider>
-              <ProtectedRouteWithProviders><Index /></ProtectedRouteWithProviders>
+              <TooltipProvider>
+                <Index />
+              </TooltipProvider>
             </AuthProvider>
           } />
+          
+          {/* Protected routes with authentication */}
           <Route path="/dashboard" element={
             <AuthProvider>
               <ProtectedRouteWithProviders><Dashboard /></ProtectedRouteWithProviders>

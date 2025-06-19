@@ -19,16 +19,15 @@ export default function Index() {
       redirecting 
     });
 
+    // Only redirect if we're sure about authentication state and not already redirecting
     if (!loading && !redirecting) {
       setRedirecting(true);
       
       if (isAuthenticated && user) {
         console.log('✅ User authenticated, redirecting to dashboard');
         navigate('/dashboard', { replace: true });
-      } else {
-        console.log('❌ User not authenticated, redirecting to auth');
-        navigate('/auth', { replace: true });
       }
+      // Don't redirect to auth automatically - let user choose to login
     }
   }, [user, loading, isAuthenticated, navigate, redirecting]);
 
@@ -50,16 +49,45 @@ export default function Index() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
+        <div className="text-center">
+          <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
+          <p className="text-fixlyfy-text-secondary">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, they'll be redirected above
+  // If not authenticated, show welcome page with login option
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
+        <div className="text-center max-w-md">
+          <h1 className="text-3xl font-bold mb-4 text-fixlyfy">Welcome to Fixlify</h1>
+          <p className="text-fixlyfy-text-secondary mb-6">
+            Your comprehensive business management platform
+          </p>
+          <Button 
+            onClick={() => navigate('/auth')}
+            className="bg-fixlyfy hover:bg-fixlyfy/90"
+            size="lg"
+          >
+            Sign In
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // This shouldn't be reached due to the redirect above, but just in case
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
       <div className="text-center">
         <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
-        <p className="text-fixlyfy-text-secondary">
-          {loading ? 'Checking authentication...' : 'Redirecting...'}
-        </p>
-        <div className="mt-4 text-xs text-gray-500">
-          <p>Debug: Loading={loading ? 'true' : 'false'}, Auth={isAuthenticated ? 'true' : 'false'}</p>
-        </div>
+        <p className="text-fixlyfy-text-secondary">Redirecting...</p>
       </div>
     </div>
   );
