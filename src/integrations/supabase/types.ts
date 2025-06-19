@@ -3945,15 +3945,6 @@ export type Database = {
         }
         Returns: string
       }
-      generate_client_portal_access: {
-        Args: {
-          p_client_id: string
-          p_document_type: string
-          p_document_id: string
-          p_hours_valid?: number
-        }
-        Returns: string
-      }
       generate_next_id: {
         Args: { p_entity_type: string }
         Returns: string

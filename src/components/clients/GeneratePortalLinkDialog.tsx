@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,7 @@ export const GeneratePortalLinkDialog = ({
     try {
       setIsGenerating(true);
       
-      // Use the Supabase function to generate portal access
+      // Use the Supabase RPC function to generate portal access
       const { data: tokenData, error: tokenError } = await supabase
         .rpc('generate_portal_access', {
           p_client_id: clientId,
