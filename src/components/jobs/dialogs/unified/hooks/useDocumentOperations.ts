@@ -2,9 +2,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
-import { LineItem } from "../../../builder/types";
+import { Estimate, Invoice, LineItem } from "@/types/documents";
 import { DocumentType } from "../../UnifiedDocumentBuilder";
 
 interface DocumentFormData {
@@ -117,12 +115,18 @@ export const useDocumentOperations = ({
       const documentData = documentType === 'estimate' 
         ? {
             ...baseDocumentData,
-            estimate_number: documentNumber
+            estimate_number: documentNumber,
+            subtotal: calculateGrandTotal(), // Add required subtotal
+            items: [] // Add required items array
           }
         : {
             ...baseDocumentData,
             invoice_number: documentNumber,
-            amount_paid: 0
+            amount_paid: 0,
+            issue_date: new Date().toISOString().split('T')[0], // Add required issue_date
+            payment_status: 'unpaid', // Add required payment_status
+            subtotal: calculateGrandTotal(), // Add required subtotal
+            items: [] // Add required items array
             // Removed 'balance' field as it's a generated column
           };
 
@@ -267,9 +271,9 @@ export const useDocumentOperations = ({
       
       toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} ${formData.documentId ? 'updated' : 'created'} successfully`);
       
-      // Return standardized format
+      // Return standardized format with all required properties
       if (documentType === 'estimate') {
-        const result = {
+        const result: Estimate = {
           id: document.id,
           job_id: document.job_id,
           estimate_number: document.estimate_number,
@@ -277,15 +281,33 @@ export const useDocumentOperations = ({
           date: document.created_at, // Use created_at instead of date
           total: document.total,
           amount: document.total,
-          status: document.status,
+          status: document.status as Estimate['status'],
           notes: document.notes,
           created_at: document.created_at,
-          updated_at: document.updated_at
+          updated_at: document.updated_at,
+          items: [],
+          subtotal: document.subtotal || 0,
+          tax_rate: document.tax_rate,
+          tax_amount: document.tax_amount,
+          discount_amount: document.discount_amount,
+          terms: document.terms,
+          valid_until: document.valid_until,
+          sent_at: document.sent_at,
+          approved_at: document.approved_at,
+          client_signature: document.client_signature,
+          signature_timestamp: document.signature_timestamp,
+          signature_ip: document.signature_ip,
+          portal_access_token: document.portal_access_token,
+          client_id: document.client_id,
+          created_by: document.created_by,
+          title: document.title,
+          description: document.description,
+          techniciansNote: document.techniciansNote
         };
         console.log('📋 Returning estimate result:', result);
         return result;
       } else {
-        const result = {
+        const result: Invoice = {
           id: document.id,
           job_id: document.job_id,
           invoice_number: document.invoice_number,
@@ -293,11 +315,29 @@ export const useDocumentOperations = ({
           date: document.created_at, // Use created_at instead of date
           total: document.total,
           amount_paid: document.amount_paid || 0,
-          balance: (document.total || 0) - (document.amount_paid || 0),
-          status: document.status,
+          balance_due: (document.total || 0) - (document.amount_paid || 0),
+          status: document.status as Invoice['status'],
+          payment_status: document.payment_status as Invoice['payment_status'],
           notes: document.notes,
           created_at: document.created_at,
-          updated_at: document.updated_at
+          updated_at: document.updated_at,
+          items: [],
+          subtotal: document.subtotal || 0,
+          tax_rate: document.tax_rate,
+          tax_amount: document.tax_amount,
+          discount_amount: document.discount_amount,
+          terms: document.terms,
+          issue_date: document.issue_date,
+          due_date: document.due_date,
+          paid_at: document.paid_at,
+          sent_at: document.sent_at,
+          payment_link: document.payment_link,
+          portal_access_token: document.portal_access_token,
+          estimate_id: document.estimate_id,
+          client_id: document.client_id,
+          created_by: document.created_by,
+          title: document.title,
+          description: document.description
         };
         console.log('📋 Returning invoice result:', result);
         return result;
@@ -353,9 +393,13 @@ export const useDocumentOperations = ({
         total: calculateGrandTotal(),
         amount_paid: 0,
         // Remove balance field as it's generated
-        status: 'unpaid',
+        status: 'unpaid' as const,
+        payment_status: 'unpaid' as const,
         notes: notes || existingDocument.notes,
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        issue_date: new Date().toISOString().split('T')[0],
+        subtotal: calculateGrandTotal(),
+        items: []
         // Remove date field
       };
 
@@ -397,10 +441,10 @@ export const useDocumentOperations = ({
         }
       }
 
-      // Update estimate status
+      // Update estimate status to converted
       const { error: updateError } = await supabase
         .from('estimates')
-        .update({ status: 'converted' })
+        .update({ status: 'converted' as const })
         .eq('id', existingDocument.id);
         
       if (updateError) {
@@ -416,20 +460,41 @@ export const useDocumentOperations = ({
         onSyncToInvoice();
       }
 
-      return {
+      // Return properly typed invoice
+      const result: Invoice = {
         id: invoice.id,
         job_id: invoice.job_id,
         invoice_number: invoice.invoice_number,
         number: invoice.invoice_number,
-        date: invoice.created_at, // Use created_at instead of date
+        date: invoice.created_at,
         total: invoice.total,
         amount_paid: invoice.amount_paid || 0,
-        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
-        status: invoice.status,
+        balance_due: (invoice.total || 0) - (invoice.amount_paid || 0),
+        status: invoice.status as Invoice['status'],
+        payment_status: invoice.payment_status as Invoice['payment_status'],
         notes: invoice.notes,
         created_at: invoice.created_at,
-        updated_at: invoice.updated_at
+        updated_at: invoice.updated_at,
+        items: [],
+        subtotal: invoice.subtotal || 0,
+        tax_rate: invoice.tax_rate,
+        tax_amount: invoice.tax_amount,
+        discount_amount: invoice.discount_amount,
+        terms: invoice.terms,
+        issue_date: invoice.issue_date,
+        due_date: invoice.due_date,
+        paid_at: invoice.paid_at,
+        sent_at: invoice.sent_at,
+        payment_link: invoice.payment_link,
+        portal_access_token: invoice.portal_access_token,
+        estimate_id: invoice.estimate_id,
+        client_id: invoice.client_id,
+        created_by: invoice.created_by,
+        title: invoice.title,
+        description: invoice.description
       };
+
+      return result;
 
     } catch (error: any) {
       console.error('Error converting to invoice:', error);

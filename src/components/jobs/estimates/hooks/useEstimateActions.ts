@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Estimate } from '@/hooks/useEstimates';
+import { Estimate } from '@/types/documents';
 
 export interface EstimateActionsState {
   selectedEstimate: Estimate | null;
@@ -93,9 +94,12 @@ export const useEstimateActions = (
 
       console.log('Estimate sent successfully');
 
-      // Update local state to reflect sent status
+      // Update local state to reflect sent status - cast status properly
       const updatedEstimates = estimates.map(est => 
-        est.id === estimateId ? { ...est, status: 'sent' } : est
+        est.id === estimateId ? { 
+          ...est, 
+          status: 'sent' as Estimate['status']
+        } : est
       );
       setEstimates(updatedEstimates);
       
@@ -177,8 +181,12 @@ export const useEstimateActions = (
           estimate_id: selectedEstimate.id,
           total: selectedEstimate.total,
           status: 'unpaid',
+          payment_status: 'unpaid',
+          issue_date: new Date().toISOString().split('T')[0],
           due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-          notes: selectedEstimate.notes
+          notes: selectedEstimate.notes,
+          subtotal: selectedEstimate.subtotal || 0,
+          items: []
         })
         .select()
         .single();
@@ -206,14 +214,17 @@ export const useEstimateActions = (
       // Update estimate status to 'converted'
       const { error: updateEstimateError } = await supabase
         .from('estimates')
-        .update({ status: 'converted' })
+        .update({ status: 'converted' as const })
         .eq('id', selectedEstimate.id);
 
       if (updateEstimateError) throw updateEstimateError;
 
-      // Update local state
+      // Update local state - cast status properly
       const updatedEstimates = estimates.map(est => 
-        est.id === selectedEstimate.id ? { ...est, status: 'converted' } : est
+        est.id === selectedEstimate.id ? { 
+          ...est, 
+          status: 'converted' as Estimate['status']
+        } : est
       );
       setEstimates(updatedEstimates);
 

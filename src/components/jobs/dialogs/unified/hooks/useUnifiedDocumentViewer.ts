@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Invoice } from "@/hooks/useInvoices";
-import { Estimate } from "@/hooks/useEstimates";
+import { Invoice, Estimate, LineItem } from "@/types/documents";
 import { useJobData } from "./useJobData";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,7 +24,7 @@ export const useUnifiedDocumentViewer = ({
 }: UseUnifiedDocumentViewerProps) => {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const { clientInfo, jobAddress } = useJobData(jobId);
@@ -52,15 +51,14 @@ export const useUnifiedDocumentViewer = ({
         } else {
           console.log('Fetched line items:', items);
           // Transform database items to the expected format
-          const transformedItems = items?.map(item => ({
+          const transformedItems: LineItem[] = items?.map(item => ({
             id: item.id,
             description: item.description || '',
             quantity: item.quantity || 1,
             unitPrice: Number(item.unit_price) || 0,
             taxable: item.taxable !== false,
             total: (item.quantity || 1) * (Number(item.unit_price) || 0),
-            name: item.description || '',
-            price: Number(item.unit_price) || 0
+            discount: 0
           })) || [];
           
           setLineItems(transformedItems);
@@ -81,9 +79,13 @@ export const useUnifiedDocumentViewer = ({
       console.log('Using fallback items from document:', document.items);
       const fallbackItems = Array.isArray(document.items) ? document.items : [];
       setLineItems(fallbackItems.map(item => ({
-        ...item,
-        unitPrice: item.unitPrice || item.price || 0,
-        total: (item.quantity || 1) * (item.unitPrice || item.price || 0)
+        id: item.id || `fallback-${Math.random()}`,
+        description: item.description || '',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        taxable: item.taxable !== false,
+        total: (item.quantity || 1) * (item.unitPrice || 0),
+        discount: item.discount || 0
       })));
     }
   }, [loading, lineItems.length, document.items]);
