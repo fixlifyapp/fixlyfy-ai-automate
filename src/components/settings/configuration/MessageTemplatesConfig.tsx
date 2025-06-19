@@ -84,7 +84,18 @@ export const MessageTemplatesConfig = () => {
         .order('template_type', { ascending: true });
 
       if (error) throw error;
-      setTemplates(data || []);
+      
+      // Transform the data to match our interface
+      const transformedTemplates = (data || []).map(template => ({
+        ...template,
+        variables: Array.isArray(template.variables) 
+          ? template.variables as string[]
+          : typeof template.variables === 'string'
+          ? JSON.parse(template.variables)
+          : []
+      }));
+      
+      setTemplates(transformedTemplates);
     } catch (error) {
       console.error('Error fetching templates:', error);
       toast.error('Failed to load message templates');
