@@ -7,6 +7,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, DollarSign, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
+interface PortalValidationResponse {
+  valid: boolean;
+  client_id?: string;
+  client_name?: string;
+  client_email?: string;
+  permissions?: {
+    view_estimates: boolean;
+    view_invoices: boolean;
+    make_payments: boolean;
+  };
+  error?: string;
+}
+
 interface PortalData {
   client: any;
   permissions: {
@@ -41,14 +54,27 @@ const ClientPortal = () => {
           p_user_agent: navigator.userAgent
         });
 
-      if (validationError || !validationData?.valid) {
+      if (validationError || !validationData) {
         setError("Invalid or expired portal link");
         setLoading(false);
         return;
       }
 
-      const clientId = validationData.client_id;
-      const permissions = validationData.permissions;
+      // Type the validation response properly
+      const validation = validationData as PortalValidationResponse;
+
+      if (!validation.valid) {
+        setError(validation.error || "Invalid or expired portal link");
+        setLoading(false);
+        return;
+      }
+
+      const clientId = validation.client_id;
+      const permissions = validation.permissions || {
+        view_estimates: true,
+        view_invoices: true,
+        make_payments: false
+      };
 
       // Load client data
       const { data: clientData } = await supabase
