@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Mail, MessageSquare, ArrowLeft } from "lucide-react";
+import { Send, Mail, MessageSquare, ArrowLeft, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDocumentSending } from "@/hooks/useDocumentSending";
 
 interface UniversalSendDialogProps {
@@ -55,6 +56,16 @@ export const UniversalSendDialog = ({
     }
   }, [isOpen, sendMethod, contactInfo]);
 
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSendTo("");
+      setCustomNote("");
+      setValidationError("");
+      setSendMethod("email");
+    }
+  }, [isOpen]);
+
   // Validation functions
   const isValidEmail = (email: string): boolean => {
     if (!email) return false;
@@ -74,12 +85,12 @@ export const UniversalSendDialog = ({
     }
 
     if (sendMethod === "email" && !isValidEmail(sendTo)) {
-      setValidationError("Please enter a valid email address");
+      setValidationError("Please enter a valid email address (e.g., client@example.com)");
       return false;
     }
 
     if (sendMethod === "sms" && !isValidPhoneNumber(sendTo)) {
-      setValidationError("Please enter a valid phone number");
+      setValidationError("Please enter a valid phone number (e.g., +1234567890 or (555) 123-4567)");
       return false;
     }
 
@@ -133,6 +144,16 @@ export const UniversalSendDialog = ({
             )}
           </div>
 
+          {/* Service Status Alert */}
+          {(!hasValidEmail && !hasValidPhone) && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No valid contact information found for this client. Please enter the recipient details manually.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Send Method Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Choose sending method:</Label>
@@ -140,22 +161,22 @@ export const UniversalSendDialog = ({
               <div className={`flex items-center space-x-2 p-3 rounded-lg border ${
                 sendMethod === "email" ? "border-blue-200 bg-blue-50" : "border-gray-200"
               } ${!hasValidEmail ? "opacity-50" : ""}`}>
-                <RadioGroupItem value="email" id="email" disabled={!hasValidEmail} />
+                <RadioGroupItem value="email" id="email" disabled={!hasValidEmail && !sendTo} />
                 <Mail className="h-4 w-4" />
                 <Label htmlFor="email" className="flex-1 cursor-pointer">
                   Email
-                  {!hasValidEmail && <span className="text-red-500 text-xs ml-2">(No valid email)</span>}
+                  {!hasValidEmail && <span className="text-amber-600 text-xs ml-2">(No valid email on file)</span>}
                 </Label>
               </div>
               
               <div className={`flex items-center space-x-2 p-3 rounded-lg border ${
                 sendMethod === "sms" ? "border-blue-200 bg-blue-50" : "border-gray-200"
               } ${!hasValidPhone ? "opacity-50" : ""}`}>
-                <RadioGroupItem value="sms" id="sms" disabled={!hasValidPhone} />
+                <RadioGroupItem value="sms" id="sms" disabled={!hasValidPhone && !sendTo} />
                 <MessageSquare className="h-4 w-4" />
                 <Label htmlFor="sms" className="flex-1 cursor-pointer">
-                  SMS (Secure portal link)
-                  {!hasValidPhone && <span className="text-red-500 text-xs ml-2">(No valid phone)</span>}
+                  SMS (Text Message)
+                  {!hasValidPhone && <span className="text-amber-600 text-xs ml-2">(No valid phone on file)</span>}
                 </Label>
               </div>
             </RadioGroup>
@@ -169,7 +190,7 @@ export const UniversalSendDialog = ({
             <Input
               id="sendTo"
               type={sendMethod === "email" ? "email" : "tel"}
-              placeholder={sendMethod === "email" ? "Enter email address" : "Enter phone number"}
+              placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
               value={sendTo}
               onChange={(e) => {
                 setSendTo(e.target.value);
@@ -180,6 +201,11 @@ export const UniversalSendDialog = ({
             {validationError && (
               <p className="text-sm text-red-600">{validationError}</p>
             )}
+            {sendMethod === "sms" && (
+              <p className="text-xs text-muted-foreground">
+                Phone numbers will be automatically formatted for delivery
+              </p>
+            )}
           </div>
 
           {/* Custom Message */}
@@ -187,26 +213,26 @@ export const UniversalSendDialog = ({
             <Label htmlFor="customNote">Custom Message (Optional)</Label>
             <Textarea
               id="customNote"
-              placeholder="Add a custom message..."
+              placeholder="Add a personal message..."
               value={customNote}
               onChange={(e) => setCustomNote(e.target.value)}
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Note: A secure portal link will be automatically added to enable client access to their documents.
+              A secure portal link will be automatically included for client access.
             </p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={isProcessing}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Cancel
             </Button>
             
             <Button 
               onClick={handleSend}
-              disabled={isProcessing || !sendTo.trim()}
+              disabled={isProcessing || !sendTo.trim() || !!validationError}
               className="gap-2"
             >
               {isProcessing ? (

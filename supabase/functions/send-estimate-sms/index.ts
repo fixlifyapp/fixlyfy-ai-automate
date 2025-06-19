@@ -17,6 +17,7 @@ serve(async (req) => {
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('❌ No authorization header provided');
       throw new Error('No authorization header provided');
     }
 
@@ -28,19 +29,28 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
+      console.error('❌ Failed to authenticate user:', userError);
       throw new Error('Failed to authenticate user');
     }
 
     const requestBody = await req.json()
-    console.log('Request body:', requestBody);
+    console.log('📱 Request body received:', { estimateId: requestBody.estimateId, recipientPhone: requestBody.recipientPhone });
     
     const { estimateId, recipientPhone, message } = requestBody;
 
     if (!estimateId || !recipientPhone) {
+      console.error('❌ Missing required fields:', { estimateId: !!estimateId, recipientPhone: !!recipientPhone });
       throw new Error('Missing required fields: estimateId and recipientPhone');
     }
 
-    console.log('Processing SMS for estimate:', estimateId, 'to phone:', recipientPhone);
+    console.log('🔍 Processing SMS for estimate:', estimateId, 'to phone:', recipientPhone);
+
+    // Validate phone number format
+    const cleanedPhone = recipientPhone.replace(/\D/g, '');
+    if (cleanedPhone.length < 10) {
+      console.error('❌ Invalid phone number format:', recipientPhone);
+      throw new Error('Invalid phone number format. Please enter a valid 10-digit phone number.');
+    }
 
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
@@ -61,14 +71,15 @@ serve(async (req) => {
       .single();
 
     if (estimateError || !estimate) {
-      throw new Error('Estimate not found');
+      console.error('❌ Estimate lookup error:', estimateError);
+      throw new Error(`Estimate not found: ${estimateError?.message || 'Unknown error'}`);
     }
 
-    console.log('Estimate found:', estimate.estimate_number);
+    console.log('✅ Estimate found:', estimate.estimate_number);
 
     const client = estimate.jobs.clients;
 
-    // Generate portal access token instead of approval token
+    // Generate portal access token
     console.log('🔄 Generating portal access token...');
     
     const { data: portalToken, error: portalError } = await supabaseAdmin
@@ -85,13 +96,12 @@ serve(async (req) => {
 
     if (portalError || !portalToken) {
       console.error('❌ Failed to generate portal token:', portalError);
-      throw new Error('Failed to generate portal access token');
+      throw new Error(`Failed to generate portal access token: ${portalError?.message || 'Unknown error'}`);
     }
 
-    console.log('✅ Portal access token generated:', portalToken);
+    console.log('✅ Portal access token generated');
 
     const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
-    console.log('🔗 Portal link:', portalLink);
 
     // Create SMS message with portal link
     const estimateTotal = estimate.total || 0;
@@ -107,10 +117,10 @@ serve(async (req) => {
       smsMessage = `Hi ${client.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimateTotal.toFixed(2)}. View your estimate: ${portalLink}`;
     }
 
-    console.log('SMS message to send:', smsMessage);
-    console.log('SMS message length:', smsMessage.length);
+    console.log('📱 SMS message prepared, length:', smsMessage.length);
 
     // Use telnyx-sms function for sending
+    console.log('🔄 Calling telnyx-sms function...');
     const { data: smsData, error: smsError } = await supabaseAdmin.functions.invoke('telnyx-sms', {
       body: {
         recipientPhone: recipientPhone,
@@ -120,9 +130,16 @@ serve(async (req) => {
       }
     });
 
+    console.log('📱 Telnyx-sms response:', { success: smsData?.success, error: smsError });
+
     if (smsError) {
       console.error('❌ Error from telnyx-sms:', smsError);
-      throw new Error(smsError.message || 'Failed to send SMS');
+      throw new Error(`SMS service error: ${smsError.message || 'Failed to send SMS'}`);
+    }
+
+    if (!smsData?.success) {
+      console.error('❌ SMS sending failed:', smsData);
+      throw new Error(`SMS sending failed: ${smsData?.error || 'Unknown error'}`);
     }
 
     // Log SMS communication
@@ -142,11 +159,12 @@ serve(async (req) => {
           client_phone: client.phone,
           portal_link_included: true
         });
+      console.log('✅ SMS communication logged successfully');
     } catch (logError) {
-      console.warn('Failed to log communication:', logError);
+      console.warn('⚠️ Failed to log communication:', logError);
     }
 
-    console.log('SMS sent successfully');
+    console.log('✅ SMS sent successfully');
 
     return new Response(
       JSON.stringify({ 
@@ -162,11 +180,11 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error sending SMS:', error);
+    console.error('❌ Error in send-estimate-sms function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message || 'Failed to send SMS'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

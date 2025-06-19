@@ -406,6 +406,7 @@ serve(async (req) => {
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('❌ No authorization header provided');
       throw new Error('No authorization header provided');
     }
 
@@ -417,19 +418,21 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
+      console.error('❌ Failed to authenticate user:', userError);
       throw new Error('Failed to authenticate user');
     }
 
     const requestBody = await req.json()
-    console.log('Request body:', requestBody);
+    console.log('📧 Request body received:', { estimateId: requestBody.estimateId, recipientEmail: requestBody.recipientEmail });
     
     const { estimateId, recipientEmail, customMessage } = requestBody;
 
     if (!estimateId || !recipientEmail) {
+      console.error('❌ Missing required fields:', { estimateId: !!estimateId, recipientEmail: !!recipientEmail });
       throw new Error('Missing required fields: estimateId and recipientEmail');
     }
 
-    console.log('Processing email for estimate:', estimateId, 'to email:', recipientEmail);
+    console.log('🔍 Processing email for estimate:', estimateId, 'to email:', recipientEmail);
 
     // Get estimate details with job and client info
     const { data: estimate, error: estimateError } = await supabaseAdmin
@@ -451,20 +454,24 @@ serve(async (req) => {
       .single();
 
     if (estimateError || !estimate) {
-      console.error('Estimate lookup error:', estimateError);
-      throw new Error('Estimate not found');
+      console.error('❌ Estimate lookup error:', estimateError);
+      throw new Error(`Estimate not found: ${estimateError?.message || 'Unknown error'}`);
     }
 
-    console.log('Estimate found:', estimate.estimate_number);
+    console.log('✅ Estimate found:', estimate.estimate_number);
     
     const client = estimate.jobs.clients;
 
     // Get company settings
-    const { data: companySettings } = await supabaseAdmin
+    const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
       .eq('user_id', userData.user.id)
       .maybeSingle();
+
+    if (settingsError) {
+      console.warn('⚠️ Error fetching company settings:', settingsError);
+    }
 
     const companyName = companySettings?.company_name || 'Fixlify Services';
     const companyEmail = companySettings?.company_email || userData.user.email || '';
@@ -489,13 +496,12 @@ serve(async (req) => {
 
     if (portalError || !portalToken) {
       console.error('❌ Failed to generate portal token:', portalError);
-      throw new Error('Failed to generate portal access token');
+      throw new Error(`Failed to generate portal access token: ${portalError?.message || 'Unknown error'}`);
     }
 
-    console.log('✅ Portal access token generated:', portalToken);
+    console.log('✅ Portal access token generated');
 
     const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
-    console.log('🔗 Portal link:', portalLink);
 
     // Create email HTML
     const emailHtml = createEstimateEmailTemplate({
@@ -510,14 +516,20 @@ serve(async (req) => {
       portalLink
     });
 
-    // Get Mailgun configuration
+    // Check Mailgun configuration
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
-      throw new Error('Mailgun API key not configured');
+      console.error('❌ Mailgun API key not configured');
+      throw new Error('Email service not configured. Please contact support.');
     }
 
     const mailgunDomain = 'fixlify.app';
     const fromEmail = `${companyName} <estimates@${mailgunDomain}>`;
+
+    console.log('📧 Sending email via Mailgun...');
+    console.log('📧 From:', fromEmail);
+    console.log('📧 To:', recipientEmail);
+    console.log('📧 Domain:', mailgunDomain);
 
     // Send email via Mailgun
     const formData = new FormData();
@@ -540,13 +552,37 @@ serve(async (req) => {
       body: formData
     });
 
-    const mailgunResult = await mailgunResponse.json();
-    console.log('Mailgun response:', mailgunResult);
+    const responseText = await mailgunResponse.text();
+    console.log('📧 Mailgun response status:', mailgunResponse.status);
+    console.log('📧 Mailgun response body:', responseText);
 
     if (!mailgunResponse.ok) {
-      console.error('Mailgun send error:', mailgunResult);
-      throw new Error(`Failed to send email via Mailgun: ${mailgunResult.message || 'Unknown error'}`);
+      console.error('❌ Mailgun send error:', responseText);
+      
+      // Provide specific error messages based on status code
+      let errorMessage = 'Failed to send email';
+      if (mailgunResponse.status === 401) {
+        errorMessage = 'Email service authentication failed. Please contact support.';
+      } else if (mailgunResponse.status === 403) {
+        errorMessage = 'Email domain not authorized. Please contact support.';
+      } else if (mailgunResponse.status === 400) {
+        errorMessage = 'Invalid email format or missing required fields.';
+      } else if (mailgunResponse.status >= 500) {
+        errorMessage = 'Email service temporarily unavailable. Please try again later.';
+      }
+      
+      throw new Error(`${errorMessage} (Status: ${mailgunResponse.status})`);
     }
+
+    let mailgunResult;
+    try {
+      mailgunResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Error parsing Mailgun response:', parseError);
+      throw new Error('Invalid response from email service');
+    }
+
+    console.log('✅ Email sent successfully via Mailgun:', mailgunResult);
 
     // Log email communication
     try {
@@ -557,20 +593,19 @@ serve(async (req) => {
           communication_type: 'email',
           recipient: recipientEmail,
           subject: `Your Estimate #${estimate.estimate_number} is Ready - ${companyName}`,
-          content: emailHtml,
+          content: customMessage || `Professional estimate email with portal access sent`,
           status: 'sent',
-          provider_message_id: mailgunResult.id,
           estimate_number: estimate.estimate_number,
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: true
+          portal_link_included: !!portalLink,
+          provider_message_id: mailgunResult.id
         });
+      console.log('✅ Communication logged successfully');
     } catch (logError) {
-      console.warn('Failed to log communication:', logError);
+      console.warn('⚠️ Failed to log communication:', logError);
     }
-
-    console.log('Email sent successfully');
 
     return new Response(
       JSON.stringify({ 
@@ -585,11 +620,11 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('❌ Error in send-estimate function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message || 'Failed to send estimate'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

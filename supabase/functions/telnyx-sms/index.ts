@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('📱 SMS request received');
+    console.log('📱 Telnyx SMS request received');
     
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,7 +21,12 @@ serve(async (req) => {
     )
 
     const requestBody = await req.json()
-    console.log('SMS request body:', requestBody);
+    console.log('📱 SMS request body received:', { 
+      recipientPhone: requestBody.recipientPhone, 
+      messageLength: requestBody.message?.length,
+      clientId: requestBody.client_id,
+      jobId: requestBody.job_id
+    });
     
     const { 
       recipientPhone, 
@@ -31,7 +36,15 @@ serve(async (req) => {
     } = requestBody;
 
     if (!recipientPhone || !message) {
+      console.error('❌ Missing required fields:', { recipientPhone: !!recipientPhone, message: !!message });
       throw new Error('Missing required fields: recipientPhone and message');
+    }
+
+    // Validate phone number format
+    const cleanedPhone = recipientPhone.replace(/\D/g, '');
+    if (cleanedPhone.length < 10) {
+      console.error('❌ Invalid phone number format:', recipientPhone);
+      throw new Error('Invalid phone number format. Please enter a valid 10-digit phone number.');
     }
 
     console.log('🔍 Getting active Telnyx phone number...');
@@ -43,29 +56,39 @@ serve(async (req) => {
       .order('purchased_at', { ascending: false })
       .limit(1);
 
-    console.log('Telnyx query result:', { telnyxNumbers, telnyxError });
+    console.log('📱 Telnyx query result:', { 
+      numbersFound: telnyxNumbers?.length || 0, 
+      error: telnyxError?.message 
+    });
 
-    if (telnyxError || !telnyxNumbers || telnyxNumbers.length === 0) {
-      throw new Error('No active Telnyx phone number found. Please configure your SMS settings.');
+    if (telnyxError) {
+      console.error('❌ Database error querying Telnyx numbers:', telnyxError);
+      throw new Error('Failed to retrieve SMS service configuration. Please contact support.');
+    }
+
+    if (!telnyxNumbers || telnyxNumbers.length === 0) {
+      console.error('❌ No active Telnyx phone number found');
+      throw new Error('SMS service not configured. Please contact support to set up SMS functionality.');
     }
 
     const fromNumber = telnyxNumbers[0].phone_number;
     console.log('✅ Using phone number for SMS:', fromNumber);
 
-    // Process the message - no need to add approval links here as they're handled by the calling functions
+    // Process the message
     let finalMessage = message;
     
     if (job_id && !message.includes('hub.fixlify.app/portal/') && !message.includes('hub.fixlify.app/approve/')) {
-      // Only add job portal link if no other portal/approval links are present
       console.log('🔗 Adding job portal link for job:', job_id);
       const jobPortalLink = `https://portal.fixlify.app/client/${job_id}`;
       finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
       console.log('✅ Job portal link added to message');
     }
 
+    // Check Telnyx API key
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
     if (!telnyxApiKey) {
-      throw new Error('Telnyx API key not configured');
+      console.error('❌ Telnyx API key not configured');
+      throw new Error('SMS service not configured. Please contact support.');
     }
 
     const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
@@ -77,8 +100,10 @@ serve(async (req) => {
     const formattedFromPhone = formatForTelnyx(fromNumber);
     const formattedToPhone = formatForTelnyx(recipientPhone);
 
-    console.log('📞 Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
-    console.log('📝 Message length:', finalMessage.length);
+    console.log('📱 Sending SMS...');
+    console.log('📱 From:', formattedFromPhone);
+    console.log('📱 To:', formattedToPhone);
+    console.log('📱 Message length:', finalMessage.length);
 
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
@@ -93,14 +118,46 @@ serve(async (req) => {
       })
     });
 
-    const telnyxResult = await telnyxResponse.json();
+    const responseText = await telnyxResponse.text();
+    console.log('📱 Telnyx response status:', telnyxResponse.status);
+    console.log('📱 Telnyx response body:', responseText);
 
     if (!telnyxResponse.ok) {
-      console.error('❌ Telnyx API error:', telnyxResult);
-      throw new Error(telnyxResult.errors?.[0]?.detail || 'Failed to send SMS via Telnyx');
+      console.error('❌ Telnyx API error:', responseText);
+      
+      let errorMessage = 'Failed to send SMS';
+      try {
+        const errorData = JSON.parse(responseText);
+        if (errorData.errors && errorData.errors.length > 0) {
+          errorMessage = errorData.errors[0].detail || errorMessage;
+        }
+      } catch (parseError) {
+        console.warn('⚠️ Could not parse Telnyx error response');
+      }
+      
+      // Provide specific error messages based on status code
+      if (telnyxResponse.status === 401) {
+        errorMessage = 'SMS service authentication failed. Please contact support.';
+      } else if (telnyxResponse.status === 403) {
+        errorMessage = 'SMS service access denied. Please contact support.';
+      } else if (telnyxResponse.status === 400) {
+        errorMessage = 'Invalid phone number or message format.';
+      } else if (telnyxResponse.status >= 500) {
+        errorMessage = 'SMS service temporarily unavailable. Please try again later.';
+      }
+      
+      throw new Error(`${errorMessage} (Status: ${telnyxResponse.status})`);
     }
 
-    console.log('✅ SMS sent successfully:', telnyxResult);
+    let telnyxResult;
+    try {
+      telnyxResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Error parsing Telnyx response:', parseError);
+      throw new Error('Invalid response from SMS service');
+    }
+
+    console.log('✅ SMS sent successfully via Telnyx:', telnyxResult.data?.id);
 
     return new Response(
       JSON.stringify({ 
@@ -115,11 +172,11 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('❌ Error sending SMS:', error);
+    console.error('❌ Error in telnyx-sms function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message || 'Failed to send SMS'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

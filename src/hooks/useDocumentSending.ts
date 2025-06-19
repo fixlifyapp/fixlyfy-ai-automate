@@ -21,8 +21,9 @@ export const useDocumentSending = () => {
 
     try {
       console.log(`🚀 Sending ${documentType} via ${sendMethod}...`);
-      console.log(`Document ID: ${documentId}`);
-      console.log(`Send to: ${sendTo}`);
+      console.log(`📄 Document ID: ${documentId}`);
+      console.log(`📧 Send to: ${sendTo}`);
+      console.log(`💬 Custom message: ${customMessage ? 'Yes' : 'No'}`);
 
       let response;
       
@@ -30,6 +31,7 @@ export const useDocumentSending = () => {
         // Call email sending edge function
         const functionName = documentType === "estimate" ? "send-estimate" : "send-invoice";
         
+        console.log(`📧 Calling ${functionName} function...`);
         response = await supabase.functions.invoke(functionName, {
           body: {
             [`${documentType}Id`]: documentId,
@@ -41,6 +43,7 @@ export const useDocumentSending = () => {
         // Call SMS sending edge function
         const functionName = documentType === "estimate" ? "send-estimate-sms" : "send-invoice-sms";
         
+        console.log(`📱 Calling ${functionName} function...`);
         response = await supabase.functions.invoke(functionName, {
           body: {
             [`${documentType}Id`]: documentId,
@@ -50,12 +53,34 @@ export const useDocumentSending = () => {
         });
       }
 
+      console.log(`📤 Edge function response:`, { 
+        error: response.error, 
+        dataSuccess: response.data?.success,
+        dataError: response.data?.error 
+      });
+
       if (response.error) {
-        console.error(`❌ Error sending ${documentType}:`, response.error);
-        throw new Error(response.error.message || `Failed to send ${documentType}`);
+        console.error(`❌ Supabase function error:`, response.error);
+        
+        // Handle specific Supabase errors
+        let errorMessage = response.error.message || `Failed to send ${documentType}`;
+        
+        if (response.error.message?.includes('JWT')) {
+          errorMessage = 'Session expired. Please refresh the page and try again.';
+        } else if (response.error.message?.includes('network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      console.log(`✅ ${documentType} sent successfully:`, response.data);
+      if (!response.data?.success) {
+        console.error(`❌ ${documentType} sending failed:`, response.data);
+        const errorMessage = response.data?.error || `Failed to send ${documentType}`;
+        throw new Error(errorMessage);
+      }
+
+      console.log(`✅ ${documentType} sent successfully via ${sendMethod}`);
       
       const methodText = sendMethod === "email" ? "email" : "SMS";
       const docText = documentType === "estimate" ? "Estimate" : "Invoice";
@@ -66,10 +91,29 @@ export const useDocumentSending = () => {
 
     } catch (error: any) {
       console.error(`❌ Failed to send ${documentType}:`, error);
-      toast.error(`Failed to send ${documentType}: ${error.message}`);
+      
+      // Provide user-friendly error messages
+      let userMessage = error.message;
+      
+      if (error.message?.includes('not configured')) {
+        userMessage = `${sendMethod === 'email' ? 'Email' : 'SMS'} service is not configured. Please contact support.`;
+      } else if (error.message?.includes('Invalid') && error.message?.includes('phone')) {
+        userMessage = 'Please enter a valid phone number (e.g., +1234567890 or (555) 123-4567).';
+      } else if (error.message?.includes('Invalid') && error.message?.includes('email')) {
+        userMessage = 'Please enter a valid email address.';
+      } else if (error.message?.includes('authentication failed')) {
+        userMessage = 'Service authentication failed. Please contact support.';
+      } else if (error.message?.includes('temporarily unavailable')) {
+        userMessage = `${sendMethod === 'email' ? 'Email' : 'SMS'} service is temporarily unavailable. Please try again in a few minutes.`;
+      } else if (!error.message || error.message === 'Failed to send document') {
+        userMessage = `Unable to send ${documentType}. Please try again or contact support.`;
+      }
+      
+      toast.error(userMessage);
+      
       return { 
         success: false, 
-        error: error.message || `Failed to send ${documentType}`
+        error: userMessage
       };
     } finally {
       setIsProcessing(false);
