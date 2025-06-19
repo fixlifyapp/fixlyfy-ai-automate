@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -11,6 +10,7 @@ export interface Invoice extends InvoiceType {
   number?: string; // Alias for invoice_number
   date?: string; // Alias for created_at
   balance?: number; // Alias for balance_due
+  description?: string; // Add missing description field
 }
 
 // Re-export LineItem for backward compatibility
