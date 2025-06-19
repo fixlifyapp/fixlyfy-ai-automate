@@ -15,11 +15,11 @@ const ApprovalTestPage = () => {
   const [approvalLink, setApprovalLink] = useState("");
   const [formData, setFormData] = useState({
     documentType: "estimate" as "estimate" | "invoice",
-    documentNumber: "TEST-001",
-    clientName: "Test Client",
-    clientEmail: "test@example.com",
-    clientPhone: "+1234567890",
-    total: "100.00"
+    documentNumber: "EST-001",
+    clientName: "Cris Palmer",
+    clientEmail: "boomymarketing.com@gmail.com",
+    clientPhone: "+16474242323",
+    total: "344.99"
   });
 
   const generateTestApprovalLink = async () => {
@@ -29,7 +29,7 @@ const ApprovalTestPage = () => {
 
       // Generate a test UUID for document ID
       const testDocumentId = crypto.randomUUID();
-      const testClientId = "TEST-CLIENT-001";
+      const testClientId = "C-1012";
 
       // Call the generate_approval_token function
       const { data: tokenData, error: tokenError } = await supabase
@@ -89,12 +89,13 @@ const ApprovalTestPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TestTube className="h-6 w-6 text-blue-600" />
-              Approval Link Test Page
+              Approval Link Test Page - Cris Palmer
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-              <p><strong>Purpose:</strong> Generate test approval links to debug the approval system.</p>
+              <p><strong>Purpose:</strong> Generate test approval links for Cris Palmer to debug the approval system.</p>
+              <p><strong>Client ID:</strong> C-1012</p>
               <p><strong>Current Domain:</strong> {window.location.origin}</p>
             </div>
 
@@ -173,7 +174,7 @@ const ApprovalTestPage = () => {
               disabled={loading}
               className="w-full"
             >
-              {loading ? "Generating..." : "Generate Test Approval Link"}
+              {loading ? "Generating..." : "Generate Test Approval Link for Cris Palmer"}
             </Button>
 
             {approvalLink && (
@@ -216,6 +217,15 @@ const ApprovalTestPage = () => {
                   Test hub.fixlify.app Domain
                 </Button>
               </div>
+            </div>
+
+            <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+              <p><strong>Cris Palmer's Info:</strong></p>
+              <p>• Name: {formData.clientName}</p>
+              <p>• Email: {formData.clientEmail}</p>
+              <p>• Phone: {formData.clientPhone}</p>
+              <p>• Client ID: C-1012</p>
+              <p>• Last Estimate: #175 ($344.99)</p>
             </div>
 
             <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
