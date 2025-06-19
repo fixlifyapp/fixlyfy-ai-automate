@@ -8,7 +8,7 @@ import { MoreHorizontal, Edit, Send, DollarSign, Eye } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
 import { UnifiedDocumentViewer } from "../dialogs/UnifiedDocumentViewer";
-import { EstimateSendDialog } from "../dialogs/estimate-builder/EstimateSendDialog";
+import { UniversalSendDialog } from "../dialogs/shared/UniversalSendDialog";
 import { formatCurrency } from "@/lib/utils";
 import { Estimate } from "@/hooks/useEstimates";
 import { useJobs } from "@/hooks/useJobs";
@@ -188,12 +188,13 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
         />
       )}
 
-      {/* Send Estimate Dialog */}
-      <EstimateSendDialog
+      {/* Universal Send Dialog for Estimates */}
+      <UniversalSendDialog
         isOpen={!!sendingEstimate}
         onClose={() => setSendingEstimate(null)}
-        estimateId={sendingEstimate?.id || ''}
-        estimateNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
+        documentType="estimate"
+        documentId={sendingEstimate?.id || ''}
+        documentNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
         total={sendingEstimate?.total || sendingEstimate?.amount || 0}
         contactInfo={{
           name: job?.client?.name || 'Client',
