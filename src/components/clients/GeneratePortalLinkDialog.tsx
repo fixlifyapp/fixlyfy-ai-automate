@@ -43,29 +43,22 @@ export const GeneratePortalLinkDialog = ({
     try {
       setIsGenerating(true);
       
-      // Generate secure access token
-      const accessToken = btoa(Math.random().toString()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
-      const expiresAt = new Date(Date.now() + (validHours * 60 * 60 * 1000));
-
-      // Store portal access in database
-      const { error } = await supabase
-        .from('client_portal_access')
-        .insert({
-          access_token: accessToken,
-          client_id: clientId,
-          document_type: 'portal',
-          document_id: crypto.randomUUID(),
-          expires_at: expiresAt.toISOString(),
-          permissions,
-          domain_restriction: 'portal.fixlify.app'
+      // Use the Supabase function to generate portal access
+      const { data: tokenData, error: tokenError } = await supabase
+        .rpc('generate_portal_access', {
+          p_client_id: clientId,
+          p_permissions: permissions,
+          p_hours_valid: validHours,
+          p_domain_restriction: 'hub.fixlify.app'
         });
 
-      if (error) throw error;
+      if (tokenError || !tokenData) throw tokenError;
       
-      // Generate new portal URL format
-      const portalUrl = `https://portal.fixlify.app/portal/${accessToken}`;
+      // Generate the portal URL for hub.fixlify.app
+      const portalUrl = `https://hub.fixlify.app/portal/${tokenData}`;
       setPortalLink(portalUrl);
-      toast.success('Enhanced portal link generated successfully!');
+      
+      toast.success('Portal link generated successfully!');
     } catch (err: any) {
       console.error('Generate portal link error:', err);
       toast.error('Failed to generate portal link');
@@ -133,13 +126,13 @@ export const GeneratePortalLinkDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Generate Enhanced Client Portal Link</DialogTitle>
+          <DialogTitle>Generate Client Portal Link</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           <div className="text-sm text-gray-600">
             Generate a secure access link for <strong>{clientName}</strong> to access their client portal at{" "}
-            <span className="font-mono text-blue-600">portal.fixlify.app</span>
+            <span className="font-mono text-blue-600">hub.fixlify.app</span>
           </div>
 
           {!portalLink && (
@@ -210,7 +203,7 @@ export const GeneratePortalLinkDialog = ({
                 disabled={isGenerating}
                 className="w-full"
               >
-                {isGenerating ? "Generating..." : "Generate Enhanced Portal Link"}
+                {isGenerating ? "Generating..." : "Generate Portal Link"}
               </Button>
             </>
           )}
@@ -243,7 +236,7 @@ export const GeneratePortalLinkDialog = ({
                 </div>
                 
                 <div className="mt-2 text-xs text-gray-500">
-                  <p>Valid for {validHours} hours • Domain: portal.fixlify.app</p>
+                  <p>Valid for {validHours} hours • Domain: hub.fixlify.app</p>
                   <p>Permissions: {Object.entries(permissions).filter(([_, value]) => value).map(([key]) => key.replace('_', ' ')).join(', ')}</p>
                 </div>
               </div>

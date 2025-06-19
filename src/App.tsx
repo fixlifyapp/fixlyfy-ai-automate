@@ -50,6 +50,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import PublicEnhancedPortal from "@/pages/PublicEnhancedPortal";
 import PublicJobPortal from "@/pages/PublicJobPortal";
+import ClientPortal from "@/pages/ClientPortal";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,9 @@ function App() {
           <Route path="/enhanced-portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:clientId/:jobId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/client/:jobNumber" element={<PublicRoute><PublicJobPortal /></PublicRoute>} />
+          
+          {/* Client Portal routes - completely public with token access */}
+          <Route path="/portal/:accessToken" element={<PublicRoute><ClientPortal /></PublicRoute>} />
           
           {/* Approval routes - public with no auth context */}
           <Route path="/approve/:token" element={<PublicRoute><ApprovalPage /></PublicRoute>} />
