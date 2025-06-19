@@ -40,6 +40,8 @@ export interface Estimate extends DocumentBase {
   signature_timestamp?: string;
   signature_ip?: string;
   portal_access_token?: string;
+  // Add techniciansNote for compatibility
+  techniciansNote?: string;
 }
 
 export interface Invoice extends DocumentBase {

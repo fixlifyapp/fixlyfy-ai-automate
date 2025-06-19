@@ -162,9 +162,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   ) || [];
 
   const totalInvoiceValue = invoices?.reduce((sum, invoice) => sum + (invoice.total || 0), 0) || 0;
-  const pendingPayment = invoices?.filter(inv => 
-    inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partial'
-  ).length || 0;
+  
+  // Fix the status comparison issue by using proper payment_status and status values
+  const pendingPayment = invoices?.filter(inv => {
+    const paymentStatus = inv.payment_status?.toLowerCase();
+    const status = inv.status?.toLowerCase();
+    return paymentStatus === 'unpaid' || paymentStatus === 'partial' || status === 'sent' || status === 'overdue';
+  }).length || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
@@ -267,7 +271,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                       <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
                         <p>Created: {format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
                         {invoice.due_date && <p>Due: {format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>}
-                        {invoice.balance > 0 && (
+                        {invoice.balance && invoice.balance > 0 && (
                           <p className="text-red-600">Balance: {formatCurrency(invoice.balance)}</p>
                         )}
                       </div>

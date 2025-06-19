@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "../../builder/types";
-import { Estimate } from "./useEstimateData";
+import { Estimate } from "@/types/documents";
 
 export const useEstimateWarranty = (
   estimates: Estimate[],
@@ -59,14 +59,11 @@ export const useEstimateWarranty = (
                     quantity: 1,
                     unitPrice: selectedWarranty.price,
                     taxable: false,
-                    total: selectedWarranty.price,
-                    name: selectedWarranty.name,
-                    price: selectedWarranty.price
+                    total: selectedWarranty.price
                   }
                 ],
                 total: est.total + selectedWarranty.price,
-                notes: customNote || est.notes,
-                techniciansNote: customNote || est.techniciansNote || ""
+                notes: customNote || est.notes
               } 
             : est
         );

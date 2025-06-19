@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Estimate, LineItem } from "@/types/documents";
 
+// Re-export types for backward compatibility
+export type { Estimate, LineItem };
+
 export const useEstimates = (jobId: string) => {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
