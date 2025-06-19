@@ -312,6 +312,11 @@ function App() {
               <ProtectedRouteWithProviders><AdminRolesPage /></ProtectedRouteWithProviders>
             </AuthProvider>
           } />
+          <Route path="/test-approval" element={
+            <AuthProvider>
+              <ProtectedRouteWithProviders><ApprovalTestPage /></ProtectedRouteWithProviders>
+            </AuthProvider>
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
