@@ -68,7 +68,7 @@ serve(async (req) => {
 
     const client = estimate.jobs.clients;
 
-    // Generate portal access token instead of approval token
+    // Generate portal access token using the updated function
     console.log('🔄 Generating portal access token...');
     
     const { data: portalToken, error: portalError } = await supabaseAdmin
@@ -80,7 +80,7 @@ serve(async (req) => {
           make_payments: false
         },
         p_hours_valid: 72,
-        p_domain_restriction: 'hub.fixlify.app'
+        p_domain_restriction: 'portal.fixlify.app'
       });
 
     if (portalError || !portalToken) {
@@ -90,7 +90,8 @@ serve(async (req) => {
 
     console.log('✅ Portal access token generated:', portalToken);
 
-    const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
+    // Use the correct domain - portal.fixlify.app
+    const portalLink = `https://portal.fixlify.app/portal/${portalToken}`;
     console.log('🔗 Portal link:', portalLink);
 
     // Create SMS message with portal link
@@ -100,7 +101,7 @@ serve(async (req) => {
     if (message) {
       smsMessage = message;
       // Add portal link to custom message if not already included
-      if (!message.includes('hub.fixlify.app/portal/')) {
+      if (!message.includes('portal.fixlify.app/portal/')) {
         smsMessage = `${message}\n\nView your estimate: ${portalLink}`;
       }
     } else {

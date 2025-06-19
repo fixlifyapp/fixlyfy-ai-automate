@@ -22,44 +22,65 @@ serve(async (req) => {
     const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     const userAgent = req.headers.get('user-agent') || 'unknown'
 
-    console.log('🔐 Validating portal access for client ID:', accessId)
+    console.log('🔐 Validating portal access for token:', accessId)
 
-    // For portal.fixlify.app - treat accessId as client_id directly (no auth needed)
-    if (accessId && accessId.startsWith('C-')) {
-      // Get client data directly
-      const { data: client, error: clientError } = await supabaseClient
-        .from('clients')
-        .select('*')
-        .eq('id', accessId)
-        .single()
+    // First try using the database function for proper validation
+    try {
+      const { data: functionResult, error: functionError } = await supabaseClient
+        .rpc('validate_portal_access', {
+          p_access_token: accessId,
+          p_ip_address: clientIP,
+          p_user_agent: userAgent
+        })
 
-      if (clientError || !client) {
-        console.log('❌ Client not found:', accessId)
+      if (functionError) {
+        console.error('❌ Database function error:', functionError)
+        throw functionError
+      }
+
+      if (functionResult && functionResult.valid) {
+        console.log('✅ Valid portal access via database function')
         return new Response(
-          JSON.stringify({ error: 'Client not found' }),
+          JSON.stringify(functionResult),
           { 
-            status: 404, 
+            status: 200, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         )
       }
+    } catch (funcError) {
+      console.error('❌ Function validation failed:', funcError)
+    }
 
-      console.log('✅ Valid portal access for client:', client.name)
+    // Fallback: Direct database query with service role (bypasses RLS)
+    console.log('🔄 Trying direct database query fallback...')
+    
+    // Check portal_sessions first
+    const { data: portalSession, error: sessionError } = await supabaseClient
+      .from('portal_sessions')
+      .select('*, clients!inner(id, name, email, phone, address, city, state, zip)')
+      .eq('access_token', accessId)
+      .gt('expires_at', new Date().toISOString())
+      .eq('is_active', true)
+      .single()
 
+    if (!sessionError && portalSession) {
+      console.log('✅ Valid portal session found')
+      
       return new Response(
         JSON.stringify({ 
           valid: true,
           client: {
-            id: client.id,
-            name: client.name,
-            email: client.email,
-            phone: client.phone,
-            address: client.address,
-            city: client.city,
-            state: client.state,
-            zip: client.zip
+            id: portalSession.clients.id,
+            name: portalSession.clients.name,
+            email: portalSession.clients.email,
+            phone: portalSession.clients.phone,
+            address: portalSession.clients.address,
+            city: portalSession.clients.city,
+            state: portalSession.clients.state,
+            zip: portalSession.clients.zip
           },
-          permissions: {
+          permissions: portalSession.permissions || {
             view_estimates: true,
             view_invoices: true,
             make_payments: false
@@ -72,19 +93,72 @@ serve(async (req) => {
       )
     }
 
-    // If not a client ID format, return error
-    console.log('❌ Invalid access ID format')
+    // Check client_portal_access as fallback
+    const { data: portalAccess, error: accessError } = await supabaseClient
+      .from('client_portal_access')
+      .select('*, clients!inner(id, name, email, phone, address, city, state, zip)')
+      .eq('access_token', accessId)
+      .gt('expires_at', new Date().toISOString())
+      .single()
+
+    if (!accessError && portalAccess) {
+      console.log('✅ Valid portal access found in client_portal_access')
+      
+      // Update use count
+      await supabaseClient
+        .from('client_portal_access')
+        .update({ 
+          use_count: (portalAccess.use_count || 0) + 1,
+          used_at: new Date().toISOString()
+        })
+        .eq('access_token', accessId)
+
+      return new Response(
+        JSON.stringify({ 
+          valid: true,
+          client: {
+            id: portalAccess.clients.id,
+            name: portalAccess.clients.name,
+            email: portalAccess.clients.email,
+            phone: portalAccess.clients.phone,
+            address: portalAccess.clients.address,
+            city: portalAccess.clients.city,
+            state: portalAccess.clients.state,
+            zip: portalAccess.clients.zip
+          },
+          permissions: portalAccess.permissions || {
+            view_estimates: true,
+            view_invoices: true,
+            make_payments: false
+          }
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // If no valid token found
+    console.log('❌ No valid portal access found for token:', accessId)
     return new Response(
-      JSON.stringify({ error: 'Invalid access format' }),
+      JSON.stringify({ 
+        valid: false, 
+        error: 'Invalid or expired access token' 
+      }),
       { 
         status: 401, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
+
   } catch (error) {
     console.error('❌ Error in validate-portal-access:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        valid: false, 
+        error: 'Internal server error' 
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
