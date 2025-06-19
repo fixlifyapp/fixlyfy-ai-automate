@@ -155,6 +155,8 @@ export const useEstimateActions = (
 
     setIsConverting(true);
     try {
+      console.log('🔄 Starting estimate conversion:', selectedEstimate.id);
+      
       // Get line items for the estimate
       const { data: lineItems, error: lineItemsError } = await supabase
         .from('line_items')
@@ -191,7 +193,12 @@ export const useEstimateActions = (
         .select()
         .single();
 
-      if (createInvoiceError) throw createInvoiceError;
+      if (createInvoiceError) {
+        console.error('❌ Error creating invoice:', createInvoiceError);
+        throw createInvoiceError;
+      }
+
+      console.log('✅ Invoice created:', newInvoice);
 
       // Copy line items to invoice
       if (lineItems && lineItems.length > 0) {
@@ -208,16 +215,28 @@ export const useEstimateActions = (
           .from('line_items')
           .insert(invoiceLineItems);
 
-        if (lineItemsCreateError) throw lineItemsCreateError;
+        if (lineItemsCreateError) {
+          console.error('❌ Error copying line items:', lineItemsCreateError);
+          throw lineItemsCreateError;
+        }
+        
+        console.log('✅ Line items copied to invoice');
       }
 
-      // Update estimate status to 'converted'
+      // Update estimate status to 'converted' with improved error handling
+      console.log('🔄 Updating estimate status to converted...');
       const { error: updateEstimateError } = await supabase
         .from('estimates')
         .update({ status: 'converted' as const })
         .eq('id', selectedEstimate.id);
 
-      if (updateEstimateError) throw updateEstimateError;
+      if (updateEstimateError) {
+        console.error('⚠️ Error updating estimate status:', updateEstimateError);
+        // Don't throw error - show warning but continue since invoice was created
+        toast.error('Invoice created successfully, but estimate status update failed. This does not affect the functionality.');
+      } else {
+        console.log('✅ Estimate status updated to converted');
+      }
 
       // Update local state - cast status properly
       const updatedEstimates = estimates.map(est => 
@@ -236,8 +255,15 @@ export const useEstimateActions = (
       
       return true;
     } catch (error: any) {
-      console.error('Error converting estimate to invoice:', error);
-      toast.error('Failed to convert estimate to invoice');
+      console.error('❌ Error converting estimate to invoice:', error);
+      
+      // Provide more specific error messages
+      if (error.message.includes('row-level security')) {
+        toast.error('Access denied. Please ensure you have permission to create invoices and update estimates.');
+      } else {
+        toast.error('Failed to convert estimate to invoice: ' + error.message);
+      }
+      
       return false;
     } finally {
       setIsConverting(false);

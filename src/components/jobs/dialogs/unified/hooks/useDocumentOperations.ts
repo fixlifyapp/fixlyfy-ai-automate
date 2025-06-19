@@ -366,13 +366,13 @@ export const useDocumentOperations = ({
     }
   }, [documentType, jobId, formData, lineItems, notes, calculateGrandTotal, isSubmitting]);
 
-  // Enhanced conversion from estimate to invoice
+  // Enhanced conversion from estimate to invoice with better error handling
   const convertToInvoice = useCallback(async (): Promise<Invoice | null> => {
     if (documentType !== 'estimate' || !existingDocument) return null;
 
     try {
       setIsSubmitting(true);
-      console.log('Converting estimate to invoice:', existingDocument.id);
+      console.log('🔄 Converting estimate to invoice:', existingDocument.id);
       
       // Check authentication first
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -392,7 +392,6 @@ export const useDocumentOperations = ({
         invoice_number: invoiceNumber,
         total: calculateGrandTotal(),
         amount_paid: 0,
-        // Remove balance field as it's generated
         status: 'unpaid' as const,
         payment_status: 'unpaid' as const,
         notes: notes || existingDocument.notes,
@@ -400,10 +399,9 @@ export const useDocumentOperations = ({
         issue_date: new Date().toISOString().split('T')[0],
         subtotal: calculateGrandTotal(),
         items: []
-        // Remove date field
       };
 
-      console.log('Creating invoice:', invoiceData);
+      console.log('📦 Creating invoice:', invoiceData);
 
       const { data: invoice, error } = await supabase
         .from('invoices')
@@ -412,11 +410,11 @@ export const useDocumentOperations = ({
         .single();
 
       if (error) {
-        console.error('Error creating invoice:', error);
+        console.error('❌ Error creating invoice:', error);
         throw new Error(`Failed to create invoice: ${error.message}`);
       }
 
-      console.log('Created invoice:', invoice);
+      console.log('✅ Created invoice:', invoice);
 
       // Copy line items to invoice
       if (lineItems.length > 0) {
@@ -429,31 +427,54 @@ export const useDocumentOperations = ({
           taxable: item.taxable
         }));
 
-        console.log('Copying line items to invoice:', invoiceLineItems);
+        console.log('📋 Copying line items to invoice:', invoiceLineItems);
 
         const { error: lineItemsError } = await supabase
           .from('line_items')
           .insert(invoiceLineItems);
           
         if (lineItemsError) {
-          console.error('Error copying line items:', lineItemsError);
+          console.error('❌ Error copying line items:', lineItemsError);
           throw new Error(`Failed to copy line items: ${lineItemsError.message}`);
         }
       }
 
-      // Update estimate status to converted
+      // Update estimate status to converted with improved error handling
+      console.log('🔄 Updating estimate status to converted...');
       const { error: updateError } = await supabase
         .from('estimates')
         .update({ status: 'converted' as const })
         .eq('id', existingDocument.id);
         
       if (updateError) {
-        console.error('Error updating estimate status:', updateError);
-        // Don't throw here as the invoice was created successfully
+        console.error('⚠️ Error updating estimate status:', updateError);
+        // Log the error but don't fail the conversion since invoice was created successfully
+        toast.error('Invoice created successfully, but estimate status update failed. This does not affect the functionality.');
+      } else {
+        console.log('✅ Estimate status updated to converted');
       }
 
-      console.log('Estimate converted successfully');
+      // Log successful conversion to job history
+      try {
+        await supabase
+          .from('job_history')
+          .insert({
+            job_id: String(jobId),
+            entity_id: invoice.id,
+            entity_type: 'invoice',
+            type: 'estimate-converted',
+            title: 'Estimate Converted to Invoice',
+            description: `Estimate ${estimateNumber} converted to Invoice ${invoiceNumber}`,
+            user_id: user.id,
+            user_name: user.email,
+            old_value: { estimate_id: existingDocument.id, estimate_status: 'approved' },
+            new_value: { invoice_id: invoice.id, invoice_status: 'unpaid' }
+          });
+      } catch (historyError) {
+        console.warn('⚠️ Failed to log conversion history (non-critical):', historyError);
+      }
 
+      console.log('✅ Estimate converted successfully');
       toast.success('Estimate successfully converted to invoice');
       
       if (onSyncToInvoice) {
@@ -497,7 +518,7 @@ export const useDocumentOperations = ({
       return result;
 
     } catch (error: any) {
-      console.error('Error converting to invoice:', error);
+      console.error('❌ Error converting to invoice:', error);
       
       if (error.message.includes('row-level security')) {
         toast.error('Access denied. Please ensure you have permission to create invoices.');
