@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -315,12 +316,12 @@ const createEstimateEmailTemplate = (data: any) => {
         
         ${portalLink ? `
           <a href="${portalLink}" class="portal-button">
-            View & Accept Estimate
+            View Your Estimate
           </a>
           <div class="features-list">
             <div class="feature-item">
               <span class="feature-icon">✓</span>
-              <span>Secure online portal access</span>
+              <span>Secure client portal access</span>
             </div>
             <div class="feature-item">
               <span class="feature-icon">📱</span>
@@ -332,7 +333,7 @@ const createEstimateEmailTemplate = (data: any) => {
             </div>
             <div class="feature-item">
               <span class="feature-icon">💳</span>
-              <span>Easy approval process</span>
+              <span>View all your documents</span>
             </div>
           </div>
         ` : `
@@ -430,42 +431,33 @@ serve(async (req) => {
 
     console.log('Processing email for estimate:', estimateId, 'to email:', recipientEmail);
 
-    // Get estimate details
+    // Get estimate details with job and client info
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
-      .select('*')
+      .select(`
+        *,
+        jobs!inner(
+          id,
+          client_id,
+          clients!inner(
+            id,
+            name,
+            email,
+            phone
+          )
+        )
+      `)
       .eq('id', estimateId)
       .single();
 
     if (estimateError || !estimate) {
+      console.error('Estimate lookup error:', estimateError);
       throw new Error('Estimate not found');
     }
 
     console.log('Estimate found:', estimate.estimate_number);
     
-    // Get job and client details
-    const { data: job, error: jobError } = await supabaseAdmin
-      .from('jobs')
-      .select('*')
-      .eq('id', estimate.job_id)
-      .single();
-
-    if (jobError) {
-      console.warn('Could not fetch job details:', jobError);
-    }
-
-    let client = null;
-    if (job?.client_id) {
-      const { data: clientData, error: clientError } = await supabaseAdmin
-        .from('clients')
-        .select('*')
-        .eq('id', job.client_id)
-        .single();
-      
-      if (!clientError) {
-        client = clientData;
-      }
-    }
+    const client = estimate.jobs.clients;
 
     // Get company settings
     const { data: companySettings } = await supabaseAdmin
@@ -480,12 +472,30 @@ serve(async (req) => {
     const companyLogo = companySettings?.company_logo_url;
     const companyWebsite = companySettings?.company_website;
 
-    // Generate portal link using client ID directly (no authentication needed)
-    let portalLink = '';
-    if (client?.id) {
-      portalLink = `https://portal.fixlify.app/portal/${client.id}`;
-      console.log('Direct portal link generated:', portalLink);
+    // Generate portal access token for the client
+    console.log('🔄 Generating portal access token...');
+    
+    const { data: portalToken, error: portalError } = await supabaseAdmin
+      .rpc('generate_portal_access', {
+        p_client_id: client.id,
+        p_permissions: {
+          view_estimates: true,
+          view_invoices: true,
+          make_payments: false
+        },
+        p_hours_valid: 72,
+        p_domain_restriction: 'hub.fixlify.app'
+      });
+
+    if (portalError || !portalToken) {
+      console.error('❌ Failed to generate portal token:', portalError);
+      throw new Error('Failed to generate portal access token');
     }
+
+    console.log('✅ Portal access token generated:', portalToken);
+
+    const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
+    console.log('🔗 Portal link:', portalLink);
 
     // Create email HTML
     const emailHtml = createEstimateEmailTemplate({
@@ -554,7 +564,7 @@ serve(async (req) => {
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLink
+          portal_link_included: true
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
