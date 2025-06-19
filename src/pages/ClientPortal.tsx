@@ -35,6 +35,9 @@ const ClientPortal = () => {
   const [portalData, setPortalData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // Get current year dynamically
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     validateAndLoadPortal();
@@ -523,7 +526,7 @@ const ClientPortal = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Footer */}
+        {/* Footer - Dynamic Year */}
         <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t text-center text-xs sm:text-sm text-gray-500">
           <div className="bg-purple-50 p-4 rounded-lg">
             <p className="font-medium text-purple-800 mb-2">Need Help?</p>
@@ -534,7 +537,7 @@ const ClientPortal = () => {
             </div>
           </div>
           <div className="mt-4">
-            <p>© 2024 Fixlify. All rights reserved.</p>
+            <p>© {currentYear} Fixlify. All rights reserved.</p>
           </div>
         </div>
       </div>
