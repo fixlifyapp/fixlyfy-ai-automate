@@ -34,7 +34,7 @@ serve(async (req) => {
     const requestBody = await req.json()
     console.log('Request body:', requestBody);
     
-    const { invoiceId, recipientPhone, message, approvalToken } = requestBody;
+    const { invoiceId, recipientPhone, message } = requestBody;
 
     if (!invoiceId || !recipientPhone) {
       throw new Error('Missing required fields: invoiceId and recipientPhone');
@@ -67,34 +67,31 @@ serve(async (req) => {
     console.log('Invoice found:', invoice.invoice_number);
 
     const client = invoice.jobs.clients;
-    let finalApprovalToken = approvalToken;
 
-    // Generate approval token if not provided
-    if (!finalApprovalToken) {
-      console.log('🔄 Generating new approval token...');
-      
-      const { data: tokenData, error: tokenError } = await supabaseAdmin
-        .rpc('generate_approval_token', {
-          p_document_type: 'invoice',
-          p_document_id: invoiceId,
-          p_document_number: invoice.invoice_number,
-          p_client_id: client.id,
-          p_client_name: client.name || '',
-          p_client_email: client.email || '',
-          p_client_phone: client.phone || ''
-        });
+    // Generate portal access token instead of approval token
+    console.log('🔄 Generating portal access token...');
+    
+    const { data: portalToken, error: portalError } = await supabaseAdmin
+      .rpc('generate_portal_access', {
+        p_client_id: client.id,
+        p_permissions: {
+          view_estimates: true,
+          view_invoices: true,
+          make_payments: false
+        },
+        p_hours_valid: 72,
+        p_domain_restriction: 'hub.fixlify.app'
+      });
 
-      if (tokenError || !tokenData) {
-        console.error('❌ Failed to generate approval token:', tokenError);
-        throw new Error('Failed to generate approval token');
-      }
-
-      finalApprovalToken = tokenData;
-      console.log('✅ New approval token generated:', finalApprovalToken);
+    if (portalError || !portalToken) {
+      console.error('❌ Failed to generate portal token:', portalError);
+      throw new Error('Failed to generate portal access token');
     }
 
-    const approvalLink = `https://hub.fixlify.app/approve/${finalApprovalToken}`;
-    console.log('🔗 Approval link:', approvalLink);
+    console.log('✅ Portal access token generated:', portalToken);
+
+    const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
+    console.log('🔗 Portal link:', portalLink);
 
     // Get company settings for branding
     const { data: companySettings } = await supabaseAdmin
@@ -105,18 +102,18 @@ serve(async (req) => {
 
     const companyName = companySettings?.company_name || 'Fixlify Services';
 
-    // Create SMS message with approval link
+    // Create SMS message with portal link
     const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
     
     let smsMessage;
     if (message) {
       smsMessage = message;
-      // Add approval link to custom message if not already included
-      if (!message.includes('hub.fixlify.app/approve/')) {
-        smsMessage = `${message}\n\nReview and pay: ${approvalLink}`;
+      // Add portal link to custom message if not already included
+      if (!message.includes('hub.fixlify.app/portal/')) {
+        smsMessage = `${message}\n\nView your invoice: ${portalLink}`;
       }
     } else {
-      smsMessage = `Hi ${client.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Review and pay: ${approvalLink}`;
+      smsMessage = `Hi ${client.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. View your invoice: ${portalLink}`;
     }
 
     console.log('SMS message to send:', smsMessage);
@@ -128,8 +125,7 @@ serve(async (req) => {
         recipientPhone: recipientPhone,
         message: smsMessage,
         client_id: client.id,
-        job_id: invoice.job_id,
-        approvalToken: finalApprovalToken
+        job_id: invoice.job_id
       }
     });
 
@@ -166,7 +162,7 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: smsData?.messageId,
-        approvalLink: approvalLink,
+        portalLink: portalLink,
         smsContent: smsMessage
       }),
       {

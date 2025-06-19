@@ -34,7 +34,7 @@ serve(async (req) => {
     const requestBody = await req.json()
     console.log('Request body:', requestBody);
     
-    const { estimateId, recipientPhone, message, approvalToken } = requestBody;
+    const { estimateId, recipientPhone, message } = requestBody;
 
     if (!estimateId || !recipientPhone) {
       throw new Error('Missing required fields: estimateId and recipientPhone');
@@ -67,47 +67,44 @@ serve(async (req) => {
     console.log('Estimate found:', estimate.estimate_number);
 
     const client = estimate.jobs.clients;
-    let finalApprovalToken = approvalToken;
 
-    // Generate approval token if not provided
-    if (!finalApprovalToken) {
-      console.log('🔄 Generating new approval token...');
-      
-      const { data: tokenData, error: tokenError } = await supabaseAdmin
-        .rpc('generate_approval_token', {
-          p_document_type: 'estimate',
-          p_document_id: estimateId,
-          p_document_number: estimate.estimate_number,
-          p_client_id: client.id,
-          p_client_name: client.name || '',
-          p_client_email: client.email || '',
-          p_client_phone: client.phone || ''
-        });
+    // Generate portal access token instead of approval token
+    console.log('🔄 Generating portal access token...');
+    
+    const { data: portalToken, error: portalError } = await supabaseAdmin
+      .rpc('generate_portal_access', {
+        p_client_id: client.id,
+        p_permissions: {
+          view_estimates: true,
+          view_invoices: true,
+          make_payments: false
+        },
+        p_hours_valid: 72,
+        p_domain_restriction: 'hub.fixlify.app'
+      });
 
-      if (tokenError || !tokenData) {
-        console.error('❌ Failed to generate approval token:', tokenError);
-        throw new Error('Failed to generate approval token');
-      }
-
-      finalApprovalToken = tokenData;
-      console.log('✅ New approval token generated:', finalApprovalToken);
+    if (portalError || !portalToken) {
+      console.error('❌ Failed to generate portal token:', portalError);
+      throw new Error('Failed to generate portal access token');
     }
 
-    const approvalLink = `https://hub.fixlify.app/approve/${finalApprovalToken}`;
-    console.log('🔗 Approval link:', approvalLink);
+    console.log('✅ Portal access token generated:', portalToken);
 
-    // Create SMS message with approval link
+    const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
+    console.log('🔗 Portal link:', portalLink);
+
+    // Create SMS message with portal link
     const estimateTotal = estimate.total || 0;
     
     let smsMessage;
     if (message) {
       smsMessage = message;
-      // Add approval link to custom message if not already included
-      if (!message.includes('hub.fixlify.app/approve/')) {
-        smsMessage = `${message}\n\nReview and approve: ${approvalLink}`;
+      // Add portal link to custom message if not already included
+      if (!message.includes('hub.fixlify.app/portal/')) {
+        smsMessage = `${message}\n\nView your estimate: ${portalLink}`;
       }
     } else {
-      smsMessage = `Hi ${client.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimateTotal.toFixed(2)}. Review and approve: ${approvalLink}`;
+      smsMessage = `Hi ${client.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimateTotal.toFixed(2)}. View your estimate: ${portalLink}`;
     }
 
     console.log('SMS message to send:', smsMessage);
@@ -119,8 +116,7 @@ serve(async (req) => {
         recipientPhone: recipientPhone,
         message: smsMessage,
         client_id: client.id,
-        job_id: estimate.job_id,
-        approvalToken: finalApprovalToken
+        job_id: estimate.job_id
       }
     });
 
@@ -157,7 +153,7 @@ serve(async (req) => {
         success: true, 
         message: 'SMS sent successfully',
         messageId: smsData?.messageId,
-        approvalLink: approvalLink,
+        portalLink: portalLink,
         smsContent: smsMessage
       }),
       {

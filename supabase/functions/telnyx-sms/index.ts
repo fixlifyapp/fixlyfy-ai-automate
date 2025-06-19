@@ -27,10 +27,7 @@ serve(async (req) => {
       recipientPhone, 
       message, 
       client_id, 
-      job_id,
-      approvalToken, // New approval token parameter
-      estimateId, // Legacy fallback
-      invoiceId   // Legacy fallback
+      job_id
     } = requestBody;
 
     if (!recipientPhone || !message) {
@@ -55,26 +52,14 @@ serve(async (req) => {
     const fromNumber = telnyxNumbers[0].phone_number;
     console.log('✅ Using phone number for SMS:', fromNumber);
 
-    // Process the message to add approval link if we have an approval token
+    // Process the message - no need to add approval links here as they're handled by the calling functions
     let finalMessage = message;
     
-    if (approvalToken) {
-      console.log('🔗 Adding approval link for token:', approvalToken);
-      const approvalLink = `https://hub.fixlify.app/approve/${approvalToken}`;
-      
-      // Add approval link if not already included
-      if (!message.includes('hub.fixlify.app/approve/')) {
-        finalMessage = `${message}\n\nReview and respond: ${approvalLink}`;
-      }
-      console.log('✅ Approval link added to message');
-    } else if (job_id) {
-      // Fallback: add job portal link for backward compatibility
+    if (job_id && !message.includes('hub.fixlify.app/portal/') && !message.includes('hub.fixlify.app/approve/')) {
+      // Only add job portal link if no other portal/approval links are present
       console.log('🔗 Adding job portal link for job:', job_id);
       const jobPortalLink = `https://portal.fixlify.app/client/${job_id}`;
-      
-      if (!message.includes('portal.fixlify.app')) {
-        finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
-      }
+      finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
       console.log('✅ Job portal link added to message');
     }
 
