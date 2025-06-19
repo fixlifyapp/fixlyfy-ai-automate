@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PhoneNumberPurchase } from '../connect/PhoneNumberPurchase';
+import { PhoneNumberVerification } from './PhoneNumberVerification';
 import { formatPhoneForDisplay } from '@/utils/phoneUtils';
 
 interface OwnedNumber {
@@ -81,6 +82,9 @@ export function TelnyxPhoneNumbersPage() {
 
   return (
     <div className="space-y-6">
+      {/* Phone Number Verification Section */}
+      <PhoneNumberVerification />
+
       {/* Purchase Numbers Section */}
       <PhoneNumberPurchase />
 
@@ -103,7 +107,8 @@ export function TelnyxPhoneNumbersPage() {
               <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No phone numbers yet</h3>
               <p className="text-muted-foreground mb-4">
-                Search and purchase a phone number above to get started with AI dispatcher
+                Use the verification tool above to check if +14375249932 is assigned to your account, 
+                or search and purchase a new phone number to get started with AI dispatcher
               </p>
             </div>
           ) : (
@@ -198,7 +203,7 @@ export function TelnyxPhoneNumbersPage() {
           <div className="bg-blue-50 p-4 rounded-lg">
             <h5 className="font-medium text-blue-800 mb-2">🧪 Testing Your Setup</h5>
             <p className="text-sm text-blue-700">
-              After purchasing and configuring a test number, you can test the AI dispatcher by calling the number. 
+              After verifying and configuring your phone number, you can test the AI dispatcher by calling the number. 
               Check the "Call History" tab to see call logs and transcripts.
             </p>
           </div>
