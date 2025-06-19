@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,6 +69,7 @@ const EstimateViewPage = () => {
           number: estimateData.estimate_number,
           amount: estimateData.total,
           date: estimateData.created_at,
+          status: estimateData.status as Estimate['status'], // Cast to proper type
           items: items
         };
 

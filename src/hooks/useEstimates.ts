@@ -2,10 +2,20 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Estimate, LineItem } from "@/types/documents";
+import { Estimate as EstimateType, LineItem } from "@/types/documents";
 
-// Re-export types for backward compatibility
-export type { Estimate, LineItem };
+// Extended interface for backward compatibility
+export interface Estimate extends EstimateType {
+  // Additional properties for backward compatibility
+  title?: string;
+  techniciansNote?: string;
+  number?: string; // Alias for estimate_number
+  amount?: number; // Alias for total
+  date?: string; // Alias for created_at
+}
+
+// Re-export LineItem for backward compatibility
+export type { LineItem };
 
 export const useEstimates = (jobId: string) => {
   const [estimates, setEstimates] = useState<Estimate[]>([]);

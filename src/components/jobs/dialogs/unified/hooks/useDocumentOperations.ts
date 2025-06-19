@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,7 +299,7 @@ export const useDocumentOperations = ({
           portal_access_token: document.portal_access_token,
           client_id: document.client_id,
           created_by: document.created_by,
-          title: document.title,
+          ...(document.title && { title: document.title }),
           description: document.description,
           techniciansNote: document.techniciansNote
         };
@@ -336,7 +335,7 @@ export const useDocumentOperations = ({
           estimate_id: document.estimate_id,
           client_id: document.client_id,
           created_by: document.created_by,
-          title: document.title,
+          ...(document.title && { title: document.title }),
           description: document.description
         };
         console.log('📋 Returning invoice result:', result);
@@ -490,7 +489,7 @@ export const useDocumentOperations = ({
         estimate_id: invoice.estimate_id,
         client_id: invoice.client_id,
         created_by: invoice.created_by,
-        title: invoice.title,
+        ...(invoice.title && { title: invoice.title }),
         description: invoice.description
       };
 
