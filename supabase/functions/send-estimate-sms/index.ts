@@ -68,7 +68,7 @@ serve(async (req) => {
 
     const client = estimate.jobs.clients;
 
-    // Generate portal access token using the updated function
+    // Generate portal access token instead of approval token
     console.log('🔄 Generating portal access token...');
     
     const { data: portalToken, error: portalError } = await supabaseAdmin
@@ -90,7 +90,6 @@ serve(async (req) => {
 
     console.log('✅ Portal access token generated:', portalToken);
 
-    // Use the correct domain - hub.fixlify.app
     const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
     console.log('🔗 Portal link:', portalLink);
 
