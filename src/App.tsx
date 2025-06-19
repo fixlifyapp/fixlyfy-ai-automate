@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -42,6 +41,8 @@ import DocumentsPage from "@/pages/DocumentsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import PreviewPage from "@/pages/PreviewPage";
 import AdminRolesPage from "@/pages/AdminRolesPage";
+import ApprovalPage from "@/pages/ApprovalPage";
+import ApprovalSuccessPage from "@/pages/ApprovalSuccessPage";
 import NotFound from "@/pages/NotFound";
 import { AppProviders } from "@/components/ui/AppProviders";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -83,6 +84,10 @@ function App() {
           <Route path="/enhanced-portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:clientId/:jobId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/client/:jobNumber" element={<PublicRoute><PublicJobPortal /></PublicRoute>} />
+          
+          {/* Approval routes - public, no authentication required */}
+          <Route path="/approve/:token" element={<PublicRoute><ApprovalPage /></PublicRoute>} />
+          <Route path="/approve/:token/success" element={<PublicRoute><ApprovalSuccessPage /></PublicRoute>} />
           
           {/* Protected routes with authentication */}
           <Route path="/" element={
