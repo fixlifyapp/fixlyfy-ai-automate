@@ -118,7 +118,7 @@ export const UniversalSendDialog = ({
         toast.success(`${documentType === "estimate" ? "Estimate" : "Invoice"} sent via email successfully!`);
         
       } else {
-        // Use telnyx-sms for both estimates and invoices
+        // Use telnyx-sms for SMS sending to ensure two-way communication
         console.log("Calling telnyx-sms function for SMS...");
         
         // Get document details for client_id and job_id
@@ -137,22 +137,19 @@ export const UniversalSendDialog = ({
           throw new Error('Unable to find client information for this document');
         }
         
-        const smsMessage = customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`;
+        // Create default message if none provided
+        const defaultMessage = customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`;
         
-        // Pass the correct parameters for SMS
-        const smsBody: any = {
+        // Use telnyx-sms for all SMS communications to ensure two-way messaging
+        const smsBody = {
           recipientPhone: sendTo,
-          message: smsMessage,
+          message: defaultMessage,
           client_id: clientId,
-          job_id: jobId
+          job_id: jobId,
+          // Add document-specific parameters for portal link generation
+          ...(documentType === "estimate" && { estimateId: documentId }),
+          ...(documentType === "invoice" && { invoiceId: documentId })
         };
-
-        // Add document-specific parameters
-        if (documentType === "estimate") {
-          smsBody.estimateId = documentId;
-        } else {
-          smsBody.invoiceId = documentId;
-        }
 
         const { data, error } = await supabase.functions.invoke('telnyx-sms', {
           body: smsBody
@@ -230,7 +227,7 @@ export const UniversalSendDialog = ({
                 <RadioGroupItem value="sms" id="sms" disabled={!hasValidPhone} />
                 <MessageSquare className="h-4 w-4" />
                 <Label htmlFor="sms" className="flex-1 cursor-pointer">
-                  SMS
+                  SMS (Two-way messaging enabled)
                   {!hasValidPhone && <span className="text-red-500 text-xs ml-2">(No valid phone)</span>}
                 </Label>
               </div>
@@ -268,6 +265,11 @@ export const UniversalSendDialog = ({
               onChange={(e) => setCustomNote(e.target.value)}
               rows={3}
             />
+            {sendMethod === "sms" && (
+              <p className="text-xs text-muted-foreground">
+                Note: A secure portal link will be automatically added to enable client access and responses.
+              </p>
+            )}
           </div>
 
           {/* Action Buttons */}
