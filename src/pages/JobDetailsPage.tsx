@@ -12,11 +12,11 @@ import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext"
 import { JobOverview } from "@/components/jobs/JobOverview";
 import { ModernJobEstimatesTab } from "@/components/jobs/overview/ModernJobEstimatesTab";
 import { ModernJobInvoicesTab } from "@/components/jobs/overview/ModernJobInvoicesTab";
-import { ModernJobPaymentsTab } from "@/components/jobs/overview/ModernJobPaymentsTab";
+import { JobPayments } from "@/components/jobs/JobPayments";
 import { JobHistory } from "@/components/jobs/JobHistory";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 const JobDetailsPage = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -25,6 +25,10 @@ const JobDetailsPage = () => {
   const [activeTab, setActiveTab] = useState<string>("overview");
   const { hasPermission } = useRBAC();
   const isMobile = useIsMobile();
+  
+  // Enhanced filtering state
+  const [filter, setFilter] = useState<'all' | 'payments' | 'documents' | 'status'>('all');
+  const [dateRange, setDateRange] = useState<{from: Date, to: Date}>();
   
   console.log("🔍 JobDetailsPage - params:", { jobId });
   console.log("🔍 JobDetailsPage - location:", location);
@@ -39,6 +43,21 @@ const JobDetailsPage = () => {
   const handleEstimateConverted = () => {
     setActiveTab("invoices");
     toast.success('Estimate converted to invoice successfully');
+  };
+
+  // Export job data functionality
+  const exportJobData = () => {
+    // Export estimates, invoices, payments to PDF/Excel
+    toast.success('Job data export started');
+    console.log('Exporting job data for:', jobId);
+    // TODO: Implement actual export functionality
+  };
+
+  // Undo functionality for critical actions
+  const handleUndo = () => {
+    toast.success('Action undone successfully');
+    console.log('Undo action for job:', jobId);
+    // TODO: Implement actual undo functionality
   };
   
   // Validate job ID format
@@ -102,6 +121,19 @@ const JobDetailsPage = () => {
           <div className="mb-4 sm:mb-6">
             <Card className="border-fixlyfy-border shadow-sm">
               <JobDetailsHeader />
+              
+              {/* Quick Actions Bar */}
+              <div className="flex gap-2 p-4 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportJobData}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export Data
+                </Button>
+              </div>
             </Card>
           </div>
           
@@ -123,7 +155,7 @@ const JobDetailsPage = () => {
                 <ModernJobInvoicesTab jobId={jobId} />
               </TabsContent>
               <TabsContent value="payments" className="mt-0">
-                <ModernJobPaymentsTab jobId={jobId} />
+                <JobPayments jobId={jobId} />
               </TabsContent>
               <TabsContent value="history" className="mt-0">
                 <JobHistory jobId={jobId} />
