@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,30 +118,49 @@ export const useEstimateActions = (
 
     setIsDeleting(true);
     try {
+      console.log('🗑️ Starting estimate deletion:', selectedEstimate.id);
+
       // Delete line items first
-      await supabase
+      const { error: lineItemsError } = await supabase
         .from('line_items')
         .delete()
         .eq('parent_type', 'estimate')
         .eq('parent_id', selectedEstimate.id);
 
+      if (lineItemsError) {
+        console.error('❌ Error deleting line items:', lineItemsError);
+        throw new Error('Failed to delete estimate line items');
+      }
+
+      console.log('✅ Line items deleted successfully');
+
       // Delete estimate
-      const { error } = await supabase
+      const { error: estimateError } = await supabase
         .from('estimates')
         .delete()
         .eq('id', selectedEstimate.id);
 
-      if (error) throw error;
+      if (estimateError) {
+        console.error('❌ Error deleting estimate:', estimateError);
+        throw new Error('Failed to delete estimate');
+      }
 
-      // Update local state
+      console.log('✅ Estimate deleted successfully from database');
+
+      // Update local state immediately
       const updatedEstimates = estimates.filter(est => est.id !== selectedEstimate.id);
+      console.log('📊 Updating local estimates state. Before:', estimates.length, 'After:', updatedEstimates.length);
       setEstimates(updatedEstimates);
+      
+      // Also trigger refresh to ensure consistency
+      console.log('🔄 Triggering estimates refresh');
+      refreshEstimates();
       
       toast.success('Estimate deleted successfully');
       return true;
     } catch (error: any) {
-      console.error('Error deleting estimate:', error);
-      toast.error('Failed to delete estimate');
+      console.error('❌ Error deleting estimate:', error);
+      toast.error('Failed to delete estimate: ' + error.message);
       return false;
     } finally {
       setIsDeleting(false);

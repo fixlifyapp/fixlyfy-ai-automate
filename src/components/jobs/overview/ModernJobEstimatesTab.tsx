@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +39,10 @@ export const ModernJobEstimatesTab = ({
   const isMobile = useIsMobile();
 
   // Keep estimates state in sync
-  useState(() => {
+  useEffect(() => {
+    console.log('📊 Syncing estimates state. New count:', estimates.length);
     setEstimatesState(estimates);
-  });
+  }, [estimates]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -63,8 +64,8 @@ export const ModernJobEstimatesTab = ({
     );
   };
 
-  const totalEstimateValue = estimates.reduce((sum, estimate) => sum + (estimate.total || 0), 0);
-  const pendingApproval = estimates.filter(est => est.status === 'sent').length;
+  const totalEstimateValue = estimatesState.reduce((sum, estimate) => sum + (estimate.total || 0), 0);
+  const pendingApproval = estimatesState.filter(est => est.status === 'sent').length;
 
   const handleEstimateCreated = () => {
     refreshEstimates();
@@ -100,9 +101,17 @@ export const ModernJobEstimatesTab = ({
   };
 
   const handleDeleteEstimate = async (estimate: any) => {
-    console.log('Deleting estimate:', estimate);
+    console.log('🗑️ Initiating delete for estimate:', estimate.id);
     actions.setSelectedEstimate(estimate);
-    await actions.confirmDeleteEstimate();
+    const success = await actions.confirmDeleteEstimate();
+    
+    if (success) {
+      console.log('✅ Delete successful, estimates should be updated');
+      // Force a refresh to ensure the UI is updated
+      setTimeout(() => {
+        refreshEstimates();
+      }, 100);
+    }
   };
 
   const handleSendEstimate = (estimate: any) => {
@@ -171,7 +180,7 @@ export const ModernJobEstimatesTab = ({
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Estimates</CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
-              <div className="text-lg sm:text-2xl font-bold">{estimates.length}</div>
+              <div className="text-lg sm:text-2xl font-bold">{estimatesState.length}</div>
             </CardContent>
           </Card>
           
@@ -200,7 +209,7 @@ export const ModernJobEstimatesTab = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
-                Estimates ({estimates.length})
+                Estimates ({estimatesState.length})
               </CardTitle>
               <Button 
                 onClick={handleCreateNew}
@@ -217,7 +226,7 @@ export const ModernJobEstimatesTab = ({
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 <p className="mt-2 text-sm text-muted-foreground">Loading estimates...</p>
               </div>
-            ) : estimates.length === 0 ? (
+            ) : estimatesState.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                 <p className="text-lg font-medium">No estimates yet</p>
@@ -225,7 +234,7 @@ export const ModernJobEstimatesTab = ({
               </div>
             ) : (
               <div className="space-y-3 sm:space-y-4">
-                {estimates.map((estimate) => (
+                {estimatesState.map((estimate) => (
                   <div key={estimate.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -297,7 +306,7 @@ export const ModernJobEstimatesTab = ({
                         disabled={state.isDeleting}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        {state.isDeleting ? 'Deleting...' : 'Delete'}
                       </Button>
                     </div>
                   </div>
