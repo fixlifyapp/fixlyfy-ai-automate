@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -5,11 +6,11 @@ import { Estimate as EstimateType, LineItem } from "@/types/documents";
 
 // Extended interface for backward compatibility
 export interface Estimate extends EstimateType {
+  [key: string]: any; // Allow any additional properties
   // Additional properties for backward compatibility
   title?: string;
   techniciansNote?: string;
   number?: string; // Alias for estimate_number
-  amount?: number; // Alias for total
   date?: string; // Alias for created_at
   description?: string; // Add missing description field
 }

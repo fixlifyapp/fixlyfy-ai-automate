@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -5,6 +6,7 @@ import { Invoice as InvoiceType, LineItem } from "@/types/documents";
 
 // Extended interface for backward compatibility
 export interface Invoice extends InvoiceType {
+  [key: string]: any; // Allow any additional properties
   // Additional properties for backward compatibility
   title?: string;
   number?: string; // Alias for invoice_number
