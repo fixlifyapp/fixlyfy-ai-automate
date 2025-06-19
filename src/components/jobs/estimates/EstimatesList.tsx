@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
 import { UnifiedDocumentViewer } from "../dialogs/UnifiedDocumentViewer";
 import { UniversalSendDialog } from "../dialogs/shared/UniversalSendDialog";
 import { formatCurrency } from "@/lib/utils";
-import { Estimate } from "@/hooks/useEstimates";
+import { Estimate } from "@/types/documents";
 import { useJobs } from "@/hooks/useJobs";
 
 interface EstimatesListProps {

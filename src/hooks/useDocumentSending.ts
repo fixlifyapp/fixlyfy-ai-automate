@@ -2,24 +2,12 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface SendDocumentParams {
-  documentType: "estimate" | "invoice";
-  documentId: string;
-  sendMethod: "email" | "sms";
-  sendTo: string;
-  customMessage?: string;
-  contactInfo?: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-}
+import { DocumentSendParams, DocumentSendResult } from "@/types/documents";
 
 export const useDocumentSending = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const sendDocument = async (params: SendDocumentParams) => {
+  const sendDocument = async (params: DocumentSendParams): Promise<DocumentSendResult> => {
     const {
       documentType,
       documentId,
