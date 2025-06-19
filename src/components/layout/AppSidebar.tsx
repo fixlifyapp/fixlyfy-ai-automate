@@ -75,24 +75,6 @@ export function AppSidebar() {
     color: "text-fixlyfy-text-muted"
   }];
 
-  // Demo client portals for testing
-  const portalRoutes = [{
-    label: 'Client Portal (Token)',
-    icon: ExternalLink,
-    href: '/portal/demo-token-123',
-    color: "text-purple-600"
-  }, {
-    label: 'Enhanced Portal',
-    icon: ExternalLink,
-    href: '/enhanced-portal/demo-access-456',
-    color: "text-blue-600"
-  }, {
-    label: 'Job Portal',
-    icon: ExternalLink,
-    href: '/client/JOB-789',
-    color: "text-green-600"
-  }];
-
   const handleNavigation = (href: string) => {
     console.log(`Navigating to: ${href}`);
     navigate(href);
@@ -160,32 +142,6 @@ export function AppSidebar() {
                     </Button>
                   </SidebarMenuButton>
                 </TrackingWrapper>
-              </SidebarMenuItem>
-            ))}
-            
-            {/* Separator and Client Portals Section */}
-            <div className="my-4 border-t border-gray-200 group-data-[collapsible=icon]:hidden"></div>
-            <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Client Portals Demo</h3>
-            </div>
-            
-            {portalRoutes.map(portal => (
-              <SidebarMenuItem key={portal.href}>
-                <SidebarMenuButton 
-                  asChild
-                  isActive={location.pathname === portal.href}
-                  className="w-full justify-start text-sm font-medium transition-all duration-200 hover:scale-[1.02] data-[active=true]:bg-gradient-to-r data-[active=true]:from-purple-50 data-[active=true]:to-blue-50 data-[active=true]:text-purple-700 data-[active=true]:shadow-sm"
-                  tooltip={portal.label}
-                >
-                  <Button 
-                    variant="ghost"
-                    className="w-full justify-start text-gray-600 hover:text-gray-900"
-                    onClick={() => handleNavigation(portal.href)}
-                  >
-                    <portal.icon className={`mr-3 h-4 w-4 transition-colors group-data-[collapsible=icon]:mr-0 ${portal.color}`} />
-                    <span className="truncate group-data-[collapsible=icon]:hidden">{portal.label}</span>
-                  </Button>
-                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

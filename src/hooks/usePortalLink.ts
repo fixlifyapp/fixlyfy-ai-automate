@@ -6,7 +6,15 @@ import { toast } from "sonner";
 export const usePortalLink = () => {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generatePortalLink = async (clientId: string): Promise<string | null> => {
+  const generatePortalLink = async (
+    clientId: string,
+    permissions = {
+      view_estimates: true,
+      view_invoices: true,
+      make_payments: false
+    },
+    hoursValid = 72
+  ): Promise<string | null> => {
     try {
       setIsGenerating(true);
       console.log('🔄 Generating portal access token for client:', clientId);
@@ -14,13 +22,9 @@ export const usePortalLink = () => {
       const { data: portalToken, error: portalError } = await supabase
         .rpc('generate_portal_access', {
           p_client_id: clientId,
-          p_permissions: {
-            view_estimates: true,
-            view_invoices: true,
-            make_payments: false
-          },
-          p_hours_valid: 72,
-          p_domain_restriction: 'hub.fixlify.app'
+          p_permissions: permissions,
+          p_hours_valid: hoursValid,
+          p_domain_restriction: window.location.hostname
         });
 
       if (portalError || !portalToken) {
@@ -30,7 +34,7 @@ export const usePortalLink = () => {
 
       console.log('✅ Portal access token generated:', portalToken);
 
-      const portalLink = `https://hub.fixlify.app/portal/${portalToken}`;
+      const portalLink = `${window.location.origin}/portal/${portalToken}`;
       console.log('🔗 Portal link:', portalLink);
 
       return portalLink;

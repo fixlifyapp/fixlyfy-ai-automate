@@ -50,28 +50,51 @@ const ClientPortal = () => {
     }
 
     try {
-      console.log("🔐 Loading enhanced portal data...");
+      console.log("🔐 Validating portal access token...");
 
-      const { data, error: functionError } = await supabase.functions.invoke(
+      // First validate the token
+      const { data: validationData, error: validationError } = await supabase.functions.invoke(
+        'validate-portal-access',
+        {
+          body: { accessId: accessToken }
+        }
+      );
+
+      if (validationError) {
+        console.error("❌ Token validation failed:", validationError);
+        setError("Invalid or expired access token");
+        return;
+      }
+
+      if (!validationData || !validationData.valid) {
+        console.error("❌ Token validation failed:", validationData?.error);
+        setError(validationData?.error || "Invalid access token");
+        return;
+      }
+
+      console.log("✅ Token validated successfully");
+
+      // Now load portal data using the enhanced function
+      const { data: portalDataResponse, error: portalError } = await supabase.functions.invoke(
         'enhanced-portal-data',
         {
           body: { accessToken }
         }
       );
 
-      if (functionError) {
-        console.error("❌ Portal data error:", functionError);
+      if (portalError) {
+        console.error("❌ Portal data loading failed:", portalError);
         setError("Failed to load portal data");
         return;
       }
 
-      if (!data) {
-        setError("No data returned from portal");
+      if (!portalDataResponse) {
+        setError("No portal data available");
         return;
       }
 
-      console.log("✅ Portal data loaded:", data);
-      setPortalData(data);
+      console.log("✅ Portal data loaded:", portalDataResponse);
+      setPortalData(portalDataResponse);
     } catch (error) {
       console.error("❌ Error loading portal:", error);
       setError("Failed to load portal data");
@@ -90,7 +113,8 @@ const ClientPortal = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 

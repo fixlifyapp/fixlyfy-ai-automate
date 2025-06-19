@@ -22,50 +22,73 @@ serve(async (req) => {
     console.log('📊 Loading enhanced portal data for token:', accessToken)
 
     let clientId: string | null = null
+    let permissions = {
+      view_estimates: true,
+      view_invoices: true,
+      make_payments: false
+    }
 
-    // Check if this is a direct client ID (legacy)
+    // Check if this is a direct client ID (legacy support)
     if (accessToken && accessToken.startsWith('C-')) {
       clientId = accessToken
       console.log('📌 Using direct client ID:', clientId)
     } else if (accessToken) {
-      // It's a token, validate it to get the client ID
+      // Validate token to get client ID and permissions
       console.log('🔍 Validating token to get client ID...')
       
-      const { data: validationResult, error: validationError } = await supabaseClient
-        .functions.invoke('validate-portal-access', {
-          body: {
-            accessId: accessToken
-          }
-        })
+      // Check client_portal_access table first
+      const { data: portalAccess, error: portalError } = await supabaseClient
+        .from('client_portal_access')
+        .select('*')
+        .eq('access_token', accessToken)
+        .gt('expires_at', new Date().toISOString())
+        .single()
 
-      if (validationError || !validationResult || !validationResult.valid) {
-        console.log('❌ Token validation failed:', validationError)
-        return new Response(
-          JSON.stringify({ error: 'Invalid or expired token' }),
-          { 
-            status: 401, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      }
+      if (portalAccess && !portalError) {
+        console.log('✅ Found valid token in client_portal_access')
+        clientId = portalAccess.client_id
+        permissions = portalAccess.permissions || permissions
+        
+        // Update use count
+        await supabaseClient
+          .from('client_portal_access')
+          .update({ 
+            use_count: (portalAccess.use_count || 0) + 1,
+            used_at: new Date().toISOString()
+          })
+          .eq('access_token', accessToken)
+      } else {
+        // Check portal_sessions table as fallback
+        console.log('🔍 Checking portal_sessions as fallback...')
+        
+        const { data: session, error: sessionError } = await supabaseClient
+          .from('portal_sessions')
+          .select('*')
+          .eq('access_token', accessToken)
+          .gt('expires_at', new Date().toISOString())
+          .eq('is_active', true)
+          .single()
 
-      clientId = validationResult.client.id
-      console.log('✅ Token validated, client ID:', clientId)
-    } else {
-      return new Response(
-        JSON.stringify({ error: 'No access token provided' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        if (session && !sessionError) {
+          console.log('✅ Found valid token in portal_sessions')
+          clientId = session.client_id
+          permissions = session.permissions || permissions
+          
+          // Update last accessed
+          await supabaseClient
+            .from('portal_sessions')
+            .update({ last_accessed_at: new Date().toISOString() })
+            .eq('access_token', accessToken)
         }
-      )
+      }
     }
 
     if (!clientId) {
+      console.log('❌ No valid access found')
       return new Response(
-        JSON.stringify({ error: 'Could not determine client ID' }),
+        JSON.stringify({ error: 'Invalid or expired token' }),
         { 
-          status: 400, 
+          status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
@@ -97,7 +120,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
 
     if (jobsError) {
-      console.warn('Error fetching jobs:', jobsError)
+      console.warn('Warning: Error fetching jobs:', jobsError)
     }
 
     // Get client's estimates
@@ -108,7 +131,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
 
     if (estimatesError) {
-      console.warn('Error fetching estimates:', estimatesError)
+      console.warn('Warning: Error fetching estimates:', estimatesError)
     }
 
     // Get client's invoices
@@ -119,10 +142,30 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
 
     if (invoicesError) {
-      console.warn('Error fetching invoices:', invoicesError)
+      console.warn('Warning: Error fetching invoices:', invoicesError)
     }
 
     console.log('✅ Portal data loaded successfully for client:', client.name)
+    console.log('📊 Data summary:', {
+      client: client.name,
+      jobs: jobs?.length || 0,
+      estimates: estimates?.length || 0,
+      invoices: invoices?.length || 0
+    })
+
+    // Log the access for audit purposes
+    await supabaseClient
+      .from('portal_activity_logs')
+      .insert({
+        client_id: clientId,
+        action: 'portal_data_accessed',
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown',
+        metadata: { 
+          access_method: accessToken.startsWith('C-') ? 'direct' : 'token',
+          data_loaded: true
+        }
+      })
 
     return new Response(
       JSON.stringify({
@@ -141,17 +184,7 @@ serve(async (req) => {
         invoices: invoices || [],
         messages: [], // Not implemented yet
         documents: [], // Not implemented yet
-        preferences: {
-          theme: 'light',
-          language: 'en',
-          notification_preferences: {},
-          timezone: 'UTC'
-        },
-        permissions: {
-          view_estimates: true,
-          view_invoices: true,
-          make_payments: false
-        }
+        permissions: permissions
       }),
       { 
         status: 200, 

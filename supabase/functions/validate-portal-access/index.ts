@@ -88,7 +88,10 @@ serve(async (req) => {
     if (!clientId) {
       console.log('❌ No valid access found')
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired access' }),
+        JSON.stringify({ 
+          valid: false,
+          error: 'Invalid or expired access token' 
+        }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -106,7 +109,10 @@ serve(async (req) => {
     if (clientError || !client) {
       console.log('❌ Client not found:', clientId)
       return new Response(
-        JSON.stringify({ error: 'Client not found' }),
+        JSON.stringify({ 
+          valid: false,
+          error: 'Client not found' 
+        }),
         { 
           status: 404, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -121,15 +127,19 @@ serve(async (req) => {
       .from('portal_activity_logs')
       .insert({
         client_id: clientId,
-        action: 'portal_access',
+        action: 'portal_access_validated',
         ip_address: clientIP,
         user_agent: userAgent,
-        metadata: { access_method: accessId.startsWith('C-') ? 'direct' : 'token' }
+        metadata: { 
+          access_method: accessId.startsWith('C-') ? 'direct' : 'token',
+          validation_successful: true
+        }
       })
 
     return new Response(
       JSON.stringify({ 
         valid: true,
+        client_id: clientId,
         client: {
           id: client.id,
           name: client.name,
@@ -150,7 +160,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Error in validate-portal-access:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        valid: false,
+        error: 'Internal server error' 
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
