@@ -2970,6 +2970,7 @@ export type Database = {
           ip_address: string | null
           is_active: boolean | null
           last_accessed_at: string | null
+          permissions: Json | null
           user_agent: string | null
         }
         Insert: {
@@ -2981,6 +2982,7 @@ export type Database = {
           ip_address?: string | null
           is_active?: boolean | null
           last_accessed_at?: string | null
+          permissions?: Json | null
           user_agent?: string | null
         }
         Update: {
@@ -2992,6 +2994,7 @@ export type Database = {
           ip_address?: string | null
           is_active?: boolean | null
           last_accessed_at?: string | null
+          permissions?: Json | null
           user_agent?: string | null
         }
         Relationships: [
