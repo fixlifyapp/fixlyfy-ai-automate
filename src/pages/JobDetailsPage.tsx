@@ -26,10 +26,6 @@ const JobDetailsPage = () => {
   const { hasPermission } = useRBAC();
   const isMobile = useIsMobile();
   
-  // Enhanced filtering state
-  const [filter, setFilter] = useState<'all' | 'payments' | 'documents' | 'status'>('all');
-  const [dateRange, setDateRange] = useState<{from: Date, to: Date}>();
-  
   console.log("🔍 JobDetailsPage - params:", { jobId });
   console.log("🔍 JobDetailsPage - location:", location);
   
@@ -51,13 +47,6 @@ const JobDetailsPage = () => {
     toast.success('Job data export started');
     console.log('Exporting job data for:', jobId);
     // TODO: Implement actual export functionality
-  };
-
-  // Undo functionality for critical actions
-  const handleUndo = () => {
-    toast.success('Action undone successfully');
-    console.log('Undo action for job:', jobId);
-    // TODO: Implement actual undo functionality
   };
   
   // Validate job ID format

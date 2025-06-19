@@ -1,9 +1,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock, User, FileText, Filter, Eye, EyeOff } from "lucide-react";
 import { useJobHistory } from "@/hooks/useJobHistory";
+import { useEnhancedJobHistory } from "@/hooks/useEnhancedJobHistory";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobHistoryProps {
   jobId: string;
@@ -11,6 +16,10 @@ interface JobHistoryProps {
 
 export const JobHistory = ({ jobId }: JobHistoryProps) => {
   const { historyItems, isLoading } = useJobHistory(jobId);
+  const { logUserAction } = useEnhancedJobHistory(jobId);
+  const { hasPermission } = useRBAC();
+  const [filter, setFilter] = useState<'all' | 'payments' | 'documents' | 'status'>('all');
+  const [showRestrictedItems, setShowRestrictedItems] = useState(false);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -18,6 +27,11 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
         return <FileText className="h-4 w-4" />;
       case 'status-change':
         return <Clock className="h-4 w-4" />;
+      case 'payment':
+        return <span className="text-green-600">💰</span>;
+      case 'estimate':
+      case 'invoice':
+        return <span className="text-blue-600">📄</span>;
       default:
         return <User className="h-4 w-4" />;
     }
@@ -40,26 +54,70 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     }
   };
 
+  const filteredItems = historyItems.filter(item => {
+    if (filter === 'all') return true;
+    if (filter === 'payments' && item.type === 'payment') return true;
+    if (filter === 'documents' && (item.type === 'estimate' || item.type === 'invoice')) return true;
+    if (filter === 'status' && item.type === 'status-change') return true;
+    return false;
+  });
+
+  const handleFilterChange = (value: string) => {
+    setFilter(value as 'all' | 'payments' | 'documents' | 'status');
+    logUserAction('History Filter Changed', { filter: value });
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Job History ({historyItems.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Job History ({filteredItems.length})
+          </CardTitle>
+          
+          <div className="flex items-center gap-2">
+            <Select value={filter} onValueChange={handleFilterChange}>
+              <SelectTrigger className="w-[140px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Items</SelectItem>
+                <SelectItem value="payments">Payments</SelectItem>
+                <SelectItem value="documents">Documents</SelectItem>
+                <SelectItem value="status">Status Changes</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {hasPermission('admin') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRestrictedItems(!showRestrictedItems)}
+                className="flex items-center gap-2"
+              >
+                {showRestrictedItems ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showRestrictedItems ? 'Hide' : 'Show'} Internal
+              </Button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="text-center py-8">Loading history...</div>
-        ) : historyItems.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-lg font-medium">No history yet</p>
+            <p className="text-lg font-medium">
+              {filter === 'all' ? 'No history yet' : `No ${filter} history`}
+            </p>
             <p className="text-sm">Activity will appear here as the job progresses</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {historyItems.map((item) => (
+            {filteredItems.map((item) => (
               <div key={item.id} className="flex gap-3 p-3 border rounded-lg">
                 <div className="flex-shrink-0 mt-1">
                   {getTypeIcon(item.type)}
@@ -71,6 +129,11 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                     <Badge className={getTypeBadgeColor(item.type)}>
                       {item.type}
                     </Badge>
+                    {item.visibility === 'restricted' && (
+                      <Badge variant="outline" className="text-xs">
+                        Internal
+                      </Badge>
+                    )}
                   </div>
                   
                   <p className="text-sm text-muted-foreground mb-2">

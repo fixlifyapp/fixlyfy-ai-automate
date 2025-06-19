@@ -1,40 +1,36 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
 import { PaymentMethod } from '@/types/payment';
 
 export const recordStatusChange = async (
-  jobId: string, 
-  oldStatus: string, 
+  jobId: string,
+  oldStatus: string,
   newStatus: string,
   userName?: string,
   userId?: string
 ) => {
   try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'status-change',
-      title: 'Job Status Changed',
-      description: `Job status changed from '${oldStatus}' to '${newStatus}'`,
-      user_id: userId,
-      user_name: userName,
-      meta: { 
-        oldStatus, 
-        newStatus 
-      }
-    };
-    
     const { data, error } = await supabase
       .from('job_history')
-      .insert(historyItem)
+      .insert({
+        job_id: jobId,
+        type: 'status-change',
+        title: 'Job Status Changed',
+        description: `Status changed from "${oldStatus}" to "${newStatus}"`,
+        user_name: userName,
+        user_id: userId,
+        old_value: { status: oldStatus },
+        new_value: { status: newStatus }
+      })
       .select()
       .single();
-      
+
     if (error) throw error;
-    
+    console.log('✅ Status change recorded:', data);
     return data;
   } catch (error) {
-    console.error('Error recording status change:', error);
-    return null;
+    console.error('❌ Error recording status change:', error);
+    throw error;
   }
 };
 
@@ -45,27 +41,25 @@ export const recordNoteAdded = async (
   userId?: string
 ) => {
   try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'note',
-      title: 'Note Added',
-      description: `Note: ${note}`,
-      user_id: userId,
-      user_name: userName
-    };
-    
     const { data, error } = await supabase
       .from('job_history')
-      .insert(historyItem)
+      .insert({
+        job_id: jobId,
+        type: 'note',
+        title: 'Note Added',
+        description: note,
+        user_name: userName,
+        user_id: userId
+      })
       .select()
       .single();
-      
+
     if (error) throw error;
-    
+    console.log('✅ Note recorded:', data);
     return data;
   } catch (error) {
-    console.error('Error recording note:', error);
-    return null;
+    console.error('❌ Error recording note:', error);
+    throw error;
   }
 };
 
@@ -78,7 +72,7 @@ export const recordPayment = async (
   reference?: string
 ) => {
   try {
-    console.log('recordPayment called with:', {
+    console.log('🔄 Recording payment in history:', {
       jobId,
       amount,
       method,
@@ -87,202 +81,34 @@ export const recordPayment = async (
       reference
     });
 
-    // Validate required parameters
-    if (!jobId) {
-      throw new Error('jobId is required for payment history logging');
-    }
-    if (!amount || amount <= 0) {
-      throw new Error('Valid amount is required for payment history logging');
-    }
-    if (!method) {
-      throw new Error('Payment method is required for payment history logging');
-    }
-
-    const historyItem = {
-      job_id: jobId,
-      type: 'payment',
-      title: 'Payment Received',
-      description: `Payment of $${amount.toFixed(2)} received via ${method}${reference ? ` (Ref: ${reference})` : ''}`,
-      user_id: userId,
-      user_name: userName || 'System',
-      meta: {
-        amount,
-        method,
-        reference,
-        timestamp: new Date().toISOString()
-      },
-      visibility: 'restricted'
-    };
-    
-    console.log('Inserting history item:', historyItem);
-    
     const { data, error } = await supabase
       .from('job_history')
-      .insert(historyItem)
+      .insert({
+        job_id: jobId,
+        type: 'payment',
+        title: 'Payment Received',
+        description: `Payment of $${amount} received via ${method}${reference ? ` (Ref: ${reference})` : ''}`,
+        user_name: userName,
+        user_id: userId,
+        meta: {
+          amount,
+          method,
+          reference
+        }
+      })
       .select()
       .single();
-      
+
     if (error) {
-      console.error('Supabase error inserting payment history:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      throw new Error(`Failed to insert payment history: ${error.message}`);
+      console.error('❌ Error recording payment history:', error);
+      throw error;
     }
-    
-    console.log('Payment history record created successfully:', data);
+
+    console.log('✅ Payment recorded in history:', data);
     return data;
   } catch (error) {
-    console.error('Error in recordPayment function:', error);
-    // Re-throw the error so calling code can handle it
+    console.error('❌ Error in recordPayment:', error);
     throw error;
-  }
-};
-
-export const recordEstimateCreated = async (
-  jobId: string,
-  estimateNumber: string,
-  amount: number,
-  userName?: string,
-  userId?: string
-) => {
-  try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'estimate',
-      title: 'Estimate Created',
-      description: `Estimate #${estimateNumber} was created for $${amount.toFixed(2)}`,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        estimateNumber,
-        amount
-      }
-    };
-    
-    const { data, error } = await supabase
-      .from('job_history')
-      .insert(historyItem)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error('Error recording estimate creation:', error);
-    return null;
-  }
-};
-
-export const recordEstimateUpdated = async (
-  jobId: string,
-  estimateNumber: string,
-  oldAmount: number,
-  newAmount: number,
-  userName?: string,
-  userId?: string
-) => {
-  try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'estimate',
-      title: 'Estimate Updated',
-      description: `Estimate #${estimateNumber} was updated from $${oldAmount.toFixed(2)} to $${newAmount.toFixed(2)}`,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        estimateNumber,
-        oldAmount,
-        newAmount
-      }
-    };
-    
-    const { data, error } = await supabase
-      .from('job_history')
-      .insert(historyItem)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error('Error recording estimate update:', error);
-    return null;
-  }
-};
-
-export const recordInvoiceCreated = async (
-  jobId: string,
-  invoiceNumber: string,
-  amount: number,
-  userName?: string,
-  userId?: string
-) => {
-  try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'invoice',
-      title: 'Invoice Generated',
-      description: `Invoice #${invoiceNumber} was generated for $${amount.toFixed(2)}`,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        invoiceNumber,
-        amount
-      },
-      visibility: 'restricted'
-    };
-    
-    const { data, error } = await supabase
-      .from('job_history')
-      .insert(historyItem)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error('Error recording invoice creation:', error);
-    return null;
-  }
-};
-
-export const recordEstimateConverted = async (
-  jobId: string,
-  estimateNumber: string,
-  invoiceNumber: string,
-  amount: number,
-  userName?: string,
-  userId?: string
-) => {
-  try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'estimate-conversion',
-      title: 'Estimate Converted to Invoice',
-      description: `Estimate #${estimateNumber} was converted to Invoice #${invoiceNumber} for $${amount.toFixed(2)}`,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        estimateNumber,
-        invoiceNumber,
-        amount
-      }
-    };
-    
-    const { data, error } = await supabase
-      .from('job_history')
-      .insert(historyItem)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error('Error recording estimate conversion:', error);
-    return null;
   }
 };
 
@@ -294,31 +120,27 @@ export const recordTechnicianChange = async (
   userId?: string
 ) => {
   try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'technician',
-      title: 'Technician Changed',
-      description: `Job reassigned from ${oldTechnician} to ${newTechnician}`,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        oldTechnician,
-        newTechnician
-      }
-    };
-    
     const { data, error } = await supabase
       .from('job_history')
-      .insert(historyItem)
+      .insert({
+        job_id: jobId,
+        type: 'technician',
+        title: 'Technician Assigned',
+        description: `Technician changed from "${oldTechnician}" to "${newTechnician}"`,
+        user_name: userName,
+        user_id: userId,
+        old_value: { technician: oldTechnician },
+        new_value: { technician: newTechnician }
+      })
       .select()
       .single();
-      
+
     if (error) throw error;
-    
+    console.log('✅ Technician change recorded:', data);
     return data;
   } catch (error) {
-    console.error('Error recording technician change:', error);
-    return null;
+    console.error('❌ Error recording technician change:', error);
+    throw error;
   }
 };
 
@@ -330,78 +152,61 @@ export const recordFileAttached = async (
   userId?: string
 ) => {
   try {
-    const historyItem = {
-      job_id: jobId,
-      type: 'attachment',
-      title: 'File Attached',
-      description: `File ${fileName} was uploaded`,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        fileName,
-        fileUrl
-      }
-    };
-    
     const { data, error } = await supabase
       .from('job_history')
-      .insert(historyItem)
+      .insert({
+        job_id: jobId,
+        type: 'file',
+        title: 'File Attached',
+        description: `File "${fileName}" was attached to the job`,
+        user_name: userName,
+        user_id: userId,
+        meta: {
+          fileName,
+          fileUrl
+        }
+      })
       .select()
       .single();
-      
+
     if (error) throw error;
-    
+    console.log('✅ File attachment recorded:', data);
     return data;
   } catch (error) {
-    console.error('Error recording file attachment:', error);
-    return null;
+    console.error('❌ Error recording file attachment:', error);
+    throw error;
   }
 };
 
 export const recordCommunication = async (
   jobId: string,
-  communicationType: 'call' | 'email' | 'sms',
+  type: 'call' | 'email' | 'sms',
   description: string,
   userName?: string,
   userId?: string
 ) => {
   try {
-    let title;
-    switch (communicationType) {
-      case 'call':
-        title = 'Call Made';
-        break;
-      case 'email':
-        title = 'Email Sent';
-        break;
-      case 'sms':
-        title = 'SMS Sent';
-        break;
-    }
-    
-    const historyItem = {
-      job_id: jobId,
-      type: 'communication',
-      title,
-      description,
-      user_id: userId,
-      user_name: userName,
-      meta: {
-        type: communicationType
-      }
-    };
-    
     const { data, error } = await supabase
       .from('job_history')
-      .insert(historyItem)
+      .insert({
+        job_id: jobId,
+        type: 'communication',
+        title: `${type.toUpperCase()} Communication`,
+        description,
+        user_name: userName,
+        user_id: userId,
+        meta: {
+          communicationType: type
+        }
+      })
       .select()
       .single();
-      
+
     if (error) throw error;
-    
+    console.log('✅ Communication recorded:', data);
     return data;
   } catch (error) {
-    console.error('Error recording communication:', error);
-    return null;
+    console.error('❌ Error recording communication:', error);
+    throw error;
   }
 };
