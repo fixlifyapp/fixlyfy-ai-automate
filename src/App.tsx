@@ -44,6 +44,7 @@ import PreviewPage from "@/pages/PreviewPage";
 import AdminRolesPage from "@/pages/AdminRolesPage";
 import ApprovalPage from "@/pages/ApprovalPage";
 import ApprovalSuccessPage from "@/pages/ApprovalSuccessPage";
+import ApprovalTestPage from "@/pages/ApprovalTestPage";
 import NotFound from "@/pages/NotFound";
 import { AppProviders } from "@/components/ui/AppProviders";
 import { AuthProvider } from "@/hooks/use-auth";
