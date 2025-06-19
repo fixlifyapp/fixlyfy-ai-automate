@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Estimate } from '@/hooks/useEstimates';
+import { Estimate } from '@/types/documents';
 
 export interface EstimateDataHook {
   estimate: Estimate | null;
@@ -29,13 +29,14 @@ export const useEstimateData = (estimateId?: string): EstimateDataHook => {
         id: estimateId,
         job_id: 'mock-job',
         estimate_number: 'EST-001',
-        number: 'EST-001',
-        date: new Date().toISOString(),
         status: 'draft',
         total: 0,
-        amount: 0,
         notes: '',
         items: [],
+        subtotal: 0,
+        tax_rate: 0,
+        tax_amount: 0,
+        discount_amount: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useJobData } from "../dialogs/unified/hooks/useJobData";
+import { Estimate } from "@/types/documents";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -24,8 +25,9 @@ export const ModernJobEstimatesTab = ({
   onEstimateConverted, 
   onTabChange 
 }: ModernJobEstimatesTabProps) => {
-  const { estimates, setEstimates, isLoading, refreshEstimates, convertEstimateToInvoice } = useEstimates(jobId);
-  const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
+  const { estimates, isLoading, refreshEstimates, convertEstimateToInvoice } = useEstimates(jobId);
+  const [estimatesState, setEstimatesState] = useState<Estimate[]>(estimates);
+  const { state, actions } = useEstimateActions(jobId, estimatesState, setEstimatesState, refreshEstimates, onEstimateConverted);
   const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEstimate, setEditingEstimate] = useState<any>(null);
@@ -35,6 +37,11 @@ export const ModernJobEstimatesTab = ({
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const isMobile = useIsMobile();
+
+  // Keep estimates state in sync
+  useState(() => {
+    setEstimatesState(estimates);
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -278,7 +285,7 @@ export const ModernJobEstimatesTab = ({
                           disabled={isConverting}
                         >
                           <DollarSign className="h-4 w-4 mr-2" />
-                          {isConverting ? "Converting..." : "Convert"}
+                          Convert to Invoice
                         </Button>
                       )}
                       
@@ -310,7 +317,6 @@ export const ModernJobEstimatesTab = ({
         onEstimateCreated={handleEstimateCreated}
       />
 
-      {/* Unified Document Viewer for Estimates */}
       {previewEstimate && (
         <UnifiedDocumentViewer
           open={showPreview}
@@ -323,22 +329,20 @@ export const ModernJobEstimatesTab = ({
         />
       )}
 
-      {sendingEstimate && (
-        <UniversalSendDialog
-          isOpen={showSendDialog}
-          onClose={handleSendCancel}
-          documentType="estimate"
-          documentId={sendingEstimate.id}
-          documentNumber={sendingEstimate.estimate_number}
-          total={sendingEstimate.total || 0}
-          contactInfo={{
-            name: clientInfo?.name || 'Client',
-            email: clientInfo?.email || '',
-            phone: clientInfo?.phone || ''
-          }}
-          onSuccess={handleSendSuccess}
-        />
-      )}
+      <UniversalSendDialog
+        isOpen={showSendDialog}
+        onClose={handleSendCancel}
+        documentType="estimate"
+        documentId={sendingEstimate?.id || ''}
+        documentNumber={sendingEstimate?.estimate_number || ''}
+        total={sendingEstimate?.total || 0}
+        contactInfo={{
+          name: clientInfo?.name || 'Client',
+          email: clientInfo?.email || '',
+          phone: clientInfo?.phone || ''
+        }}
+        onSuccess={handleSendSuccess}
+      />
     </>
   );
 };

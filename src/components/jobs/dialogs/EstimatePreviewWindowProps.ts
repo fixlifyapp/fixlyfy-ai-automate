@@ -1,5 +1,5 @@
 
-import { Estimate } from "@/hooks/useEstimates";
+import { Estimate } from "@/types/documents";
 
 export interface EstimatePreviewWindowProps {
   open: boolean;

@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Invoice } from "@/hooks/useInvoices";
+import { Invoice } from "@/types/documents";
 import { LineItem } from "@/components/jobs/builder/types";
 import { InvoiceFormData } from "./types";
 
@@ -134,18 +134,22 @@ export const useInvoicePersistence = (
         id: invoice.id,
         job_id: invoice.job_id,
         invoice_number: invoice.invoice_number,
-        number: invoice.invoice_number,
-        date: invoice.issue_date || invoice.created_at,
         issue_date: invoice.issue_date,
         due_date: invoice.due_date,
         total: invoice.total,
+        subtotal: invoice.subtotal || subtotal,
         amount_paid: invoice.amount_paid || 0,
-        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
+        balance_due: (invoice.total || 0) - (invoice.amount_paid || 0),
         status: invoice.status,
+        payment_status: invoice.payment_status || 'unpaid',
         notes: invoice.notes,
+        terms: invoice.terms,
         items: invoice.items || [],
+        tax_rate: invoice.tax_rate || taxRate,
+        tax_amount: invoice.tax_amount || taxAmount,
+        discount_amount: invoice.discount_amount || 0,
         created_at: invoice.created_at,
-        updated_at: invoice.updated_at
+        updated_at: invoice.updated_at || invoice.created_at
       };
       
       console.log('✅ Invoice save process completed successfully');

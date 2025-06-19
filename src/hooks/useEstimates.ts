@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Estimate } from "@/types/documents";
 
+// Export the type for backward compatibility
+export type { Estimate };
+
 export const useEstimates = (jobId: string) => {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +30,21 @@ export const useEstimates = (jobId: string) => {
       }
 
       console.log('✅ Estimates fetched:', data?.length || 0);
-      setEstimates(data || []);
+      
+      // Transform data to match Estimate interface
+      const transformedEstimates: Estimate[] = (data || []).map(item => ({
+        ...item,
+        status: item.status as Estimate['status'], // Type assertion for status
+        items: Array.isArray(item.items) ? item.items : [], // Ensure items is always an array
+        subtotal: item.subtotal || 0,
+        total: item.total || 0,
+        tax_rate: item.tax_rate || 0,
+        tax_amount: item.tax_amount || 0,
+        discount_amount: item.discount_amount || 0,
+        updated_at: item.updated_at || item.created_at
+      }));
+      
+      setEstimates(transformedEstimates);
     } catch (error) {
       console.error('❌ Error in fetchEstimates:', error);
       toast.error('Failed to load estimates');
@@ -57,6 +74,15 @@ export const useEstimates = (jobId: string) => {
         return false;
       }
 
+      // Transform LineItem objects to plain JSON for database storage
+      const itemsForDb = estimate.items.map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        taxable: item.taxable,
+        total: item.quantity * item.unitPrice
+      }));
+
       // Create invoice from estimate
       const { error: invoiceError } = await supabase
         .from('invoices')
@@ -65,7 +91,7 @@ export const useEstimates = (jobId: string) => {
           client_id: estimate.client_id,
           estimate_id: estimate.id,
           invoice_number: invoiceNumber,
-          items: estimate.items,
+          items: itemsForDb,
           subtotal: estimate.subtotal,
           tax_rate: estimate.tax_rate,
           tax_amount: estimate.tax_amount,

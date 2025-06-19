@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice } from '@/hooks/useInvoices';
+import { Invoice } from '@/types/documents';
 
 export const useInvoiceActions = (invoiceId: string, refreshInvoices: () => void) => {
   const [isProcessing, setIsProcessing] = useState(false);

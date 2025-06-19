@@ -1,8 +1,7 @@
 
 import React from 'react';
 import { SteppedInvoiceBuilder } from './SteppedInvoiceBuilder';
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
+import { Estimate, Invoice } from "@/types/documents";
 
 interface InvoiceBuilderDialogProps {
   open: boolean;
