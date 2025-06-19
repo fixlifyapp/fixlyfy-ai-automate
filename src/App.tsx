@@ -43,7 +43,6 @@ import PreviewPage from "@/pages/PreviewPage";
 import AdminRolesPage from "@/pages/AdminRolesPage";
 import ApprovalPage from "@/pages/ApprovalPage";
 import ApprovalSuccessPage from "@/pages/ApprovalSuccessPage";
-import ApprovalTestPage from "@/pages/ApprovalTestPage";
 import NotFound from "@/pages/NotFound";
 import { AppProviders } from "@/components/ui/AppProviders";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -313,11 +312,6 @@ function App() {
           <Route path="/admin/roles" element={
             <AuthProvider>
               <ProtectedRouteWithProviders><AdminRolesPage /></ProtectedRouteWithProviders>
-            </AuthProvider>
-          } />
-          <Route path="/test-approval" element={
-            <AuthProvider>
-              <ProtectedRouteWithProviders><ApprovalTestPage /></ProtectedRouteWithProviders>
             </AuthProvider>
           } />
           <Route path="*" element={<NotFound />} />

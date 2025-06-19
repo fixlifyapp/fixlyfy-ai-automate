@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -15,11 +14,13 @@ import {
   Tag,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Link
 } from "lucide-react";
 import { format } from "date-fns";
 import { Job } from "@/hooks/useJobs";
 import { useJobStatuses, useJobTypes, useTags } from "@/hooks/useConfigItems";
+import { usePortalLink } from "@/hooks/usePortalLink";
 
 interface JobsListProps {
   jobs: Job[];
@@ -39,6 +40,7 @@ export const JobsList = ({
   onRefresh
 }: JobsListProps) => {
   const navigate = useNavigate();
+  const { copyPortalLink, isGenerating } = usePortalLink();
   
   // Get configuration data for styling and display
   const { items: jobStatuses } = useJobStatuses();
@@ -52,6 +54,13 @@ export const JobsList = ({
   const handleEditJob = (e: React.MouseEvent, jobId: string) => {
     e.stopPropagation();
     navigate(`/jobs/${jobId}`);
+  };
+
+  const handlePortalLink = async (e: React.MouseEvent, job: Job) => {
+    e.stopPropagation();
+    if (job.client_id) {
+      await copyPortalLink(job.client_id);
+    }
   };
 
   const areAllJobsSelected = jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
@@ -200,14 +209,26 @@ export const JobsList = ({
                         />
                         <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleEditJob(e, job.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handlePortalLink(e, job)}
+                          disabled={!job.client_id || isGenerating}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Copy portal link"
+                        >
+                          <Link className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleEditJob(e, job.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     
                     <div>
@@ -302,7 +323,7 @@ export const JobsList = ({
               <th className="text-left p-4 font-semibold">Address</th>
               <th className="text-left p-4 font-semibold">Tags</th>
               <th className="text-left p-4 font-semibold">Revenue</th>
-              <th className="text-right p-4 w-20">
+              <th className="text-right p-4 w-32">
                 Actions
                 {onRefresh && (
                   <Button 
@@ -400,13 +421,24 @@ export const JobsList = ({
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleEditJob(e, job.id)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handlePortalLink(e, job)}
+                        disabled={!job.client_id || isGenerating}
+                        title="Copy portal link"
+                      >
+                        <Link className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleEditJob(e, job.id)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );

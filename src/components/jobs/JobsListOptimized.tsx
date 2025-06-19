@@ -1,4 +1,3 @@
-
 import { memo, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -15,12 +14,14 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Link
 } from "lucide-react";
 import { format } from "date-fns";
 import { Job } from "@/hooks/useJobs";
 import { useTags } from "@/hooks/useConfigItems";
 import { getTagColor } from "@/data/tags";
+import { usePortalLink } from "@/hooks/usePortalLink";
 
 interface JobsListOptimizedProps {
   jobs: Job[];
@@ -64,12 +65,16 @@ const JobCard = memo(({
   isSelected, 
   onSelect, 
   onEdit,
+  onPortalLink,
+  isGeneratingPortal,
   tagItems 
 }: { 
   job: Job; 
   isSelected: boolean; 
   onSelect: (checked: boolean) => void; 
   onEdit: () => void;
+  onPortalLink: () => void;
+  isGeneratingPortal: boolean;
   tagItems: Array<{id: string, name: string, color?: string}>;
 }) => {
   const getStatusBadgeStyle = useMemo(() => (status: string) => {
@@ -132,17 +137,32 @@ const JobCard = memo(({
             />
             <span className="font-mono text-sm font-medium text-blue-600">{job.id}</span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPortalLink();
+              }}
+              disabled={!job.client_id || isGeneratingPortal}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Copy portal link"
+            >
+              <Link className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         
         <div>
@@ -217,6 +237,7 @@ export const JobsListOptimized = memo(({
 }: JobsListOptimizedProps) => {
   const navigate = useNavigate();
   const { items: tagItems } = useTags();
+  const { copyPortalLink, isGenerating } = usePortalLink();
 
   const handleJobClick = useMemo(() => (jobId: string) => {
     navigate(`/jobs/${jobId}`);
@@ -225,6 +246,10 @@ export const JobsListOptimized = memo(({
   const handleEditJob = useMemo(() => (jobId: string) => {
     navigate(`/jobs/${jobId}`);
   }, [navigate]);
+
+  const handlePortalLink = useMemo(() => async (clientId: string) => {
+    await copyPortalLink(clientId);
+  }, [copyPortalLink]);
 
   const areAllJobsSelected = useMemo(() => 
     jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id)),
@@ -303,6 +328,8 @@ export const JobsListOptimized = memo(({
                 isSelected={selectedJobs.includes(job.id)}
                 onSelect={(checked) => onSelectJob(job.id, checked)}
                 onEdit={() => handleEditJob(job.id)}
+                onPortalLink={() => handlePortalLink(job.client_id)}
+                isGeneratingPortal={isGenerating}
                 tagItems={tagItems}
               />
             </div>
