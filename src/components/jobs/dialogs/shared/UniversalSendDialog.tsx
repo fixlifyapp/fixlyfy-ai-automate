@@ -97,6 +97,58 @@ export const UniversalSendDialog = ({
       console.log(`Document ID: ${documentId}, Number: ${documentNumber}`);
       console.log(`Send to: ${sendTo}`);
 
+      // First, get the document details to find the client_id
+      const tableName = documentType === "estimate" ? "estimates" : "invoices";
+      const { data: document, error: docError } = await supabase
+        .from(tableName)
+        .select(`
+          *,
+          jobs!inner(
+            id,
+            client_id,
+            clients!inner(
+              id,
+              name,
+              email,
+              phone
+            )
+          )
+        `)
+        .eq('id', documentId)
+        .single();
+
+      if (docError || !document) {
+        throw new Error('Failed to find document details');
+      }
+
+      const client = document.jobs.clients;
+      const clientId = client.id;
+
+      console.log('🔄 Generating approval token...');
+      
+      // Generate approval token using the database function
+      const { data: tokenData, error: tokenError } = await supabase
+        .rpc('generate_approval_token', {
+          p_document_type: documentType,
+          p_document_id: documentId,
+          p_document_number: documentNumber,
+          p_client_id: clientId,
+          p_client_name: client.name || contactInfo?.name || '',
+          p_client_email: client.email || contactInfo?.email || '',
+          p_client_phone: client.phone || contactInfo?.phone || ''
+        });
+
+      if (tokenError || !tokenData) {
+        console.error('❌ Failed to generate approval token:', tokenError);
+        throw new Error('Failed to generate approval token');
+      }
+
+      const approvalToken = tokenData;
+      const approvalLink = `https://hub.fixlify.app/approve/${approvalToken}`;
+
+      console.log('✅ Approval token generated:', approvalToken);
+      console.log('🔗 Approval link:', approvalLink);
+
       if (sendMethod === "email") {
         // Call email sending edge function
         const functionName = documentType === "estimate" ? "send-estimate" : "send-invoice";
@@ -105,7 +157,8 @@ export const UniversalSendDialog = ({
           body: {
             [`${documentType}Id`]: documentId,
             recipientEmail: sendTo,
-            customMessage: customNote || undefined
+            customMessage: customNote || undefined,
+            approvalToken: approvalToken // Pass the approval token
           }
         });
 
@@ -118,37 +171,19 @@ export const UniversalSendDialog = ({
         toast.success(`${documentType === "estimate" ? "Estimate" : "Invoice"} sent via email successfully!`);
         
       } else {
-        // Use telnyx-sms for SMS sending to ensure two-way communication
+        // Use telnyx-sms for SMS sending with approval link
         console.log("Calling telnyx-sms function for SMS...");
         
-        // Get document details for client_id and job_id
-        const tableName = documentType === "estimate" ? "estimates" : "invoices";
-        const { data: document } = await supabase
-          .from(tableName)
-          .select('job_id, client_id, jobs!inner(client_id)')
-          .eq('id', documentId)
-          .single();
-
-        // Use client_id from document or fallback to jobs relationship
-        const clientId = document?.client_id || document?.jobs?.client_id;
-        const jobId = document?.job_id;
+        // Create message with approval link
+        const defaultMessage = customNote || `Hi ${contactInfo?.name || client.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}. Review and approve: ${approvalLink}`;
         
-        if (!clientId) {
-          throw new Error('Unable to find client information for this document');
-        }
-        
-        // Create default message if none provided
-        const defaultMessage = customNote || `Hi ${contactInfo?.name || 'valued customer'}! Your ${documentType} ${documentNumber} is ready. Total: $${total.toFixed(2)}.`;
-        
-        // Use telnyx-sms for all SMS communications to ensure two-way messaging
+        // Use telnyx-sms for all SMS communications
         const smsBody = {
           recipientPhone: sendTo,
           message: defaultMessage,
           client_id: clientId,
-          job_id: jobId,
-          // Add document-specific parameters for portal link generation
-          ...(documentType === "estimate" && { estimateId: documentId }),
-          ...(documentType === "invoice" && { invoiceId: documentId })
+          job_id: document.job_id || '',
+          approvalToken: approvalToken // Pass approval token instead of document IDs
         };
 
         const { data, error } = await supabase.functions.invoke('telnyx-sms', {
@@ -227,7 +262,7 @@ export const UniversalSendDialog = ({
                 <RadioGroupItem value="sms" id="sms" disabled={!hasValidPhone} />
                 <MessageSquare className="h-4 w-4" />
                 <Label htmlFor="sms" className="flex-1 cursor-pointer">
-                  SMS (Two-way messaging enabled)
+                  SMS (Secure approval link)
                   {!hasValidPhone && <span className="text-red-500 text-xs ml-2">(No valid phone)</span>}
                 </Label>
               </div>
@@ -265,11 +300,9 @@ export const UniversalSendDialog = ({
               onChange={(e) => setCustomNote(e.target.value)}
               rows={3}
             />
-            {sendMethod === "sms" && (
-              <p className="text-xs text-muted-foreground">
-                Note: A secure portal link will be automatically added to enable client access and responses.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Note: A secure approval link will be automatically added to enable client responses.
+            </p>
           </div>
 
           {/* Action Buttons */}

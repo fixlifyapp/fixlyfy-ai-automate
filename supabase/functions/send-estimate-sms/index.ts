@@ -34,7 +34,7 @@ serve(async (req) => {
     const requestBody = await req.json()
     console.log('Request body:', requestBody);
     
-    const { estimateId, recipientPhone, message, hoursValid = 72 } = requestBody;
+    const { estimateId, recipientPhone, message, approvalToken } = requestBody;
 
     if (!estimateId || !recipientPhone) {
       throw new Error('Missing required fields: estimateId and recipientPhone');
@@ -46,12 +46,10 @@ serve(async (req) => {
       .from('estimates')
       .select(`
         *,
-        jobs:job_id (
+        jobs!inner(
           id,
-          title,
-          description,
-          address,
-          clients:client_id (
+          client_id,
+          clients!inner(
             id,
             name,
             email,
@@ -68,116 +66,67 @@ serve(async (req) => {
 
     console.log('Estimate found:', estimate.estimate_number);
 
-    // Generate secure portal access token
-    const accessToken = btoa(Math.random().toString()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
-    const expiresAt = new Date(Date.now() + (hoursValid * 60 * 60 * 1000));
+    const client = estimate.jobs.clients;
+    let finalApprovalToken = approvalToken;
 
-    // Store portal access in database
-    const { error: portalError } = await supabaseAdmin
-      .from('client_portal_access')
-      .insert({
-        access_token: accessToken,
-        client_id: estimate.jobs?.clients?.id || '',
-        document_type: 'estimate',
-        document_id: estimateId,
-        expires_at: expiresAt.toISOString(),
-        permissions: {
-          view_estimates: true,
-          view_invoices: true,
-          make_payments: false
-        },
-        domain_restriction: 'portal.fixlify.app'
-      });
+    // Generate approval token if not provided
+    if (!finalApprovalToken) {
+      console.log('🔄 Generating new approval token...');
+      
+      const { data: tokenData, error: tokenError } = await supabaseAdmin
+        .rpc('generate_approval_token', {
+          p_document_type: 'estimate',
+          p_document_id: estimateId,
+          p_document_number: estimate.estimate_number,
+          p_client_id: client.id,
+          p_client_name: client.name || '',
+          p_client_email: client.email || '',
+          p_client_phone: client.phone || ''
+        });
 
-    if (portalError) {
-      console.error('Error creating portal access:', portalError);
+      if (tokenError || !tokenData) {
+        console.error('❌ Failed to generate approval token:', tokenError);
+        throw new Error('Failed to generate approval token');
+      }
+
+      finalApprovalToken = tokenData;
+      console.log('✅ New approval token generated:', finalApprovalToken);
     }
 
-    // Update estimate with portal access token
-    await supabaseAdmin
-      .from('estimates')
-      .update({ portal_access_token: accessToken })
-      .eq('id', estimateId);
+    const approvalLink = `https://hub.fixlify.app/approve/${finalApprovalToken}`;
+    console.log('🔗 Approval link:', approvalLink);
 
-    // Generate new portal URL
-    const job = estimate.jobs;
-    const portalUrl = job?.id 
-      ? `https://portal.fixlify.app/portal/${accessToken}/${job.id}`
-      : `https://portal.fixlify.app/portal/${accessToken}`;
-
-    console.log('Generated portal URL:', portalUrl);
-
-    const { data: userPhoneNumbers, error: phoneError } = await supabaseAdmin
-      .from('telnyx_phone_numbers')
-      .select('*')
-      .eq('status', 'active')
-      .order('purchased_at', { ascending: false })
-      .limit(1);
-
-    if (phoneError || !userPhoneNumbers || userPhoneNumbers.length === 0) {
-      throw new Error('No active Telnyx phone number found. Please configure your SMS settings.');
-    }
-
-    const fromNumber = userPhoneNumbers[0].phone_number;
-    console.log('Using from number:', fromNumber);
-
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
-    if (!telnyxApiKey) {
-      throw new Error('Telnyx API key not configured');
-    }
-
-    const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
-    const formatForTelnyx = (phone: string) => {
-      const cleaned = cleanPhone(phone);
-      return cleaned.startsWith('1') ? `+${cleaned}` : `+1${cleaned}`;
-    };
-
-    const formattedFromPhone = formatForTelnyx(fromNumber);
-    const formattedToPhone = formatForTelnyx(recipientPhone);
-
-    console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
-
-    // Create SMS message with new portal link
+    // Create SMS message with approval link
     const estimateTotal = estimate.total || 0;
-    const client = estimate.jobs?.clients;
     
     let smsMessage;
     if (message) {
       smsMessage = message;
-      // Add portal link to custom message if not already included
-      if (portalUrl && !message.includes('portal.fixlify.app')) {
-        smsMessage = `${message}\n\nView details: ${portalUrl}`;
+      // Add approval link to custom message if not already included
+      if (!message.includes('hub.fixlify.app/approve/')) {
+        smsMessage = `${message}\n\nReview and approve: ${approvalLink}`;
       }
     } else {
-      if (portalUrl) {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimateTotal.toFixed(2)}. View details: ${portalUrl}`;
-      } else {
-        smsMessage = `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimateTotal.toFixed(2)}. Contact us for details.`;
-      }
+      smsMessage = `Hi ${client.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimateTotal.toFixed(2)}. Review and approve: ${approvalLink}`;
     }
 
     console.log('SMS message to send:', smsMessage);
     console.log('SMS message length:', smsMessage.length);
 
-    const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: formattedFromPhone,
-        to: formattedToPhone,
-        text: smsMessage
-      })
+    // Use telnyx-sms function for sending
+    const { data: smsData, error: smsError } = await supabaseAdmin.functions.invoke('telnyx-sms', {
+      body: {
+        recipientPhone: recipientPhone,
+        message: smsMessage,
+        client_id: client.id,
+        job_id: estimate.job_id,
+        approvalToken: finalApprovalToken
+      }
     });
 
-    const telnyxResult = await telnyxResponse.json();
-    console.log('Telnyx response:', telnyxResult);
-
-    if (!telnyxResponse.ok) {
-      console.error('Telnyx API error:', telnyxResult);
-      throw new Error(telnyxResult.errors?.[0]?.detail || 'Failed to send SMS via Telnyx');
+    if (smsError) {
+      console.error('❌ Error from telnyx-sms:', smsError);
+      throw new Error(smsError.message || 'Failed to send SMS');
     }
 
     // Log SMS communication
@@ -187,15 +136,15 @@ serve(async (req) => {
         .insert({
           estimate_id: estimateId,
           communication_type: 'sms',
-          recipient: formattedToPhone,
+          recipient: recipientPhone,
           content: smsMessage,
           status: 'sent',
-          provider_message_id: telnyxResult.data?.id,
+          provider_message_id: smsData?.messageId,
           estimate_number: estimate.estimate_number,
-          client_name: client?.name,
-          client_email: client?.email,
-          client_phone: client?.phone,
-          portal_link_included: !!portalUrl
+          client_name: client.name,
+          client_email: client.email,
+          client_phone: client.phone,
+          portal_link_included: true
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
@@ -207,8 +156,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'SMS sent successfully',
-        messageId: telnyxResult.data?.id,
-        portalUrl: portalUrl,
+        messageId: smsData?.messageId,
+        approvalLink: approvalLink,
         smsContent: smsMessage
       }),
       {
