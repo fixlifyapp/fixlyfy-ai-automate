@@ -63,6 +63,17 @@ const ProtectedRouteWithProviders = ({ children }: { children: React.ReactNode }
   );
 };
 
+// Wrapper component for public routes with auth context (no auth required but auth context available)
+const PublicRouteWithAuth = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <AuthProvider>
+      <TooltipProvider>
+        {children}
+      </TooltipProvider>
+    </AuthProvider>
+  );
+};
+
 // Wrapper component for public routes (no auth providers)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -85,9 +96,9 @@ function App() {
           <Route path="/enhanced-portal/:clientId/:jobId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/client/:jobNumber" element={<PublicRoute><PublicJobPortal /></PublicRoute>} />
           
-          {/* Approval routes - public, no authentication required */}
-          <Route path="/approve/:token" element={<PublicRoute><ApprovalPage /></PublicRoute>} />
-          <Route path="/approve/:token/success" element={<PublicRoute><ApprovalSuccessPage /></PublicRoute>} />
+          {/* Approval routes - public but need auth context for Supabase operations */}
+          <Route path="/approve/:token" element={<PublicRouteWithAuth><ApprovalPage /></PublicRouteWithAuth>} />
+          <Route path="/approve/:token/success" element={<PublicRouteWithAuth><ApprovalSuccessPage /></PublicRouteWithAuth>} />
           
           {/* Protected routes with authentication */}
           <Route path="/" element={
