@@ -1,3 +1,4 @@
+
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -272,7 +273,7 @@ export const useDocumentOperations = ({
       
       // Return standardized format with all required properties
       if (documentType === 'estimate') {
-        const result: Estimate = {
+        const result = {
           id: document.id,
           job_id: document.job_id,
           estimate_number: document.estimate_number,
@@ -302,11 +303,11 @@ export const useDocumentOperations = ({
           ...(document.title && { title: document.title }),
           description: document.description,
           techniciansNote: document.techniciansNote
-        };
+        } as Estimate;
         console.log('📋 Returning estimate result:', result);
         return result;
       } else {
-        const result: Invoice = {
+        const result = {
           id: document.id,
           job_id: document.job_id,
           invoice_number: document.invoice_number,
@@ -337,7 +338,7 @@ export const useDocumentOperations = ({
           created_by: document.created_by,
           ...(document.title && { title: document.title }),
           description: document.description
-        };
+        } as Invoice;
         console.log('📋 Returning invoice result:', result);
         return result;
       }
@@ -460,7 +461,7 @@ export const useDocumentOperations = ({
       }
 
       // Return properly typed invoice
-      const result: Invoice = {
+      const result = {
         id: invoice.id,
         job_id: invoice.job_id,
         invoice_number: invoice.invoice_number,
@@ -491,7 +492,7 @@ export const useDocumentOperations = ({
         created_by: invoice.created_by,
         ...(invoice.title && { title: invoice.title }),
         description: invoice.description
-      };
+      } as Invoice;
 
       return result;
 
