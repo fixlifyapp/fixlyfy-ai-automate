@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
-import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
+import { InvoiceWarrantyDialog } from "./invoice-builder/InvoiceWarrantyDialog";
 import { UniversalSendDialog } from "./shared/UniversalSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
@@ -115,15 +115,6 @@ export const SteppedInvoiceBuilder = ({
       console.error("Error in handleSaveAndContinue:", error);
       toast.error("Failed to save invoice: " + (error.message || "Unknown error"));
     }
-  };
-
-  // Create job context including invoiceId
-  const jobContext = {
-    job_type: 'General Service',
-    service_category: 'Maintenance',
-    job_value: calculateGrandTotal(),
-    client_history: null,
-    invoiceId: savedInvoice?.id || existingInvoice?.id
   };
 
   const handleUpsellContinue = async (upsells: UpsellItem[], notes: string) => {
@@ -242,7 +233,7 @@ export const SteppedInvoiceBuilder = ({
 
   return (
     <>
-      <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
+      <Dialog open={open && currentStep !== "send" && currentStep !== "upsell"} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
@@ -326,18 +317,23 @@ export const SteppedInvoiceBuilder = ({
                 </div>
               </>
             )}
-            
-            {currentStep === "upsell" && (
-              <InvoiceUpsellStep
-                documentTotal={calculateGrandTotal()}
-                onContinue={handleUpsellContinue}
-                onBack={() => setCurrentStep("items")}
-                jobContext={jobContext}
-              />
-            )}
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Compact Warranty Dialog */}
+      <InvoiceWarrantyDialog
+        open={currentStep === "upsell"}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCurrentStep("items");
+          }
+        }}
+        onContinue={handleUpsellContinue}
+        invoiceTotal={calculateGrandTotal()}
+        invoiceId={savedInvoice?.id || existingInvoice?.id}
+        wasConvertedFromEstimate={!!estimateToConvert}
+      />
 
       {/* Universal Send Dialog */}
       <UniversalSendDialog

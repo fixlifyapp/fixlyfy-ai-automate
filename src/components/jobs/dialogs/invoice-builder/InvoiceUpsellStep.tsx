@@ -30,7 +30,7 @@ export const InvoiceUpsellStep = ({
   // Get invoice ID from jobContext or other source
   const invoiceId = jobContext?.invoiceId;
 
-  // Check if warranties were already added in the estimate OR already exist in the invoice
+  // Enhanced check for existing warranties - now includes estimates
   useEffect(() => {
     const checkExistingWarranties = async () => {
       if (!invoiceId) {
@@ -40,6 +40,40 @@ export const InvoiceUpsellStep = ({
 
       try {
         setIsLoadingExistingWarranties(true);
+        
+        // First check if this invoice was converted from an estimate
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('estimate_id')
+          .eq('id', invoiceId)
+          .single();
+
+        if (invoiceError) {
+          console.error('Error fetching invoice:', invoiceError);
+          setIsLoadingExistingWarranties(false);
+          return;
+        }
+
+        // If invoice was converted from estimate, check if estimate had warranties
+        if (invoice?.estimate_id) {
+          const { data: estimateLineItems, error: estimateError } = await supabase
+            .from('line_items')
+            .select('*')
+            .eq('parent_id', invoice.estimate_id)
+            .eq('parent_type', 'estimate');
+
+          if (!estimateError && estimateLineItems) {
+            const hasWarrantiesInEstimate = estimateLineItems.some((item: any) => 
+              item.description?.toLowerCase().includes('warranty')
+            );
+            
+            if (hasWarrantiesInEstimate) {
+              setHasExistingWarranties(true);
+              setIsLoadingExistingWarranties(false);
+              return;
+            }
+          }
+        }
         
         // Check if the invoice already contains warranty items
         const { data: invoiceLineItems, error } = await supabase
@@ -77,7 +111,7 @@ export const InvoiceUpsellStep = ({
     } else if (!isLoading) {
       setIsLoadingExistingWarranties(false);
     }
-  }, [invoiceId, warrantyProducts, isLoading]);
+  }, [invoiceId, warrantyProducts, isLoading, estimateToConvert]);
 
   // Convert warranty products to upsell items and restore previous selections
   useEffect(() => {
@@ -135,13 +169,12 @@ export const InvoiceUpsellStep = ({
           return;
         }
 
-        // Update invoice total and balance
+        // Update invoice total only (balance is auto-calculated)
         const newTotal = documentTotal + item.price;
         const { error: updateError } = await supabase
           .from('invoices')
           .update({ 
-            total: newTotal,
-            balance: newTotal // Assuming no payments yet
+            total: newTotal
           })
           .eq('id', invoiceId);
 
@@ -167,13 +200,12 @@ export const InvoiceUpsellStep = ({
           return;
         }
 
-        // Update invoice total and balance
+        // Update invoice total only (balance is auto-calculated)
         const newTotal = Math.max(0, documentTotal - item.price);
         const { error: updateError } = await supabase
           .from('invoices')
           .update({ 
-            total: newTotal,
-            balance: newTotal // Assuming no payments yet
+            total: newTotal
           })
           .eq('id', invoiceId);
 
@@ -238,7 +270,7 @@ export const InvoiceUpsellStep = ({
       <div className="space-y-6">
         <div className="text-center">
           <h3 className="text-lg font-semibold">Loading Additional Services...</h3>
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mt-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mt-4"></div>
         </div>
       </div>
     );
