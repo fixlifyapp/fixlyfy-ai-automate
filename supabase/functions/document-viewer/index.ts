@@ -19,7 +19,7 @@ serve(async (req) => {
     )
 
     const { documentType, documentId, documentNumber } = await req.json()
-    console.log(`📄 Viewing ${documentType}:`, { documentId, documentNumber })
+    console.log(`👁️ View request for ${documentType}:`, { documentId, documentNumber })
 
     // Get document data
     let document;
@@ -61,14 +61,51 @@ serve(async (req) => {
 
     if (jobError) throw jobError;
 
-    // Return document view data
+    // For now, return success with document data
+    // In a real implementation, you would generate a PDF or redirect to a view page
     return new Response(
       JSON.stringify({
         success: true,
-        document,
-        job,
-        client: job.clients,
-        viewUrl: null // For now, we'll just return success
+        message: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} #${documentNumber} opened successfully`,
+        document: {
+          id: document.id,
+          number: documentType === 'estimate' ? document.estimate_number : document.invoice_number,
+          total: document.total,
+          status: document.status,
+          client: job.clients?.name,
+          items: document.items || [],
+          created_at: document.created_at
+        },
+        // For now, we'll return a placeholder view URL
+        // In production, this would be a real document viewer or PDF
+        viewUrl: `data:text/html;charset=utf-8,${encodeURIComponent(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${documentType.toUpperCase()} #${documentNumber}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              .header { text-align: center; margin-bottom: 30px; }
+              .info { margin: 20px 0; }
+              .total { font-size: 24px; font-weight: bold; color: #2563eb; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>${documentType.toUpperCase()} #${documentNumber}</h1>
+            </div>
+            <div class="info">
+              <p><strong>Client:</strong> ${job.clients?.name}</p>
+              <p><strong>Total:</strong> $${document.total}</p>
+              <p><strong>Status:</strong> ${document.status}</p>
+              <p><strong>Date:</strong> ${new Date(document.created_at).toLocaleDateString()}</p>
+            </div>
+            <div class="total">
+              Total: $${document.total}
+            </div>
+          </body>
+          </html>
+        `)}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -48,8 +48,9 @@ export const DocumentList = ({
       // Open document in new window/tab
       if (data?.viewUrl) {
         window.open(data.viewUrl, '_blank');
-      } else {
         toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} opened successfully`);
+      } else {
+        toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} viewed successfully`);
       }
     } catch (error) {
       console.error(`Error viewing ${documentType}:`, error);
@@ -80,7 +81,7 @@ export const DocumentList = ({
         // Create a temporary link to download the file
         const link = document.createElement('a');
         link.href = data.downloadUrl;
-        link.download = `${documentType}-${documentType === 'estimate' ? document.estimate_number : document.invoice_number}.pdf`;
+        link.download = `${documentType}-${documentType === 'estimate' ? document.estimate_number : document.invoice_number}.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -109,53 +110,56 @@ export const DocumentList = ({
       <CardContent>
         {documents && documents.length > 0 ? (
           <div className="space-y-4">
-            {documents.map((doc: any) => (
-              <div key={doc.id} className="border rounded-lg p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <h4 className="font-semibold text-sm sm:text-base">
-                      {documentType.charAt(0).toUpperCase() + documentType.slice(1)} #{documentType === 'estimate' ? doc.estimate_number : doc.invoice_number}
-                    </h4>
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      {documentType === 'invoice' && doc.due_date 
-                        ? `Due: ${formatDate(doc.due_date)}` 
-                        : formatDate(doc.created_at)}
-                    </p>
-                    {doc.description && (
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2">
-                        {doc.description}
+            {documents.map((doc: any) => {
+              const total = parseFloat(doc.total?.toString() || '0');
+              return (
+                <div key={doc.id} className="border rounded-lg p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm sm:text-base">
+                        {documentType.charAt(0).toUpperCase() + documentType.slice(1)} #{documentType === 'estimate' ? doc.estimate_number : doc.invoice_number}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-gray-600">
+                        {documentType === 'invoice' && doc.due_date 
+                          ? `Due: ${formatDate(doc.due_date)}` 
+                          : formatDate(doc.created_at)}
                       </p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-4">
-                    <div className="text-right">
-                      <div className="text-base sm:text-lg font-semibold text-green-600">
-                        {formatCurrency(doc.total)}
-                      </div>
-                      <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(doc.status || doc.payment_status)}`}>
-                        {doc.status || doc.payment_status || 'draft'}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => handleView(doc)}>
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => handleDownload(doc)}>
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </Button>
-                      {documentType === 'invoice' && permissions.make_payments && 
-                       (doc.status !== 'paid' && doc.payment_status !== 'paid') && (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs">
-                          Pay Now
-                        </Button>
+                      {doc.description && (
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2">
+                          {doc.description}
+                        </p>
                       )}
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4">
+                      <div className="text-right">
+                        <div className="text-base sm:text-lg font-semibold text-green-600">
+                          {formatCurrency(total)}
+                        </div>
+                        <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(doc.status || doc.payment_status)}`}>
+                          {doc.status || doc.payment_status || 'draft'}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleView(doc)}>
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleDownload(doc)}>
+                          <Download className="h-3 w-3 mr-1" />
+                          Download
+                        </Button>
+                        {documentType === 'invoice' && permissions.make_payments && 
+                         (doc.status !== 'paid' && doc.payment_status !== 'paid') && (
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs">
+                            Pay Now
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">

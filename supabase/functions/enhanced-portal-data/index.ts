@@ -173,16 +173,19 @@ serve(async (req) => {
       })))
     }
 
-    // Calculate actual totals with proper number conversion
+    // Calculate totals correctly from the actual data
     const estimateCount = estimates?.length || 0
     const estimateValue = estimates?.reduce((sum, est) => {
-      const total = typeof est.total === 'string' ? parseFloat(est.total) : (est.total || 0)
+      // Ensure total is a number - handle both string and number cases properly
+      const total = parseFloat(est.total?.toString() || '0')
+      console.log('Processing estimate total:', est.total, 'parsed as:', total)
       return sum + total
     }, 0) || 0
     
     const invoiceCount = invoices?.length || 0
     const invoiceValue = invoices?.reduce((sum, inv) => {
-      const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0)
+      const total = parseFloat(inv.total?.toString() || '0')
+      console.log('Processing invoice total:', inv.total, 'parsed as:', total)
       return sum + total
     }, 0) || 0
     
@@ -191,7 +194,7 @@ serve(async (req) => {
     ) || []
     const paidCount = paidInvoices.length
     const paidValue = paidInvoices.reduce((sum, inv) => {
-      const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0)
+      const total = parseFloat(inv.total?.toString() || '0')
       return sum + total
     }, 0)
     

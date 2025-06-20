@@ -67,7 +67,7 @@ const ClientPortal = () => {
     }
 
     try {
-      console.log("🔐 Loading portal data with token...");
+      console.log("🔐 Loading portal data with token:", accessToken);
 
       // Load portal data using the enhanced function
       const { data: portalDataResponse, error: portalError } = await supabase.functions.invoke(
@@ -126,6 +126,8 @@ const ClientPortal = () => {
         return 'text-gray-600 bg-gray-50';
       case 'overdue':
         return 'text-red-600 bg-red-50';
+      case 'converted':
+        return 'text-purple-600 bg-purple-50';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -153,13 +155,13 @@ const ClientPortal = () => {
     
     const totalEstimates = estimates.length;
     const totalEstimateValue = estimates.reduce((sum, est) => {
-      const total = typeof est.total === 'string' ? parseFloat(est.total) : (est.total || 0);
+      const total = parseFloat(est.total?.toString() || '0');
       return sum + total;
     }, 0);
     
     const totalInvoices = invoices.length;
     const totalInvoiceValue = invoices.reduce((sum, inv) => {
-      const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0);
+      const total = parseFloat(inv.total?.toString() || '0');
       return sum + total;
     }, 0);
     
@@ -167,7 +169,7 @@ const ClientPortal = () => {
     const paidValue = invoices
       .filter(inv => inv.status === 'paid' || inv.payment_status === 'paid')
       .reduce((sum, inv) => {
-        const total = typeof inv.total === 'string' ? parseFloat(inv.total) : (inv.total || 0);
+        const total = parseFloat(inv.total?.toString() || '0');
         return sum + total;
       }, 0);
     
@@ -244,7 +246,7 @@ const ClientPortal = () => {
                     .slice(0, 5)
                     .map((item: any) => {
                       const isEstimate = 'estimate_number' in item;
-                      const total = typeof item.total === 'string' ? parseFloat(item.total) : (item.total || 0);
+                      const total = parseFloat(item.total?.toString() || '0');
                       return (
                         <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -314,7 +316,7 @@ const ClientPortal = () => {
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .map((item: any) => {
                       const isEstimate = 'estimate_number' in item;
-                      const total = typeof item.total === 'string' ? parseFloat(item.total) : (item.total || 0);
+                      const total = parseFloat(item.total?.toString() || '0');
                       return (
                         <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
