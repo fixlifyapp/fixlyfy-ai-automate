@@ -7,9 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number | null | undefined): string {
-  // Return "N/A" for null, undefined, or 0 values to avoid confusing $0.00 displays
-  if (amount === null || amount === undefined || amount === 0) {
-    return "N/A";
+  // Handle null, undefined, or NaN values
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return "$0.00";
   }
   
   // Ensure the amount is rounded to 2 decimal places to avoid floating-point precision issues
