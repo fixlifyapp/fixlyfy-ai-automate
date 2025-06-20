@@ -23,15 +23,21 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       
       // Validate required data
       if (!paymentData.invoiceId) {
-        throw new Error('Invoice ID is required');
+        console.error('Invoice ID is required');
+        toast.error('Invoice ID is required');
+        return false;
       }
       
       if (!paymentData.amount || paymentData.amount <= 0) {
-        throw new Error('Payment amount must be greater than 0');
+        console.error('Payment amount must be greater than 0');
+        toast.error('Payment amount must be greater than 0');
+        return false;
       }
 
       if (!paymentData.method) {
-        throw new Error('Payment method is required');
+        console.error('Payment method is required');
+        toast.error('Payment method is required');
+        return false;
       }
 
       // First, verify the invoice exists and get current state
@@ -43,11 +49,36 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
 
       if (fetchError) {
         console.error('Error fetching invoice:', fetchError);
-        throw new Error('Invoice not found or access denied');
+        toast.error('Invoice not found or access denied');
+        return false;
       }
 
       if (!currentInvoice) {
-        throw new Error('Invoice not found');
+        console.error('Invoice not found');
+        toast.error('Invoice not found');
+        return false;
+      }
+
+      console.log('Current invoice state:', currentInvoice);
+
+      // Calculate remaining balance with proper rounding
+      const currentAmountPaid = Math.round((currentInvoice.amount_paid || 0) * 100) / 100;
+      const invoiceTotal = Math.round(currentInvoice.total * 100) / 100;
+      const remainingBalance = Math.round((invoiceTotal - currentAmountPaid) * 100) / 100;
+      const paymentAmount = Math.round(paymentData.amount * 100) / 100;
+
+      console.log('Payment calculation:', {
+        currentAmountPaid,
+        invoiceTotal,
+        remainingBalance,
+        paymentAmount
+      });
+
+      // Validate payment amount doesn't exceed remaining balance
+      if (paymentAmount > remainingBalance + 0.01) { // Small tolerance for floating point
+        console.error('Payment amount exceeds remaining balance');
+        toast.error(`Payment amount ($${paymentAmount.toFixed(2)}) exceeds remaining balance ($${remainingBalance.toFixed(2)})`);
+        return false;
       }
 
       // Generate payment number
@@ -57,15 +88,18 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
 
       if (numberError) {
         console.error('Error generating payment number:', numberError);
-        throw new Error('Failed to generate payment number');
+        toast.error('Failed to generate payment number');
+        return false;
       }
+
+      console.log('Generated payment number:', paymentNumber);
 
       // Insert payment record
       const { data: paymentResult, error: paymentError } = await supabase
         .from('payments')
         .insert({
           invoice_id: paymentData.invoiceId,
-          amount: paymentData.amount,
+          amount: paymentAmount,
           method: paymentData.method,
           reference: paymentData.reference || null,
           notes: paymentData.notes || null,
@@ -78,15 +112,15 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
 
       if (paymentError) {
         console.error('Error inserting payment:', paymentError);
-        throw new Error('Failed to record payment: ' + paymentError.message);
+        toast.error('Failed to record payment: ' + paymentError.message);
+        return false;
       }
 
       console.log('Payment inserted successfully:', paymentResult);
 
-      // Calculate new amounts
-      const currentAmountPaid = currentInvoice.amount_paid || 0;
-      const newAmountPaid = currentAmountPaid + paymentData.amount;
-      const newBalance = currentInvoice.total - newAmountPaid;
+      // Calculate new amounts with proper rounding
+      const newAmountPaid = Math.round((currentAmountPaid + paymentAmount) * 100) / 100;
+      const newBalance = Math.round((invoiceTotal - newAmountPaid) * 100) / 100;
       
       let newStatus = 'unpaid';
       if (newBalance <= 0.01) { // Account for floating point precision
@@ -96,7 +130,6 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       }
 
       console.log('Updating invoice with new amounts:', {
-        currentAmountPaid,
         newAmountPaid,
         newBalance,
         newStatus
@@ -119,21 +152,16 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
           .from('payments')
           .delete()
           .eq('id', paymentResult.id);
-        throw new Error('Failed to update invoice status');
+        toast.error('Failed to update invoice status');
+        return false;
       }
 
-      // Log the payment in job history
-      console.log('About to log payment to job history:', {
-        jobId,
-        amount: paymentData.amount,
-        method: paymentData.method,
-        reference: paymentData.reference,
-        isPartial: newBalance > 0.01
-      });
+      console.log('Invoice updated successfully');
 
+      // Log the payment in job history
       try {
         await logPaymentReceived(
-          paymentData.amount, 
+          paymentAmount, 
           paymentData.method as any, 
           paymentData.reference
         );
@@ -145,6 +173,7 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       }
 
       console.log('Payment successfully recorded');
+      toast.success('Payment recorded successfully!');
       if (onSuccess) onSuccess();
       return true;
     } catch (error: any) {

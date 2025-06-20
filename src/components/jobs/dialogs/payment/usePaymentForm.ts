@@ -47,26 +47,26 @@ export const usePaymentForm = ({ invoice, jobId, onPaymentAdded, onClose }: UseP
     }
     
     // Validate input
-    if (!amount || amount.trim() === "") {
+    const trimmedAmount = amount.trim();
+    if (!trimmedAmount || trimmedAmount === "" || trimmedAmount === "0") {
       toast.error("Please enter a payment amount");
       return;
     }
 
-    const paymentAmount = parseFloat(amount);
+    const paymentAmount = parseFloat(trimmedAmount);
     
     // Check if amount is valid number
     if (isNaN(paymentAmount) || paymentAmount <= 0) {
-      toast.error("Please enter a valid payment amount");
+      toast.error("Please enter a valid payment amount greater than 0");
       return;
     }
     
     // Round the payment amount to avoid floating point issues
     const roundedPaymentAmount = roundToCurrency(paymentAmount);
     
-    // Use a small tolerance for floating-point comparison (1 cent)
-    const tolerance = 0.01;
-    if (roundedPaymentAmount > (maxPayment + tolerance)) {
-      toast.error(`Payment amount cannot exceed remaining balance of $${maxPayment.toFixed(2)}`);
+    // More lenient validation for partial payments - allow any positive amount up to remaining balance
+    if (roundedPaymentAmount > remainingBalance) {
+      toast.error(`Payment amount cannot exceed remaining balance of $${remainingBalance.toFixed(2)}`);
       return;
     }
 
