@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Edit } from "lucide-react";
 import { ProductEditInEstimateDialog } from "../../ProductEditInEstimateDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileLineItemCard } from "./MobileLineItemCard";
 
 interface DocumentLineItemsTableProps {
   documentType: DocumentType;
@@ -24,6 +26,7 @@ export const DocumentLineItemsTable = ({
 }: DocumentLineItemsTableProps) => {
   const [editingProduct, setEditingProduct] = useState<LineItem | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleEditProduct = (item: LineItem) => {
     setEditingProduct(item);
@@ -70,165 +73,182 @@ export const DocumentLineItemsTable = ({
           {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
         </h3>
         
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">Description</th>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900 w-16 sm:w-20">Qty</th>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900 w-24 sm:w-28">Customer Price</th>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900 w-24 sm:w-28 bg-yellow-50">Our Price</th>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900 w-16 sm:w-20">Taxable</th>
-                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900 w-24 sm:w-28">Total</th>
-                  {isEditable && (
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900 w-20">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.map((item, index) => {
-                  const marginPercentage = calculateMarginPercentage(item);
-                  const margin = calculateMargin(item);
-                  
-                  return (
-                    <tr key={item.id} className="border-t border-gray-200 hover:bg-gray-50">
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        {isEditable ? (
-                          <Input
-                            value={item.description || item.name || ''}
-                            onChange={(e) => onUpdateLineItem!(item.id, 'description', e.target.value)}
-                            className="border-0 p-0 h-auto bg-transparent text-xs sm:text-sm"
-                            placeholder="Product description"
-                          />
-                        ) : (
-                          <div>
-                            <p className="font-medium text-gray-900 text-xs sm:text-sm break-words">
-                              {item.description || item.name}
-                            </p>
-                            {item.taxable && !isEditable && (
-                              <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full mt-1 sm:mt-2">
-                                Taxable
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                        {isEditable ? (
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => onUpdateLineItem!(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                            className="w-16 text-center text-xs sm:text-sm"
-                          />
-                        ) : (
-                          <span className="text-gray-900 text-xs sm:text-sm">{item.quantity}</span>
-                        )}
-                      </td>
-                      
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                        {isEditable ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={(e) => onUpdateLineItem!(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            className="w-24 text-right text-xs sm:text-sm"
-                          />
-                        ) : (
-                          <span className="text-gray-900 text-xs sm:text-sm">
-                            {formatCurrency(item.unitPrice)}
-                          </span>
-                        )}
-                      </td>
-                      
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-right bg-yellow-50">
-                        {isEditable ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.ourPrice || 0}
-                            onChange={(e) => onUpdateLineItem!(item.id, 'ourPrice', parseFloat(e.target.value) || 0)}
-                            className="w-24 text-right bg-yellow-50 text-xs sm:text-sm"
-                            title="Internal use only"
-                          />
-                        ) : (
-                          <span className="text-gray-900 text-xs sm:text-sm">
-                            {formatCurrency(item.ourPrice || 0)}
-                          </span>
-                        )}
-                      </td>
-                      
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                        {isEditable ? (
-                          <Select 
-                            value={item.taxable.toString()} 
-                            onValueChange={(value) => onUpdateLineItem!(item.id, 'taxable', value === 'true')}
-                          >
-                            <SelectTrigger className="w-16 text-xs sm:text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="true">Yes</SelectItem>
-                              <SelectItem value="false">No</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-gray-900 text-xs sm:text-sm">
-                            {item.taxable ? 'Yes' : 'No'}
-                          </span>
-                        )}
-                      </td>
-                      
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                        <div>
-                          <div className="font-semibold text-gray-900 text-xs sm:text-sm">
-                            {formatCurrency(item.quantity * item.unitPrice)}
-                          </div>
-                          {(item.ourPrice && item.ourPrice > 0) && (
-                            <div className={`text-xs ${getMarginColor(marginPercentage)}`}>
-                              M: {formatCurrency(margin)} ({marginPercentage.toFixed(0)}%)
+        {isMobile ? (
+          // Mobile Card Layout
+          <div className="space-y-3">
+            {lineItems.map((item) => (
+              <MobileLineItemCard
+                key={item.id}
+                item={item}
+                isEditable={isEditable}
+                onUpdateLineItem={onUpdateLineItem}
+                onRemoveLineItem={onRemoveLineItem}
+                onEditProduct={handleEditProduct}
+              />
+            ))}
+          </div>
+        ) : (
+          // Desktop Table Layout
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">Description</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900 w-16 sm:w-20">Qty</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900 w-24 sm:w-28">Customer Price</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900 w-24 sm:w-28 bg-yellow-50">Our Price</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900 w-16 sm:w-20">Taxable</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900 w-24 sm:w-28">Total</th>
+                    {isEditable && (
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900 w-20">Actions</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, index) => {
+                    const marginPercentage = calculateMarginPercentage(item);
+                    const margin = calculateMargin(item);
+                    
+                    return (
+                      <tr key={item.id} className="border-t border-gray-200 hover:bg-gray-50">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
+                          {isEditable ? (
+                            <Input
+                              value={item.description || item.name || ''}
+                              onChange={(e) => onUpdateLineItem!(item.id, 'description', e.target.value)}
+                              className="border-0 p-0 h-auto bg-transparent text-xs sm:text-sm"
+                              placeholder="Product description"
+                            />
+                          ) : (
+                            <div>
+                              <p className="font-medium text-gray-900 text-xs sm:text-sm break-words">
+                                {item.description || item.name}
+                              </p>
+                              {item.taxable && !isEditable && (
+                                <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full mt-1 sm:mt-2">
+                                  Taxable
+                                </span>
+                              )}
                             </div>
                           )}
-                        </div>
-                      </td>
-                      
-                      {isEditable && (
+                        </td>
+                        
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                          <div className="flex gap-1 justify-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditProduct(item)}
-                              className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0"
-                              title="Edit product details"
+                          {isEditable ? (
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => onUpdateLineItem!(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                              className="w-16 text-center text-xs sm:text-sm"
+                            />
+                          ) : (
+                            <span className="text-gray-900 text-xs sm:text-sm">{item.quantity}</span>
+                          )}
+                        </td>
+                        
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
+                          {isEditable ? (
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) => onUpdateLineItem!(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              className="w-24 text-right text-xs sm:text-sm"
+                            />
+                          ) : (
+                            <span className="text-gray-900 text-xs sm:text-sm">
+                              {formatCurrency(item.unitPrice)}
+                            </span>
+                          )}
+                        </td>
+                        
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right bg-yellow-50">
+                          {isEditable ? (
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.ourPrice || 0}
+                              onChange={(e) => onUpdateLineItem!(item.id, 'ourPrice', parseFloat(e.target.value) || 0)}
+                              className="w-24 text-right bg-yellow-50 text-xs sm:text-sm"
+                              title="Internal use only"
+                            />
+                          ) : (
+                            <span className="text-gray-900 text-xs sm:text-sm">
+                              {formatCurrency(item.ourPrice || 0)}
+                            </span>
+                          )}
+                        </td>
+                        
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                          {isEditable ? (
+                            <Select 
+                              value={item.taxable.toString()} 
+                              onValueChange={(value) => onUpdateLineItem!(item.id, 'taxable', value === 'true')}
                             >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onRemoveLineItem!(item.id)}
-                              className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
-                              title="Remove item"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <SelectTrigger className="w-16 text-xs sm:text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="true">Yes</SelectItem>
+                                <SelectItem value="false">No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-gray-900 text-xs sm:text-sm">
+                              {item.taxable ? 'Yes' : 'No'}
+                            </span>
+                          )}
+                        </td>
+                        
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
+                          <div>
+                            <div className="font-semibold text-gray-900 text-xs sm:text-sm">
+                              {formatCurrency(item.quantity * item.unitPrice)}
+                            </div>
+                            {(item.ourPrice && item.ourPrice > 0) && (
+                              <div className={`text-xs ${getMarginColor(marginPercentage)}`}>
+                                M: {formatCurrency(margin)} ({marginPercentage.toFixed(0)}%)
+                              </div>
+                            )}
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        
+                        {isEditable && (
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditProduct(item)}
+                                className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0"
+                                title="Edit product details"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onRemoveLineItem!(item.id)}
+                                className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                title="Remove item"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Product Edit Dialog */}
