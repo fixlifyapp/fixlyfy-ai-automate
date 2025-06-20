@@ -113,8 +113,10 @@ serve(async (req) => {
     }
 
     console.log('📋 Loading data for client:', client.name, 'ID:', clientId)
+    console.log('🔍 Client created_by user ID:', client.created_by)
 
     // Get company settings for the client's created_by user
+    console.log('🏢 Attempting to fetch company settings for user_id:', client.created_by)
     const { data: companySettings, error: companyError } = await supabaseClient
       .from('company_settings')
       .select('*')
@@ -122,7 +124,22 @@ serve(async (req) => {
       .single()
 
     if (companyError) {
-      console.warn('Warning: Could not fetch company settings:', companyError)
+      console.warn('⚠️ Warning: Could not fetch company settings:', companyError)
+      console.log('🔍 Company error details:', {
+        code: companyError.code,
+        message: companyError.message,
+        details: companyError.details
+      })
+    } else if (companySettings) {
+      console.log('✅ Company settings found!')
+      console.log('🏢 Company details:', {
+        name: companySettings.company_name,
+        email: companySettings.company_email,
+        phone: companySettings.company_phone,
+        website: companySettings.company_website
+      })
+    } else {
+      console.log('⚠️ No company settings returned (but no error)')
     }
 
     // Get client's jobs
@@ -220,6 +237,20 @@ serve(async (req) => {
       pending: { count: pendingCount }
     })
 
+    // Prepare the response company data
+    const responseCompanyData = companySettings ? {
+      name: companySettings.company_name,
+      email: companySettings.company_email,
+      phone: companySettings.company_phone,
+      website: companySettings.company_website,
+      address: companySettings.company_address,
+      city: companySettings.company_city,
+      state: companySettings.company_state,
+      zip: companySettings.company_zip
+    } : null
+
+    console.log('🎯 Final company data being sent to frontend:', responseCompanyData)
+
     console.log('✅ Portal data loaded successfully for client:', client.name)
 
     // Log the access for audit purposes
@@ -233,6 +264,7 @@ serve(async (req) => {
         metadata: { 
           access_method: accessToken.startsWith('C-') ? 'direct' : 'token',
           data_loaded: true,
+          company_data_found: !!companySettings,
           totals: {
             estimates: estimateCount,
             invoices: invoiceCount,
@@ -254,16 +286,7 @@ serve(async (req) => {
           state: client.state,
           zip: client.zip
         },
-        company: companySettings ? {
-          name: companySettings.company_name,
-          email: companySettings.company_email,
-          phone: companySettings.company_phone,
-          website: companySettings.company_website,
-          address: companySettings.company_address,
-          city: companySettings.company_city,
-          state: companySettings.company_state,
-          zip: companySettings.company_zip
-        } : null,
+        company: responseCompanyData,
         jobs: jobs || [],
         estimates: estimates || [],
         invoices: invoices || [],

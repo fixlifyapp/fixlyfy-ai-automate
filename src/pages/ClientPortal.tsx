@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +98,20 @@ const ClientPortal = () => {
       }
 
       console.log("✅ Portal data loaded:", portalDataResponse);
+      console.log("🏢 Company data received:", portalDataResponse.company);
+      
+      // Debug company data specifically
+      if (portalDataResponse.company) {
+        console.log("✅ Company data found:", {
+          name: portalDataResponse.company.name,
+          email: portalDataResponse.company.email,
+          phone: portalDataResponse.company.phone,
+          website: portalDataResponse.company.website
+        });
+      } else {
+        console.warn("⚠️ No company data in response");
+      }
+
       setPortalData(portalDataResponse);
     } catch (error) {
       console.error("❌ Error loading portal:", error);
@@ -224,6 +237,8 @@ const ClientPortal = () => {
   }
 
   const totals = calculateTotals();
+
+  console.log("🎯 Rendering ClientPortalFooter with company data:", portalData.company);
 
   return (
     <div className="min-h-screen bg-gray-50">
