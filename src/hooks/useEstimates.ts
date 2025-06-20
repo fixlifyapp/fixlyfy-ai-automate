@@ -93,6 +93,16 @@ export const useEstimates = (jobId: string) => {
         return false;
       }
 
+      // Transform LineItem objects to plain JSON for database storage
+      const itemsForDb = (estimate.items || []).map(item => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        taxable: item.taxable,
+        total: item.quantity * item.unitPrice
+      }));
+
       // First, create the invoice
       const { data: newInvoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -101,7 +111,7 @@ export const useEstimates = (jobId: string) => {
           client_id: estimate.client_id,
           estimate_id: estimate.id,
           invoice_number: invoiceNumber,
-          items: estimate.items || [],
+          items: itemsForDb,
           subtotal: estimate.subtotal,
           tax_rate: estimate.tax_rate,
           tax_amount: estimate.tax_amount,
