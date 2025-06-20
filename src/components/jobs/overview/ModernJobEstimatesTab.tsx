@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,7 +144,7 @@ export const ModernJobEstimatesTab = ({
       
       if (success) {
         console.log('Estimate converted successfully, calling onEstimateConverted');
-        toast.success("Estimate converted to invoice successfully!");
+        // Removed duplicate toast - the success notification is handled in useEstimates.ts
         if (onEstimateConverted) {
           onEstimateConverted();
         }

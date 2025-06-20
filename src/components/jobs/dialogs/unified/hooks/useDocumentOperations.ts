@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -475,7 +474,7 @@ export const useDocumentOperations = ({
       }
 
       console.log('✅ Estimate converted successfully');
-      toast.success('Estimate successfully converted to invoice');
+      // Removed duplicate success toast - the notification is handled in useEstimates.ts
       
       if (onSyncToInvoice) {
         onSyncToInvoice();
