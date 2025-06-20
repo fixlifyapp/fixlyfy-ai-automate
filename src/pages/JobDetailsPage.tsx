@@ -110,19 +110,6 @@ const JobDetailsPage = () => {
           <div className="mb-4 sm:mb-6">
             <Card className="border-fixlyfy-border shadow-sm">
               <JobDetailsHeader />
-              
-              {/* Quick Actions Bar */}
-              <div className="flex gap-2 p-4 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportJobData}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Export Data
-                </Button>
-              </div>
             </Card>
           </div>
           
