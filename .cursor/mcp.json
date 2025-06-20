@@ -8,7 +8,24 @@
         "--project-ref=mqppvcrlvsgrsqelglod"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_cb907e8566ebad6a7f369a8359e96dc5c8a768fb"
+        "SUPABASE_ACCESS_TOKEN": "YOUR_SUPABASE_TOKEN_HERE"
+      }
+    },
+    "github": {
+      "command": "docker", 
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "-e", 
+        "GITHUB_TOOLSETS",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_TOKEN_HERE",
+        "GITHUB_TOOLSETS": "repos,issues,pull_requests,users"
       }
     }
   }
