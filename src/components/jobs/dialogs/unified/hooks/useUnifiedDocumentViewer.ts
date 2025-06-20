@@ -58,7 +58,7 @@ export const useUnifiedDocumentViewer = ({
             unitPrice: Number(item.unit_price) || 0,
             taxable: item.taxable !== false,
             total: (item.quantity || 1) * (Number(item.unit_price) || 0),
-            discount: 0
+            discount: item.discount || 0
           })) || [];
           
           setLineItems(transformedItems);
@@ -82,9 +82,9 @@ export const useUnifiedDocumentViewer = ({
         id: item.id || `fallback-${Math.random()}`,
         description: item.description || '',
         quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || 0,
+        unitPrice: item.unitPrice || item.unit_price || 0,
         taxable: item.taxable !== false,
-        total: (item.quantity || 1) * (item.unitPrice || 0),
+        total: (item.quantity || 1) * (item.unitPrice || item.unit_price || 0),
         discount: item.discount || 0
       })));
     }
@@ -101,6 +101,7 @@ export const useUnifiedDocumentViewer = ({
       }
       return total;
     }, 0);
+    console.log('useUnifiedDocumentViewer - Using locked tax rate:', LOCKED_TAX_RATE);
     return (taxableTotal * LOCKED_TAX_RATE) / 100;
   };
 

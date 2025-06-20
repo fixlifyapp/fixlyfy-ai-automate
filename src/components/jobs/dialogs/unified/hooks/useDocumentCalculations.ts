@@ -1,15 +1,18 @@
 
 import { useMemo } from "react";
 import { LineItem } from "../../../builder/types";
-import { useTaxSettings } from "@/hooks/useTaxSettings";
 
 interface UseDocumentCalculationsProps {
   lineItems: LineItem[];
   taxRate?: number; // Add taxRate as optional prop
 }
 
-export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsProps) => {
-  const { taxConfig } = useTaxSettings();
+// Lock tax rate to 13% globally
+const LOCKED_TAX_RATE = 13;
+
+export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalculationsProps) => {
+  // Use the passed taxRate or fallback to locked rate
+  const effectiveTaxRate = taxRate || LOCKED_TAX_RATE;
 
   const calculateSubtotal = useMemo(() => {
     return () => {
@@ -27,10 +30,10 @@ export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsPr
         }
         return total;
       }, 0);
-      console.log('useDocumentCalculations - Using tax rate:', taxConfig.rate);
-      return (taxableTotal * taxConfig.rate) / 100;
+      console.log('useDocumentCalculations - Using tax rate:', effectiveTaxRate);
+      return (taxableTotal * effectiveTaxRate) / 100;
     };
-  }, [lineItems, taxConfig.rate]);
+  }, [lineItems, effectiveTaxRate]);
 
   const calculateGrandTotal = useMemo(() => {
     return () => {
@@ -64,8 +67,8 @@ export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsPr
     calculateGrandTotal,
     calculateTotalMargin,
     calculateMarginPercentage,
-    taxRate: taxConfig.rate,
-    taxLabel: taxConfig.label,
-    taxDisplayText: taxConfig.displayText
+    taxRate: effectiveTaxRate,
+    taxLabel: `Tax (${effectiveTaxRate}%)`,
+    taxDisplayText: `${effectiveTaxRate}% Tax`
   };
 };

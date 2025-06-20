@@ -1,3 +1,4 @@
+
 import React from "react";
 import { LineItem } from "../../builder/types";
 import { DocumentType } from "../UnifiedDocumentBuilder";
@@ -30,6 +31,7 @@ export const UnifiedDocumentPreview = ({
   documentType,
   documentNumber,
   lineItems,
+  taxRate = LOCKED_TAX_RATE, // Use locked rate as default
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
@@ -46,6 +48,7 @@ export const UnifiedDocumentPreview = ({
   console.log('Line items received:', lineItems);
   console.log('Issue date:', issueDate);
   console.log('Due date:', dueDate);
+  console.log('Tax rate:', taxRate);
 
   const { companyInfo, enhancedClientInfo, jobAddress, loading } = useDocumentPreviewData({
     clientInfo,
@@ -90,7 +93,7 @@ export const UnifiedDocumentPreview = ({
         jobAddress={jobAddress}
         issueDate={issueDate}
         dueDate={dueDate}
-        taxRate={LOCKED_TAX_RATE}
+        taxRate={taxRate}
         companyInfo={companyInfo}
       />
 

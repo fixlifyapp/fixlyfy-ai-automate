@@ -31,6 +31,11 @@ export const UnifiedDocumentViewerContent = ({
   issueDate,
   dueDate
 }: UnifiedDocumentViewerContentProps) => {
+  console.log('UnifiedDocumentViewerContent - Tax rate received:', taxRate);
+  console.log('UnifiedDocumentViewerContent - Line items:', lineItems);
+  console.log('UnifiedDocumentViewerContent - Issue date:', issueDate);
+  console.log('UnifiedDocumentViewerContent - Due date:', dueDate);
+  
   return (
     <div className="flex-1 overflow-auto">
       <UnifiedDocumentPreview
