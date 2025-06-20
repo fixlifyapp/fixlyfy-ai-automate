@@ -3,6 +3,7 @@ import React from "react";
 import { LineItem } from "../../builder/types";
 import { DocumentType } from "../UnifiedDocumentBuilder";
 import { useDocumentPreviewData } from "./hooks/useDocumentPreviewData";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 import { DocumentPreviewHeader } from "./components/DocumentPreviewHeader";
 import { DocumentInfoGrid } from "./components/DocumentInfoGrid";
 import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
@@ -24,14 +25,11 @@ interface UnifiedDocumentPreviewProps {
   jobId?: string;
 }
 
-// Lock tax rate to 13%
-const LOCKED_TAX_RATE = 13;
-
 export const UnifiedDocumentPreview = ({
   documentType,
   documentNumber,
   lineItems,
-  taxRate = LOCKED_TAX_RATE, // Use locked rate as default
+  taxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
@@ -41,6 +39,11 @@ export const UnifiedDocumentPreview = ({
   dueDate,
   jobId
 }: UnifiedDocumentPreviewProps) => {
+  const { taxConfig } = useTaxSettings();
+  
+  // Use passed taxRate or fallback to user settings
+  const effectiveTaxRate = taxRate || taxConfig.rate;
+  
   console.log('=== UnifiedDocumentPreview Debug ===');
   console.log('JobId prop received:', jobId);
   console.log('ClientInfo prop received:', clientInfo);
@@ -48,7 +51,7 @@ export const UnifiedDocumentPreview = ({
   console.log('Line items received:', lineItems);
   console.log('Issue date:', issueDate);
   console.log('Due date:', dueDate);
-  console.log('Tax rate:', taxRate);
+  console.log('Tax rate:', effectiveTaxRate);
 
   const { companyInfo, enhancedClientInfo, jobAddress, loading } = useDocumentPreviewData({
     clientInfo,
@@ -93,7 +96,7 @@ export const UnifiedDocumentPreview = ({
         jobAddress={jobAddress}
         issueDate={issueDate}
         dueDate={dueDate}
-        taxRate={taxRate}
+        taxRate={effectiveTaxRate}
         companyInfo={companyInfo}
       />
 
@@ -121,6 +124,7 @@ export const UnifiedDocumentPreview = ({
         subtotal={subtotal}
         tax={tax}
         total={total}
+        taxRate={effectiveTaxRate}
       />
 
       {/* Notes Section */}

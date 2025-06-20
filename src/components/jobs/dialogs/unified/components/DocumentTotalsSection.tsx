@@ -16,13 +16,18 @@ export const DocumentTotalsSection = ({
   documentType,
   subtotal,
   tax,
-  total
+  total,
+  taxRate
 }: DocumentTotalsSectionProps) => {
   const { taxConfig } = useTaxSettings();
   const totalColor = documentType === 'estimate' ? 'text-blue-600' : 'text-green-600';
   const totalBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-green-50';
 
-  console.log('DocumentTotalsSection - Using tax config:', taxConfig);
+  // Use passed taxRate or fallback to user settings
+  const effectiveTaxRate = taxRate || taxConfig.rate;
+  const taxLabel = taxConfig.label;
+
+  console.log('DocumentTotalsSection - Using tax rate:', effectiveTaxRate);
 
   return (
     <div className="px-8 py-6 bg-gray-50">
@@ -36,7 +41,7 @@ export const DocumentTotalsSection = ({
             
             <div className="flex justify-between items-center">
               <span className="text-gray-700">
-                {taxConfig.label} ({taxConfig.rate}%)
+                {taxLabel} ({effectiveTaxRate}%)
               </span>
               <span className="font-medium text-gray-900">{formatCurrency(tax)}</span>
             </div>

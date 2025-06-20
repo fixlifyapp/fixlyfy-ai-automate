@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Invoice, Estimate, LineItem } from "@/types/documents";
 import { useJobData } from "./useJobData";
+import { useTaxSettings } from "@/hooks/useTaxSettings";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UseUnifiedDocumentViewerProps {
@@ -28,6 +28,10 @@ export const useUnifiedDocumentViewer = ({
   const [loading, setLoading] = useState(true);
 
   const { clientInfo, jobAddress } = useJobData(jobId);
+  const { taxConfig } = useTaxSettings();
+
+  // Get tax rate from document or fallback to user settings
+  const taxRate = document.tax_rate || taxConfig.rate;
 
   // Fetch line items from database
   useEffect(() => {
@@ -82,9 +86,9 @@ export const useUnifiedDocumentViewer = ({
         id: item.id || `fallback-${Math.random()}`,
         description: item.description || '',
         quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || item.unit_price || 0,
+        unitPrice: item.unitPrice || 0,
         taxable: item.taxable !== false,
-        total: (item.quantity || 1) * (item.unitPrice || item.unit_price || 0),
+        total: (item.quantity || 1) * (item.unitPrice || 0),
         discount: item.discount || 0
       })));
     }
@@ -101,8 +105,8 @@ export const useUnifiedDocumentViewer = ({
       }
       return total;
     }, 0);
-    console.log('useUnifiedDocumentViewer - Using locked tax rate:', LOCKED_TAX_RATE);
-    return (taxableTotal * LOCKED_TAX_RATE) / 100;
+    console.log('useUnifiedDocumentViewer - Using tax rate:', taxRate);
+    return (taxableTotal * taxRate) / 100;
   };
 
   const calculateGrandTotal = () => {
@@ -155,7 +159,7 @@ export const useUnifiedDocumentViewer = ({
     jobAddress,
     loading,
     lineItems,
-    taxRate: LOCKED_TAX_RATE,
+    taxRate,
     documentNumber,
     calculateSubtotal,
     calculateTotalTax,
