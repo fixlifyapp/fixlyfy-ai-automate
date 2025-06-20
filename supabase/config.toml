@@ -1,0 +1,38 @@
+
+project_id = "mqppvcrlvsgrsqelglod"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+
+[db]
+port = 54322
+
+[edge_runtime]
+enabled = true
+port = 54323
+
+[functions.sms-receiver]
+verify_jwt = false
+
+[functions.update-webhook-url]
+verify_jwt = false
+
+[functions.telnyx-webhook-router]
+verify_jwt = false
+
+[functions.ai-dispatcher-webhook]
+verify_jwt = false
+
+[functions.basic-telephony-webhook]
+verify_jwt = false
+
+[functions.manage-ai-dispatcher]
+verify_jwt = false
