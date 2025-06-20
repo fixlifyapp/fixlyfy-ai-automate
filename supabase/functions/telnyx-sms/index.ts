@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -25,14 +24,16 @@ serve(async (req) => {
       recipientPhone: requestBody.recipientPhone, 
       messageLength: requestBody.message?.length,
       clientId: requestBody.client_id,
-      jobId: requestBody.job_id
+      jobId: requestBody.job_id,
+      userId: requestBody.user_id
     });
     
     const { 
       recipientPhone, 
       message, 
       client_id, 
-      job_id
+      job_id,
+      user_id
     } = requestBody;
 
     if (!recipientPhone || !message) {
@@ -49,9 +50,26 @@ serve(async (req) => {
 
     console.log('🔍 Getting active Telnyx phone number...');
     
+    // Get the sending phone number - try to find user-specific number if user_id provided
+    let telnyxQuery = supabaseAdmin
+      .from('telnyx_phone_numbers')
+      .select('phone_number, user_id')
+      .eq('status', 'active');
+    
+    if (user_id) {
+      // First try to find a phone number owned by this user
+      const { data: userPhoneNumbers } = await telnyxQuery.eq('user_id', user_id).limit(1);
+      if (userPhoneNumbers && userPhoneNumbers.length > 0) {
+        console.log('✅ Found user-specific phone number:', userPhoneNumbers[0].phone_number);
+        const fromNumber = userPhoneNumbers[0].phone_number;
+        return await sendSMSAndStore(supabaseAdmin, fromNumber, recipientPhone, message, message, client_id, job_id, user_id);
+      }
+    }
+    
+    // If no user-specific number found, get any active number
     const { data: telnyxNumbers, error: telnyxError } = await supabaseAdmin
       .from('telnyx_phone_numbers')
-      .select('phone_number')
+      .select('phone_number, user_id')
       .eq('status', 'active')
       .order('purchased_at', { ascending: false })
       .limit(1);
@@ -72,105 +90,12 @@ serve(async (req) => {
     }
 
     const fromNumber = telnyxNumbers[0].phone_number;
-    console.log('✅ Using phone number for SMS:', fromNumber);
+    const sendingUserId = user_id || telnyxNumbers[0].user_id;
+    console.log('✅ Using phone number for SMS:', fromNumber, 'for user:', sendingUserId);
 
-    // Process the message
-    let finalMessage = message;
-    
-    if (job_id && !message.includes('hub.fixlify.app/portal/') && !message.includes('hub.fixlify.app/approve/')) {
-      console.log('🔗 Adding job portal link for job:', job_id);
-      const jobPortalLink = `https://portal.fixlify.app/client/${job_id}`;
-      finalMessage = `${message}\n\nView details: ${jobPortalLink}`;
-      console.log('✅ Job portal link added to message');
-    }
+    // Process the message - moved inside function
+    return await sendSMSAndStore(supabaseAdmin, fromNumber, recipientPhone, message, message, client_id, job_id, sendingUserId);
 
-    // Check Telnyx API key
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
-    if (!telnyxApiKey) {
-      console.error('❌ Telnyx API key not configured');
-      throw new Error('SMS service not configured. Please contact support.');
-    }
-
-    const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
-    const formatForTelnyx = (phone: string) => {
-      const cleaned = cleanPhone(phone);
-      return cleaned.startsWith('1') ? `+${cleaned}` : `+1${cleaned}`;
-    };
-
-    const formattedFromPhone = formatForTelnyx(fromNumber);
-    const formattedToPhone = formatForTelnyx(recipientPhone);
-
-    console.log('📱 Sending SMS...');
-    console.log('📱 From:', formattedFromPhone);
-    console.log('📱 To:', formattedToPhone);
-    console.log('📱 Message length:', finalMessage.length);
-
-    const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: formattedFromPhone,
-        to: formattedToPhone,
-        text: finalMessage
-      })
-    });
-
-    const responseText = await telnyxResponse.text();
-    console.log('📱 Telnyx response status:', telnyxResponse.status);
-    console.log('📱 Telnyx response body:', responseText);
-
-    if (!telnyxResponse.ok) {
-      console.error('❌ Telnyx API error:', responseText);
-      
-      let errorMessage = 'Failed to send SMS';
-      try {
-        const errorData = JSON.parse(responseText);
-        if (errorData.errors && errorData.errors.length > 0) {
-          errorMessage = errorData.errors[0].detail || errorMessage;
-        }
-      } catch (parseError) {
-        console.warn('⚠️ Could not parse Telnyx error response');
-      }
-      
-      // Provide specific error messages based on status code
-      if (telnyxResponse.status === 401) {
-        errorMessage = 'SMS service authentication failed. Please contact support.';
-      } else if (telnyxResponse.status === 403) {
-        errorMessage = 'SMS service access denied. Please contact support.';
-      } else if (telnyxResponse.status === 400) {
-        errorMessage = 'Invalid phone number or message format.';
-      } else if (telnyxResponse.status >= 500) {
-        errorMessage = 'SMS service temporarily unavailable. Please try again later.';
-      }
-      
-      throw new Error(`${errorMessage} (Status: ${telnyxResponse.status})`);
-    }
-
-    let telnyxResult;
-    try {
-      telnyxResult = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ Error parsing Telnyx response:', parseError);
-      throw new Error('Invalid response from SMS service');
-    }
-
-    console.log('✅ SMS sent successfully via Telnyx:', telnyxResult.data?.id);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'SMS sent successfully',
-        messageId: telnyxResult.data?.id,
-        finalMessage: finalMessage
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    )
   } catch (error) {
     console.error('❌ Error in telnyx-sms function:', error);
     return new Response(
@@ -185,3 +110,188 @@ serve(async (req) => {
     )
   }
 })
+
+async function sendSMSAndStore(supabaseAdmin: any, fromNumber: string, recipientPhone: string, originalMessage: string, _unused: string, client_id?: string, job_id?: string, user_id?: string) {
+  // Check Telnyx API key
+  const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
+  if (!telnyxApiKey) {
+    console.error('❌ Telnyx API key not configured');
+    throw new Error('SMS service not configured. Please contact support.');
+  }
+
+  // Process the message
+  let finalMessage = originalMessage;
+  
+  if (job_id && !originalMessage.includes('hub.fixlify.app/portal/') && !originalMessage.includes('hub.fixlify.app/approve/')) {
+    console.log('🔗 Adding job portal link for job:', job_id);
+    const jobPortalLink = `https://portal.fixlify.app/client/${job_id}`;
+    finalMessage = `${originalMessage}\n\nView details: ${jobPortalLink}`;
+    console.log('✅ Job portal link added to message');
+  }
+
+  const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
+  const formatForTelnyx = (phone: string) => {
+    const cleaned = cleanPhone(phone);
+    return cleaned.startsWith('1') ? `+${cleaned}` : `+1${cleaned}`;
+  };
+
+  const formattedFromPhone = formatForTelnyx(fromNumber);
+  const formattedToPhone = formatForTelnyx(recipientPhone);
+
+  console.log('📱 Sending SMS...');
+  console.log('📱 From:', formattedFromPhone);
+  console.log('📱 To:', formattedToPhone);
+  console.log('📱 Message length:', finalMessage.length);
+
+  const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${telnyxApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: formattedFromPhone,
+      to: formattedToPhone,
+      text: finalMessage
+    })
+  });
+
+  const responseText = await telnyxResponse.text();
+  console.log('📱 Telnyx response status:', telnyxResponse.status);
+  console.log('📱 Telnyx response body:', responseText);
+
+  if (!telnyxResponse.ok) {
+    console.error('❌ Telnyx API error:', responseText);
+    
+    let errorMessage = 'Failed to send SMS';
+    try {
+      const errorData = JSON.parse(responseText);
+      if (errorData.errors && errorData.errors.length > 0) {
+        errorMessage = errorData.errors[0].detail || errorMessage;
+      }
+    } catch (parseError) {
+      console.warn('⚠️ Could not parse Telnyx error response');
+    }
+    
+    // Provide specific error messages based on status code
+    if (telnyxResponse.status === 401) {
+      errorMessage = 'SMS service authentication failed. Please contact support.';
+    } else if (telnyxResponse.status === 403) {
+      errorMessage = 'SMS service access denied. Please contact support.';
+    } else if (telnyxResponse.status === 400) {
+      errorMessage = 'Invalid phone number or message format.';
+    } else if (telnyxResponse.status >= 500) {
+      errorMessage = 'SMS service temporarily unavailable. Please try again later.';
+    }
+    
+    throw new Error(`${errorMessage} (Status: ${telnyxResponse.status})`);
+  }
+
+  let telnyxResult;
+  try {
+    telnyxResult = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('❌ Error parsing Telnyx response:', parseError);
+    throw new Error('Invalid response from SMS service');
+  }
+
+  console.log('✅ SMS sent successfully via Telnyx:', telnyxResult.data?.id);
+
+  // Now store the outbound message in the database
+  if (client_id && job_id && user_id) {
+    console.log('📝 Storing outbound message in database...');
+    
+    try {
+      // Find or create conversation
+      let conversation;
+      const { data: existingConversation, error: convError } = await supabaseAdmin
+        .from('conversations')
+        .select('*')
+        .eq('client_id', client_id)
+        .eq('job_id', job_id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (convError) {
+        console.error('❌ Error finding conversation:', convError);
+      }
+
+      if (existingConversation) {
+        conversation = existingConversation;
+        console.log('✅ Using existing conversation:', conversation.id);
+        
+        // Update last_message_at
+        await supabaseAdmin
+          .from('conversations')
+          .update({ 
+            last_message_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversation.id);
+      } else {
+        console.log('📝 Creating new conversation for outbound SMS');
+        const { data: newConversation, error: newConvError } = await supabaseAdmin
+          .from('conversations')
+          .insert({
+            client_id: client_id,
+            job_id: job_id,
+            status: 'active',
+            last_message_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (newConvError) {
+          console.error('❌ Error creating conversation:', newConvError);
+        } else {
+          conversation = newConversation;
+          console.log('✅ Created new conversation:', conversation.id);
+        }
+      }
+
+      // Store the outbound message
+      if (conversation) {
+        const { data: savedMessage, error: messageError } = await supabaseAdmin
+          .from('messages')
+          .insert({
+            conversation_id: conversation.id,
+            body: finalMessage,
+            direction: 'outbound',
+            sender: formattedFromPhone,
+            recipient: formattedToPhone,
+            status: 'sent',
+            message_sid: telnyxResult.data?.id,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (messageError) {
+          console.error('❌ Error storing outbound message:', messageError);
+        } else {
+          console.log('✅ Outbound message stored successfully:', savedMessage.id);
+        }
+      }
+    } catch (storeError) {
+      console.error('❌ Error storing outbound message:', storeError);
+      // Don't throw here - SMS was sent successfully, storage is secondary
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      message: 'SMS sent successfully',
+      messageId: telnyxResult.data?.id,
+      finalMessage: finalMessage
+    }),
+    {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    }
+  )
+}

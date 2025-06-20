@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -68,25 +67,36 @@ const formatPhoneNumber = (phone: string): string => {
 const findUserByReceivingNumber = async (supabase: any, toPhone: string) => {
   console.log('Finding user for receiving number:', toPhone);
   
-  const { data: phoneNumber, error } = await supabase
-    .from('telnyx_phone_numbers')
-    .select('user_id, phone_number')
-    .eq('phone_number', toPhone)
-    .eq('status', 'active')
-    .single();
+  // Create multiple phone format variations to try
+  const cleanedPhone = toPhone.replace(/\D/g, '');
+  const phoneVariations = [
+    toPhone, // Original format from webhook
+    cleanedPhone, // Just digits
+    `+${cleanedPhone}`, // With + prefix
+    `+1${cleanedPhone}`, // With +1 prefix
+    cleanedPhone.startsWith('1') ? `+${cleanedPhone}` : `+1${cleanedPhone}`, // Smart prefix handling
+    cleanedPhone.startsWith('1') ? cleanedPhone.substring(1) : cleanedPhone, // Remove leading 1 if present
+  ].filter((phone, index, array) => array.indexOf(phone) === index); // Remove duplicates
 
-  if (error) {
-    console.error('Error finding phone number owner:', error);
-    return null;
+  console.log('Trying phone variations:', phoneVariations);
+  
+  // Try each phone format variation
+  for (const phoneVariation of phoneVariations) {
+    const { data: phoneNumber, error } = await supabase
+      .from('telnyx_phone_numbers')
+      .select('user_id, phone_number')
+      .eq('phone_number', phoneVariation)
+      .eq('status', 'active')
+      .single();
+
+    if (!error && phoneNumber) {
+      console.log('Found phone number owner with format:', phoneVariation, '-> user:', phoneNumber.user_id);
+      return phoneNumber.user_id;
+    }
   }
 
-  if (!phoneNumber) {
-    console.log('No active phone number found for:', toPhone);
-    return null;
-  }
-
-  console.log('Found phone number owner:', phoneNumber.user_id);
-  return phoneNumber.user_id;
+  console.log('No active phone number found for any format variations of:', toPhone);
+  return null;
 };
 
 const findClientByPhone = async (supabase: any, phone: string, userId: string) => {
