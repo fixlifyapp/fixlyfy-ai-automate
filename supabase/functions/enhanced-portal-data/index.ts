@@ -114,6 +114,17 @@ serve(async (req) => {
 
     console.log('📋 Loading data for client:', client.name, 'ID:', clientId)
 
+    // Get company settings for the client's created_by user
+    const { data: companySettings, error: companyError } = await supabaseClient
+      .from('company_settings')
+      .select('*')
+      .eq('user_id', client.created_by)
+      .single()
+
+    if (companyError) {
+      console.warn('Warning: Could not fetch company settings:', companyError)
+    }
+
     // Get client's jobs
     const { data: jobs, error: jobsError } = await supabaseClient
       .from('jobs')
@@ -176,7 +187,6 @@ serve(async (req) => {
     // Calculate totals correctly from the actual data
     const estimateCount = estimates?.length || 0
     const estimateValue = estimates?.reduce((sum, est) => {
-      // Ensure total is a number - handle both string and number cases properly
       const total = parseFloat(est.total?.toString() || '0')
       console.log('Processing estimate total:', est.total, 'parsed as:', total)
       return sum + total
@@ -244,6 +254,16 @@ serve(async (req) => {
           state: client.state,
           zip: client.zip
         },
+        company: companySettings ? {
+          name: companySettings.company_name,
+          email: companySettings.company_email,
+          phone: companySettings.company_phone,
+          website: companySettings.company_website,
+          address: companySettings.company_address,
+          city: companySettings.company_city,
+          state: companySettings.company_state,
+          zip: companySettings.company_zip
+        } : null,
         jobs: jobs || [],
         estimates: estimates || [],
         invoices: invoices || [],

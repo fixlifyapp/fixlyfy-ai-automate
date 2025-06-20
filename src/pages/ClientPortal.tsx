@@ -22,6 +22,16 @@ interface PortalData {
     state?: string;
     zip?: string;
   };
+  company?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  } | null;
   jobs: any[];
   estimates: any[];
   invoices: any[];
@@ -247,6 +257,7 @@ const ClientPortal = () => {
                     .map((item: any) => {
                       const isEstimate = 'estimate_number' in item;
                       const total = parseFloat(item.total?.toString() || '0');
+                      const documentNumber = isEstimate ? item.estimate_number : item.invoice_number;
                       return (
                         <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -258,7 +269,7 @@ const ClientPortal = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-sm sm:text-base truncate">
-                                {isEstimate ? 'Estimate' : 'Invoice'} #{isEstimate ? item.estimate_number : item.invoice_number}
+                                {isEstimate ? 'Estimate' : 'Invoice'} #{documentNumber}
                               </div>
                               <div className="text-xs sm:text-sm text-gray-600">
                                 {formatDate(item.created_at)}
@@ -317,6 +328,7 @@ const ClientPortal = () => {
                     .map((item: any) => {
                       const isEstimate = 'estimate_number' in item;
                       const total = parseFloat(item.total?.toString() || '0');
+                      const documentNumber = isEstimate ? item.estimate_number : item.invoice_number;
                       return (
                         <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -328,7 +340,7 @@ const ClientPortal = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-sm sm:text-base">
-                                {isEstimate ? 'Estimate' : 'Invoice'} #{isEstimate ? item.estimate_number : item.invoice_number}
+                                {isEstimate ? 'Estimate' : 'Invoice'} #{documentNumber}
                               </div>
                               <div className="text-xs sm:text-sm text-gray-600">
                                 {formatDate(item.created_at)}
@@ -352,7 +364,7 @@ const ClientPortal = () => {
           </TabsContent>
         </Tabs>
 
-        <ClientPortalFooter />
+        <ClientPortalFooter companyData={portalData.company} />
       </div>
     </div>
   );
