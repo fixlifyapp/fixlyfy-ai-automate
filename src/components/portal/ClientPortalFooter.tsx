@@ -13,7 +13,7 @@ interface ClientPortalFooterProps {
 export const ClientPortalFooter = ({ companyData }: ClientPortalFooterProps) => {
   const currentYear = new Date().getFullYear();
   
-  // Use company data if available, otherwise fallback to default
+  // Use company business email if available, otherwise fallback to default
   const supportEmail = companyData?.email || 'support@fixlify.app';
   const companyName = companyData?.name || 'Fixlify';
   const companyPhone = companyData?.phone;
