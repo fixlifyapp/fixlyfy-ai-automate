@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -115,6 +116,7 @@ export const SteppedInvoiceBuilder = ({
               return;
             }
           }
+        }
         
         // Check if the invoice already contains warranty items
         const { data: invoiceLineItems, error } = await supabase
