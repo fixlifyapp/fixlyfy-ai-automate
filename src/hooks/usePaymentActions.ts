@@ -122,14 +122,14 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       const newAmountPaid = Math.round((currentAmountPaid + paymentAmount) * 100) / 100;
       const newBalance = Math.round((invoiceTotal - newAmountPaid) * 100) / 100;
       
-      // Determine new status based on payment amount
+      // Determine new status - use only valid database status values
       let newStatus: string;
       if (newBalance <= 0.01) { // Account for floating point precision
         newStatus = 'paid';
       } else if (newAmountPaid > 0) {
         newStatus = 'partial';
       } else {
-        newStatus = 'unpaid';
+        newStatus = 'draft'; // Fallback to draft instead of unpaid
       }
 
       console.log('Updating invoice with new amounts:', {
@@ -138,15 +138,12 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
         newStatus
       });
 
-      // Update invoice amount_paid and status - use valid status values only
-      const validStatuses = ['draft', 'sent', 'paid', 'partial', 'unpaid', 'overdue', 'cancelled'];
-      const statusToUpdate = validStatuses.includes(newStatus) ? newStatus : 'partial';
-
+      // Update invoice amount_paid and status - ensure we only use valid status values
       const { error: updateError } = await supabase
         .from('invoices')
         .update({
           amount_paid: newAmountPaid,
-          status: statusToUpdate,
+          status: newStatus,
           paid_at: newBalance <= 0.01 ? new Date().toISOString() : null
         })
         .eq('id', paymentData.invoiceId);
@@ -235,7 +232,7 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
       const newBalance = invoice.total - newAmountPaid;
       
-      let newStatus = 'unpaid';
+      let newStatus = 'draft';
       if (newBalance <= 0) {
         newStatus = 'paid';
       } else if (newAmountPaid > 0) {
@@ -297,7 +294,7 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
       const newBalance = invoice.total - newAmountPaid;
       
-      let newStatus = 'unpaid';
+      let newStatus = 'draft';
       if (newBalance <= 0) {
         newStatus = 'paid';
       } else if (newAmountPaid > 0) {
