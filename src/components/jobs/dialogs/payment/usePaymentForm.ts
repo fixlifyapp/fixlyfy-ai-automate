@@ -65,7 +65,7 @@ export const usePaymentForm = ({ invoice, jobId, onPaymentAdded, onClose }: UseP
     const roundedPaymentAmount = roundToCurrency(paymentAmount);
     
     // More lenient validation for partial payments - allow any positive amount up to remaining balance
-    if (roundedPaymentAmount > remainingBalance) {
+    if (roundedPaymentAmount > remainingBalance + 0.01) { // Small tolerance for floating point
       toast.error(`Payment amount cannot exceed remaining balance of $${remainingBalance.toFixed(2)}`);
       return;
     }

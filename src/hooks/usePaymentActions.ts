@@ -122,11 +122,14 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       const newAmountPaid = Math.round((currentAmountPaid + paymentAmount) * 100) / 100;
       const newBalance = Math.round((invoiceTotal - newAmountPaid) * 100) / 100;
       
-      let newStatus = 'unpaid';
+      // Determine new status based on payment amount
+      let newStatus: string;
       if (newBalance <= 0.01) { // Account for floating point precision
         newStatus = 'paid';
       } else if (newAmountPaid > 0) {
         newStatus = 'partial';
+      } else {
+        newStatus = 'unpaid';
       }
 
       console.log('Updating invoice with new amounts:', {
@@ -135,12 +138,15 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
         newStatus
       });
 
-      // Update invoice amount_paid and status
+      // Update invoice amount_paid and status - use valid status values only
+      const validStatuses = ['draft', 'sent', 'paid', 'partial', 'unpaid', 'overdue', 'cancelled'];
+      const statusToUpdate = validStatuses.includes(newStatus) ? newStatus : 'partial';
+
       const { error: updateError } = await supabase
         .from('invoices')
         .update({
           amount_paid: newAmountPaid,
-          status: newStatus,
+          status: statusToUpdate,
           paid_at: newBalance <= 0.01 ? new Date().toISOString() : null
         })
         .eq('id', paymentData.invoiceId);
