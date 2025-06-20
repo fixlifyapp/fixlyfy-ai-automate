@@ -30,6 +30,11 @@ interface SteppedInvoiceBuilderProps {
 
 type BuilderStep = "items" | "upsell" | "send";
 
+// Helper to check if a document is an estimate
+const isEstimate = (doc: any): doc is Estimate => {
+  return doc && ('estimate_number' in doc || 'valid_until' in doc);
+};
+
 export const SteppedInvoiceBuilder = ({
   open,
   onOpenChange,
@@ -82,6 +87,7 @@ export const SteppedInvoiceBuilder = ({
         // The unified hook will handle estimate conversion
         setInvoiceCreated(false);
         setSavedInvoice(null);
+        console.log("Initializing invoice from estimate:", estimateToConvert.id);
       }
       setCurrentStep("items");
       setSelectedUpsells([]);
@@ -234,7 +240,7 @@ export const SteppedInvoiceBuilder = ({
   return (
     <>
       <Dialog open={open && currentStep !== "send" && currentStep !== "upsell"} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">

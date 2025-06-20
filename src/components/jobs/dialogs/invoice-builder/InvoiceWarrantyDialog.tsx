@@ -59,6 +59,33 @@ export const InvoiceWarrantyDialog = ({
         ) || false;
         
         setHasExistingWarranties(hasWarranties);
+
+        // Also check if the invoice was converted from an estimate with warranties
+        if (wasConvertedFromEstimate && !hasWarranties) {
+          const { data: invoice } = await supabase
+            .from('invoices')
+            .select('estimate_id')
+            .eq('id', invoiceId)
+            .single();
+
+          if (invoice?.estimate_id) {
+            const { data: estimateLineItems } = await supabase
+              .from('line_items')
+              .select('*')
+              .eq('parent_id', invoice.estimate_id)
+              .eq('parent_type', 'estimate');
+
+            const hasEstimateWarranties = estimateLineItems?.some((item: any) => 
+              item.description?.toLowerCase().includes('warranty') ||
+              warrantyProducts.some(wp => item.description?.includes(wp.name))
+            ) || false;
+            
+            if (hasEstimateWarranties) {
+              setHasExistingWarranties(true);
+              console.log('Warranties already exist in the original estimate');
+            }
+          }
+        }
       } catch (error) {
         console.error('Error checking warranties:', error);
       } finally {
@@ -67,7 +94,7 @@ export const InvoiceWarrantyDialog = ({
     };
 
     checkExistingWarranties();
-  }, [invoiceId, open]);
+  }, [invoiceId, open, wasConvertedFromEstimate, warrantyProducts]);
 
   const handleContinue = async () => {
     if (selectedWarranties.length > 0 && invoiceId) {
