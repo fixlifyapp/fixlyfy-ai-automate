@@ -93,12 +93,17 @@ export const IntegrationTester = () => {
     // Test 4: Test SMS Sending
     if (testPhone && testMessage) {
       try {
+        // Get current user ID for message storage
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
+        
         const { data, error } = await supabase.functions.invoke('telnyx-sms', {
           body: {
-            to: testPhone,
-            body: `[TEST] ${testMessage}`,
+            recipientPhone: testPhone,
+            message: `[TEST] ${testMessage}`,
             client_id: 'test-client',
-            job_id: 'test-job'
+            job_id: 'test-job',
+            user_id: userId
           }
         });
         

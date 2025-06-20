@@ -44,6 +44,15 @@ export const sendClientMessage = async ({
   try {
     console.log("Calling telnyx-sms function...");
     
+    // Get current user ID for message storage
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    if (!userId) {
+      console.error("User not authenticated");
+      return { success: false, error: "User authentication required" };
+    }
+    
     // The telnyx-sms function now handles secure portal link generation automatically
     // No need to generate portal links here - just pass the original content
     const { data, error } = await supabase.functions.invoke('telnyx-sms', {
@@ -51,7 +60,8 @@ export const sendClientMessage = async ({
         recipientPhone: clientPhone,
         message: content,
         client_id: clientId || '',
-        job_id: jobId || ''
+        job_id: jobId || '',
+        user_id: userId
       }
     });
 

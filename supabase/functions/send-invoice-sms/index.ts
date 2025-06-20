@@ -125,7 +125,8 @@ serve(async (req) => {
         recipientPhone: recipientPhone,
         message: smsMessage,
         client_id: client.id,
-        job_id: invoice.job_id
+        job_id: invoice.job_id,
+        user_id: userData.user.id
       }
     });
 

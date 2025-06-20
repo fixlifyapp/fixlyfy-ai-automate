@@ -77,11 +77,17 @@ export const GeneratePortalLinkDialog = ({
     try {
       const message = customMessage || `Hi ${clientName}! Access your secure client portal here: ${portalLink}`;
 
+      // Get current user ID for message storage
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
       if (sendMethod === "email" && clientEmail) {
-        const { error } = await supabase.functions.invoke('telnyx-sms', {
+        // Use send-email function for actual email sending
+        const { error } = await supabase.functions.invoke('send-email', {
           body: {
-            recipientPhone: clientEmail,
-            message,
+            to: clientEmail,
+            subject: 'Your Client Portal Access',
+            html: `<p>${message}</p>`,
             client_id: clientId
           }
         });
@@ -93,7 +99,9 @@ export const GeneratePortalLinkDialog = ({
           body: {
             recipientPhone: clientPhone,
             message,
-            client_id: clientId
+            client_id: clientId,
+            job_id: '',
+            user_id: userId
           }
         });
         

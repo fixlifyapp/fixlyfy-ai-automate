@@ -45,10 +45,15 @@ export const TelnyxConfig = () => {
 
     setIsTesting(true);
     try {
+      // Get current user ID for message storage
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      
       const { data, error } = await supabase.functions.invoke('telnyx-sms', {
         body: {
-          to: testNumber,
-          body: 'Test SMS from Fixlyfy - Your SMS configuration is working correctly!',
+          recipientPhone: testNumber,
+          message: 'Test SMS from Fixlify - Your SMS configuration is working correctly!',
+          user_id: userId,
           test: true
         }
       });

@@ -79,11 +79,16 @@ export const useMessageSending = ({
       
       // Send SMS via Telnyx edge function
       console.log("Invoking telnyx-sms function...");
+      // Get current user ID for message storage
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      
       const { data, error } = await supabase.functions.invoke('telnyx-sms', {
         body: {
-          to: client.phone,
-          body: message,
-          client_id: client.id
+          recipientPhone: client.phone,
+          message: message,
+          client_id: client.id,
+          user_id: userId
         }
       });
       

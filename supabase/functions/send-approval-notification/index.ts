@@ -130,7 +130,8 @@ serve(async (req) => {
         recipientPhone: userPhone,
         message: notificationMessage,
         client_id: approval.client_id,
-        job_id: '' // No job context for notifications
+        job_id: '', // No job context for notifications
+        user_id: approval.created_by
       }
     });
 
@@ -178,7 +179,8 @@ serve(async (req) => {
             recipientPhone: approval.client_phone,
             message: depositMessage,
             client_id: approval.client_id,
-            job_id: ''
+            job_id: '',
+            user_id: ownerId
           }
         });
 
