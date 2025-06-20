@@ -93,24 +93,15 @@ export const useEstimates = (jobId: string) => {
         return false;
       }
 
-      // Transform LineItem objects to plain JSON for database storage
-      const itemsForDb = estimate.items.map(item => ({
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        taxable: item.taxable,
-        total: item.quantity * item.unitPrice
-      }));
-
-      // Create invoice from estimate
-      const { error: invoiceError } = await supabase
+      // First, create the invoice
+      const { data: newInvoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           job_id: estimate.job_id,
           client_id: estimate.client_id,
           estimate_id: estimate.id,
           invoice_number: invoiceNumber,
-          items: itemsForDb,
+          items: estimate.items || [],
           subtotal: estimate.subtotal,
           tax_rate: estimate.tax_rate,
           tax_amount: estimate.tax_amount,
@@ -122,12 +113,51 @@ export const useEstimates = (jobId: string) => {
           payment_status: 'unpaid',
           amount_paid: 0,
           issue_date: new Date().toISOString().split('T')[0]
-        });
+        })
+        .select()
+        .single();
 
       if (invoiceError) {
         console.error('❌ Error creating invoice:', invoiceError);
         toast.error('Failed to create invoice');
         return false;
+      }
+
+      console.log('✅ Invoice created:', newInvoice);
+
+      // Now copy line items from estimate to invoice
+      const { data: estimateLineItems, error: lineItemsError } = await supabase
+        .from('line_items')
+        .select('*')
+        .eq('parent_id', estimate.id)
+        .eq('parent_type', 'estimate');
+
+      if (lineItemsError) {
+        console.error('❌ Error fetching estimate line items:', lineItemsError);
+        // Don't fail the conversion if line items can't be fetched
+        console.warn('Line items could not be copied, but invoice was created');
+      } else if (estimateLineItems && estimateLineItems.length > 0) {
+        // Copy line items to the new invoice
+        const invoiceLineItems = estimateLineItems.map(item => ({
+          parent_id: newInvoice.id,
+          parent_type: 'invoice',
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          taxable: item.taxable,
+          discount: item.discount || 0
+        }));
+
+        const { error: insertLineItemsError } = await supabase
+          .from('line_items')
+          .insert(invoiceLineItems);
+
+        if (insertLineItemsError) {
+          console.error('❌ Error copying line items to invoice:', insertLineItemsError);
+          console.warn('Invoice created but line items could not be copied');
+        } else {
+          console.log('✅ Line items copied to invoice successfully');
+        }
       }
 
       // Update estimate status
