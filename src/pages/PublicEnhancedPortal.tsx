@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -354,7 +353,9 @@ const PublicEnhancedPortal = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-green-600">{formatCurrency(estimate.total_amount)}</p>
+                        <p className="font-semibold text-green-600">
+                          {estimate.total || estimate.total_amount ? formatCurrency(estimate.total || estimate.total_amount) : "Draft"}
+                        </p>
                         <Badge className={getStatusColor(estimate.status)}>
                           {estimate.status || 'Draft'}
                         </Badge>
@@ -372,7 +373,9 @@ const PublicEnhancedPortal = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-blue-600">{formatCurrency(invoice.total_amount)}</p>
+                        <p className="font-semibold text-blue-600">
+                          {invoice.total || invoice.total_amount ? formatCurrency(invoice.total || invoice.total_amount) : "Pending"}
+                        </p>
                         <Badge className={getStatusColor(invoice.status)}>
                           {invoice.status || 'Pending'}
                         </Badge>
@@ -412,7 +415,7 @@ const PublicEnhancedPortal = () => {
                                 Created: {formatDate(estimate.created_at)}
                               </p>
                               <div className="text-2xl font-bold text-green-600">
-                                {formatCurrency(estimate.total_amount)}
+                                {estimate.total || estimate.total_amount ? formatCurrency(estimate.total || estimate.total_amount) : "Draft"}
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -469,7 +472,7 @@ const PublicEnhancedPortal = () => {
                                 Due: {formatDate(invoice.due_date || invoice.created_at)}
                               </p>
                               <div className="text-2xl font-bold text-blue-600">
-                                {formatCurrency(invoice.total_amount)}
+                                {invoice.total || invoice.total_amount ? formatCurrency(invoice.total || invoice.total_amount) : "Pending"}
                               </div>
                             </div>
                             <div className="flex gap-2">
