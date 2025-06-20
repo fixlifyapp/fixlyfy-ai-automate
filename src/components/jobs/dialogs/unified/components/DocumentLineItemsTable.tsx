@@ -64,7 +64,7 @@ export const DocumentLineItemsTable = ({
     return 'text-green-600';
   };
 
-  const isEditable = onUpdateLineItem && onRemoveLineItem;
+  const isEditable = !!(onUpdateLineItem && onRemoveLineItem);
 
   return (
     <>
