@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign } from "lucide-react";
-import { QuickAmountButtons } from "./QuickAmountButtons";
+import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils";
 
 interface PaymentFormProps {
   amount: string;
@@ -34,35 +34,75 @@ export const PaymentForm = ({
   maxPayment,
   isFormDisabled
 }: PaymentFormProps) => {
+  const handleAmountChange = (value: string) => {
+    // Only allow positive numbers with up to 2 decimal places
+    const sanitized = value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) return; // Don't allow multiple decimal points
+    if (parts[1] && parts[1].length > 2) return; // Don't allow more than 2 decimal places
+    setAmount(sanitized);
+  };
+
+  const setPercentage = (percentage: number) => {
+    if (maxPayment > 0) {
+      const calculatedAmount = (maxPayment * percentage / 100).toFixed(2);
+      setAmount(calculatedAmount);
+    }
+  };
+
+  const setFullAmount = () => {
+    if (maxPayment > 0) {
+      setAmount(maxPayment.toFixed(2));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <Label htmlFor="amount">Payment Amount</Label>
-        <div className="relative">
-          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="space-y-2">
           <Input
             id="amount"
-            type="number"
-            step="0.01"
-            min="0.01"
-            max={maxPayment}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            type="text"
             placeholder="0.00"
-            className="pl-9"
+            value={amount}
+            onChange={(e) => handleAmountChange(e.target.value)}
             disabled={isFormDisabled}
-            required
+            className="text-lg font-medium"
           />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPercentage(25)}
+              disabled={isFormDisabled}
+            >
+              25%
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPercentage(50)}
+              disabled={isFormDisabled}
+            >
+              50%
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={setFullAmount}
+              disabled={isFormDisabled}
+            >
+              Full
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Maximum: {formatCurrency(maxPayment)}
+          </p>
         </div>
-        <QuickAmountButtons
-          remainingBalance={remainingBalance}
-          maxPayment={maxPayment}
-          onAmountSelect={setAmount}
-          disabled={isFormDisabled}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Maximum: ${maxPayment.toFixed(2)}
-        </p>
       </div>
 
       <div>
@@ -73,12 +113,9 @@ export const PaymentForm = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="cash">Cash</SelectItem>
-            <SelectItem value="check">Check</SelectItem>
-            <SelectItem value="credit_card">Credit Card</SelectItem>
-            <SelectItem value="debit_card">Debit Card</SelectItem>
-            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-            <SelectItem value="e_transfer">E-Transfer</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            <SelectItem value="credit-card">Credit Card</SelectItem>
+            <SelectItem value="e-transfer">E-Transfer</SelectItem>
+            <SelectItem value="cheque">Cheque</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -87,9 +124,9 @@ export const PaymentForm = ({
         <Label htmlFor="reference">Reference Number (Optional)</Label>
         <Input
           id="reference"
+          placeholder="Check number, transaction ID, etc."
           value={reference}
           onChange={(e) => setReference(e.target.value)}
-          placeholder="Check number, transaction ID, etc."
           disabled={isFormDisabled}
         />
       </div>
@@ -98,11 +135,11 @@ export const PaymentForm = ({
         <Label htmlFor="notes">Notes (Optional)</Label>
         <Textarea
           id="notes"
+          placeholder="Additional payment details..."
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Additional payment details..."
-          rows={3}
           disabled={isFormDisabled}
+          rows={3}
         />
       </div>
     </div>
