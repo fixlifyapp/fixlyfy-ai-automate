@@ -47,6 +47,8 @@ export const SteppedInvoiceBuilder = ({
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
   const [invoiceCreated, setInvoiceCreated] = useState(false);
+  const [hasExistingWarranties, setHasExistingWarranties] = useState(false);
+  const [isCheckingWarranties, setIsCheckingWarranties] = useState(false);
 
   // Get job and client data
   const { clientInfo, loading: jobLoading } = useJobData(jobId);
@@ -76,6 +78,70 @@ export const SteppedInvoiceBuilder = ({
     onSyncToInvoice: undefined
   });
 
+  // Check for existing warranties when we have an invoice
+  useEffect(() => {
+    const checkExistingWarranties = async () => {
+      const invoiceId = savedInvoice?.id || existingInvoice?.id;
+      if (!invoiceId) {
+        setHasExistingWarranties(false);
+        return;
+      }
+
+      setIsCheckingWarranties(true);
+      try {
+        // Check if this invoice was converted from an estimate
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('estimate_id')
+          .eq('id', invoiceId)
+          .single();
+
+        if (!invoiceError && invoice?.estimate_id) {
+          // Check if estimate had warranties
+          const { data: estimateLineItems, error: estimateError } = await supabase
+            .from('line_items')
+            .select('*')
+            .eq('parent_id', invoice.estimate_id)
+            .eq('parent_type', 'estimate');
+
+          if (!estimateError && estimateLineItems) {
+            const hasWarrantiesInEstimate = estimateLineItems.some((item: any) => 
+              item.description?.toLowerCase().includes('warranty')
+            );
+            
+            if (hasWarrantiesInEstimate) {
+              setHasExistingWarranties(true);
+              setIsCheckingWarranties(false);
+              return;
+            }
+          }
+        
+        // Check if the invoice already contains warranty items
+        const { data: invoiceLineItems, error } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_id', invoiceId)
+          .eq('parent_type', 'invoice');
+
+        if (!error && invoiceLineItems) {
+          const hasWarranties = invoiceLineItems.some((item: any) => 
+            item.description?.toLowerCase().includes('warranty')
+          );
+          setHasExistingWarranties(hasWarranties);
+        }
+      } catch (error) {
+        console.error('Error checking existing warranties:', error);
+        setHasExistingWarranties(false);
+      } finally {
+        setIsCheckingWarranties(false);
+      }
+    };
+
+    if (open && (savedInvoice?.id || existingInvoice?.id)) {
+      checkExistingWarranties();
+    }
+  }, [open, savedInvoice?.id, existingInvoice?.id]);
+
   // Initialize form data when dialog opens
   useEffect(() => {
     if (open) {
@@ -101,7 +167,7 @@ export const SteppedInvoiceBuilder = ({
     }
 
     try {
-      console.log("💾 Saving invoice before continuing to upsell step...");
+      console.log("💾 Saving invoice before continuing...");
       
       const invoice = await saveDocumentChanges();
       
@@ -111,7 +177,18 @@ export const SteppedInvoiceBuilder = ({
         console.log("✅ Invoice saved successfully:", invoice.id);
         toast.success("Invoice saved successfully!");
         
-        setCurrentStep("upsell");
+        // Wait a moment for warranty check to complete if it's running
+        if (isCheckingWarranties) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        // Skip upsell step if warranties already exist
+        if (hasExistingWarranties) {
+          console.log("Warranties already exist, skipping to send step");
+          setCurrentStep("send");
+        } else {
+          setCurrentStep("upsell");
+        }
       } else {
         toast.error("Failed to save invoice. Please try again.");
         return;
@@ -151,7 +228,7 @@ export const SteppedInvoiceBuilder = ({
 
   const handleDialogClose = () => {
     if (currentStep === "send") {
-      setCurrentStep("upsell");
+      setCurrentStep(hasExistingWarranties ? "items" : "upsell");
     } else if (currentStep === "upsell") {
       setCurrentStep("items");
     } else {
@@ -160,8 +237,8 @@ export const SteppedInvoiceBuilder = ({
   };
 
   const handleSendDialogClose = () => {
-    // Return to the upsell step instead of closing the entire dialog
-    setCurrentStep("upsell");
+    // Return to the appropriate step based on warranty status
+    setCurrentStep(hasExistingWarranties ? "items" : "upsell");
   };
 
   const handleSendSuccess = () => {
@@ -209,22 +286,44 @@ export const SteppedInvoiceBuilder = ({
     return savedInvoice?.id || existingInvoice?.id || '';
   };
 
-  const steps = [
-    { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
-    { number: 2, title: "Additional Services", description: "Add warranties and extras" },
-    { number: 3, title: "Send Invoice", description: "Review and send to client" }
-  ];
+  // Update steps based on warranty status
+  const getSteps = () => {
+    if (hasExistingWarranties) {
+      return [
+        { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
+        { number: 2, title: "Send Invoice", description: "Review and send to client" }
+      ];
+    }
+    return [
+      { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
+      { number: 2, title: "Additional Services", description: "Add warranties and extras" },
+      { number: 3, title: "Send Invoice", description: "Review and send to client" }
+    ];
+  };
+
+  const steps = getSteps();
 
   const isStepComplete = (stepNumber: number) => {
-    switch (stepNumber) {
-      case 1:
-        return lineItems.length > 0;
-      case 2:
-        return true;
-      case 3:
-        return false;
-      default:
-        return false;
+    if (hasExistingWarranties) {
+      switch (stepNumber) {
+        case 1:
+          return lineItems.length > 0;
+        case 2:
+          return false;
+        default:
+          return false;
+      }
+    } else {
+      switch (stepNumber) {
+        case 1:
+          return lineItems.length > 0;
+        case 2:
+          return true;
+        case 3:
+          return false;
+        default:
+          return false;
+      }
     }
   };
 
@@ -234,7 +333,14 @@ export const SteppedInvoiceBuilder = ({
     send: "Send Invoice"
   };
 
-  const currentStepNumber = currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3;
+  const getCurrentStepNumber = () => {
+    if (hasExistingWarranties) {
+      return currentStep === "items" ? 1 : 2;
+    }
+    return currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3;
+  };
+
+  const currentStepNumber = getCurrentStepNumber();
 
   return (
     <>
@@ -243,10 +349,15 @@ export const SteppedInvoiceBuilder = ({
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                Step {currentStepNumber} of 3
+                Step {currentStepNumber} of {steps.length}
               </span>
               {stepTitles[currentStep]}
               {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
+              {hasExistingWarranties && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                  Warranty Included
+                </span>
+              )}
             </DialogTitle>
             
             <div className="flex items-center justify-start sm:justify-center space-x-4 py-4 overflow-x-auto">
@@ -316,7 +427,7 @@ export const SteppedInvoiceBuilder = ({
                     disabled={isSubmitting || lineItems.length === 0}
                     className="gap-2"
                   >
-                    {isSubmitting ? "Saving..." : "Save & Continue"}
+                    {isSubmitting ? "Saving..." : hasExistingWarranties ? "Save & Send" : "Save & Continue"}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -326,19 +437,21 @@ export const SteppedInvoiceBuilder = ({
         </DialogContent>
       </Dialog>
 
-      {/* Compact Warranty Dialog */}
-      <InvoiceWarrantyDialog
-        open={currentStep === "upsell"}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCurrentStep("items");
-          }
-        }}
-        onContinue={handleUpsellContinue}
-        invoiceTotal={calculateGrandTotal()}
-        invoiceId={savedInvoice?.id || existingInvoice?.id}
-        wasConvertedFromEstimate={!!estimateToConvert}
-      />
+      {/* Compact Warranty Dialog - only show if no existing warranties */}
+      {!hasExistingWarranties && (
+        <InvoiceWarrantyDialog
+          open={currentStep === "upsell"}
+          onOpenChange={(open) => {
+            if (!open) {
+              setCurrentStep("items");
+            }
+          }}
+          onContinue={handleUpsellContinue}
+          invoiceTotal={calculateGrandTotal()}
+          invoiceId={savedInvoice?.id || existingInvoice?.id}
+          wasConvertedFromEstimate={!!estimateToConvert}
+        />
+      )}
 
       {/* Universal Send Dialog */}
       <UniversalSendDialog
