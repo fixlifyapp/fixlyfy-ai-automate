@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,10 +16,12 @@ export default function AuthPage() {
   const { user, loading, error: authError, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authTab, setAuthTab] = useState("login");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   console.log('🔐 AuthPage render state:', { 
@@ -80,6 +81,20 @@ export default function AuthPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("📝 Attempting sign up with email:", email);
+    
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setLocalError("Passwords do not match");
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError("Password must be at least 6 characters");
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     setAuthLoading(true);
     setLocalError(null);
     
@@ -132,7 +147,7 @@ export default function AuthPage() {
   // Show loading if auth is still loading
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
+      <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg-interface">
         <div className="text-center">
           <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
           <p className="text-fixlyfy-text-secondary">Loading...</p>
@@ -144,30 +159,30 @@ export default function AuthPage() {
   const displayError = authError || localError;
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center">
-            <div className="h-12 w-12 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold text-xl mb-4">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-fixlyfy-bg-interface to-gray-50">
+      <Card className="w-full max-w-md shadow-lg border-0">
+        <CardHeader className="space-y-1 text-center pb-6">
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 rounded-2xl bg-gradient-primary flex items-center justify-center text-white font-bold text-2xl shadow-lg">
               F
             </div>
           </div>
-          <CardTitle className="text-2xl">Fixlyfy</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-bold text-fixlyfy-text">Fixlyfy</CardTitle>
+          <CardDescription className="text-fixlyfy-text-secondary text-base">
             Field service management simplified
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {displayError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
-              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-sm text-red-700">{displayError}</p>
+                <p className="text-sm text-red-700 font-medium">{displayError}</p>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={clearError}
-                  className="mt-1 h-auto p-0 text-red-600 hover:text-red-800"
+                  className="mt-2 h-auto p-0 text-red-600 hover:text-red-800 text-xs"
                 >
                   Dismiss
                 </Button>
@@ -176,14 +191,15 @@ export default function AuthPage() {
           )}
           
           <Tabs value={authTab} onValueChange={setAuthTab} defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="register">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
+              <TabsTrigger value="login" className="data-[state=active]:bg-white">Sign In</TabsTrigger>
+              <TabsTrigger value="register" className="data-[state=active]:bg-white">Sign Up</TabsTrigger>
             </TabsList>
-            <TabsContent value="login">
+            
+            <TabsContent value="login" className="space-y-4">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-fixlyfy-text font-medium">Email</Label>
                   <Input 
                     id="email" 
                     type="email" 
@@ -192,10 +208,11 @@ export default function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={authLoading}
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-fixlyfy-text font-medium">Password</Label>
                   <div className="relative">
                     <Input 
                       id="password" 
@@ -205,40 +222,41 @@ export default function AuthPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={authLoading}
-                      className="pr-10"
+                      className="h-11 pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted hover:text-fixlyfy-text transition-colors"
                       disabled={authLoading}
                     >
                       {showPassword ? (
-                        <EyeOff size={16} />
+                        <EyeOff size={18} />
                       ) : (
-                        <Eye size={16} />
+                        <Eye size={18} />
                       )}
                     </button>
                   </div>
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
+                  className="w-full h-11 bg-fixlyfy hover:bg-fixlyfy-light text-white font-medium"
                   disabled={authLoading || !email || !password}
                 >
                   {authLoading ? (
                     <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      <Loader2 size={18} className="mr-2 animate-spin" />
                       Signing in...
                     </>
                   ) : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
-            <TabsContent value="register">
+            
+            <TabsContent value="register" className="space-y-4">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-fixlyfy-text font-medium">Email</Label>
                   <Input 
                     id="signup-email" 
                     type="email" 
@@ -247,10 +265,11 @@ export default function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={authLoading}
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-fixlyfy-text font-medium">Password</Label>
                   <div className="relative">
                     <Input 
                       id="signup-password" 
@@ -260,33 +279,60 @@ export default function AuthPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={authLoading}
-                      className="pr-10"
+                      className="h-11 pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted hover:text-fixlyfy-text transition-colors"
                       disabled={authLoading}
                     >
                       {showPassword ? (
-                        <EyeOff size={16} />
+                        <EyeOff size={18} />
                       ) : (
-                        <Eye size={16} />
+                        <Eye size={18} />
                       )}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password" className="text-fixlyfy-text font-medium">Confirm Password</Label>
+                  <div className="relative">
+                    <Input 
+                      id="confirm-password" 
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••" 
+                      required 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={authLoading}
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted hover:text-fixlyfy-text transition-colors"
+                      disabled={authLoading}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-fixlyfy-text-muted">
                     Password must be at least 6 characters
                   </p>
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={authLoading || !email || !password}
+                  className="w-full h-11 bg-fixlyfy hover:bg-fixlyfy-light text-white font-medium"
+                  disabled={authLoading || !email || !password || !confirmPassword}
                 >
                   {authLoading ? (
                     <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      <Loader2 size={18} className="mr-2 animate-spin" />
                       Creating account...
                     </>
                   ) : "Create Account"}
@@ -295,15 +341,15 @@ export default function AuthPage() {
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <p className="mt-2 text-xs text-center text-muted-foreground">
+        <CardFooter className="flex flex-col space-y-4 pt-6">
+          <p className="text-xs text-center text-fixlyfy-text-muted">
             By continuing, you agree to Fixlyfy's Terms of Service and Privacy Policy.
           </p>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => window.location.reload()}
-            className="mt-2 text-xs"
+            className="text-xs text-fixlyfy-text-muted hover:text-fixlyfy-text"
           >
             <RefreshCw className="h-3 w-3 mr-1" />
             Refresh Page

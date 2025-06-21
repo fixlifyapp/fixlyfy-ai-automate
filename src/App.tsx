@@ -43,6 +43,7 @@ import PreviewPage from "@/pages/PreviewPage";
 import AdminRolesPage from "@/pages/AdminRolesPage";
 import ApprovalPage from "@/pages/ApprovalPage";
 import ApprovalSuccessPage from "@/pages/ApprovalSuccessPage";
+import TestRealtimePage from "@/pages/TestRealtimePage";
 import NotFound from "@/pages/NotFound";
 import { AppProviders } from "@/components/ui/AppProviders";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -91,7 +92,13 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Public routes - no authentication required */}
-          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth" element={
+            <AuthProvider>
+              <TooltipProvider>
+                <AuthPage />
+              </TooltipProvider>
+            </AuthProvider>
+          } />
           <Route path="/portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:accessId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
           <Route path="/enhanced-portal/:clientId/:jobId" element={<PublicRoute><PublicEnhancedPortal /></PublicRoute>} />
@@ -312,6 +319,11 @@ function App() {
           <Route path="/admin/roles" element={
             <AuthProvider>
               <ProtectedRouteWithProviders><AdminRolesPage /></ProtectedRouteWithProviders>
+            </AuthProvider>
+          } />
+          <Route path="/test-realtime" element={
+            <AuthProvider>
+              <ProtectedRouteWithProviders><TestRealtimePage /></ProtectedRouteWithProviders>
             </AuthProvider>
           } />
           <Route path="*" element={<NotFound />} />

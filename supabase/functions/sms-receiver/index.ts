@@ -67,35 +67,50 @@ const formatPhoneNumber = (phone: string): string => {
 const findUserByReceivingNumber = async (supabase: any, toPhone: string) => {
   console.log('Finding user for receiving number:', toPhone);
   
-  // Create multiple phone format variations to try
-  const cleanedPhone = toPhone.replace(/\D/g, '');
-  const phoneVariations = [
-    toPhone, // Original format from webhook
-    cleanedPhone, // Just digits
-    `+${cleanedPhone}`, // With + prefix
-    `+1${cleanedPhone}`, // With +1 prefix
-    cleanedPhone.startsWith('1') ? `+${cleanedPhone}` : `+1${cleanedPhone}`, // Smart prefix handling
-    cleanedPhone.startsWith('1') ? cleanedPhone.substring(1) : cleanedPhone, // Remove leading 1 if present
-  ].filter((phone, index, array) => array.indexOf(phone) === index); // Remove duplicates
-
-  console.log('Trying phone variations:', phoneVariations);
-  
-  // Try each phone format variation
-  for (const phoneVariation of phoneVariations) {
-    const { data: phoneNumber, error } = await supabase
-      .from('telnyx_phone_numbers')
-      .select('user_id, phone_number')
-      .eq('phone_number', phoneVariation)
-      .eq('status', 'active')
-      .single();
-
-    if (!error && phoneNumber) {
-      console.log('Found phone number owner with format:', phoneVariation, '-> user:', phoneNumber.user_id);
-      return phoneNumber.user_id;
+  // Normalize the phone number to remove any formatting
+  const normalizePhone = (phone: string): string => {
+    const cleaned = phone.replace(/\D/g, '');
+    // Remove leading 1 for US numbers if it's 11 digits
+    if (cleaned.startsWith('1') && cleaned.length === 11) {
+      return cleaned.substring(1);
     }
+    return cleaned;
+  };
+  
+  const baseNumber = normalizePhone(toPhone);
+  
+  // Try to find with ILIKE pattern matching for flexibility
+      const { data: phoneNumber, error } = await supabase
+        .from('telnyx_phone_numbers')
+        .select('user_id, phone_number')
+    .or(`phone_number.ilike.%${baseNumber},phone_number.ilike.+1${baseNumber},phone_number.ilike.+${baseNumber}`)
+        .eq('status', 'active')
+        .single();
+
+      if (!error && phoneNumber) {
+    console.log('Found phone number owner:', phoneNumber.user_id);
+        return phoneNumber.user_id;
   }
 
   console.log('No active phone number found for any format variations of:', toPhone);
+  console.log('Available active phone numbers:');
+  
+  // Debug: List all active phone numbers to help troubleshoot
+  try {
+    const { data: allActiveNumbers, error: debugError } = await supabase
+      .from('telnyx_phone_numbers')
+      .select('phone_number, user_id')
+      .eq('status', 'active');
+    
+    if (!debugError && allActiveNumbers) {
+      allActiveNumbers.forEach(num => {
+        console.log(' - Available:', num.phone_number, 'for user:', num.user_id);
+      });
+    }
+  } catch (debugErr) {
+    console.error('Error fetching debug info:', debugErr);
+  }
+  
   return null;
 };
 
@@ -299,7 +314,7 @@ serve(async (req) => {
         .select('*')
         .eq('client_id', client.id)
         .eq('created_by', userId)
-        .eq('status', 'active')
+        .in('status', ['open', 'scheduled'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -313,17 +328,36 @@ serve(async (req) => {
         console.log('✅ Using existing job:', job.id);
       } else {
         console.log('📝 Creating new job for client:', client.id, 'and user:', userId);
+        // Get the next job ID in the correct format
+        const { data: lastJob } = await supabaseAdmin
+          .from('jobs')
+          .select('id')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let nextJobNumber = 1;
+        if (lastJob && lastJob.id) {
+          const match = lastJob.id.match(/J-(\d+)/);
+          if (match) {
+            nextJobNumber = parseInt(match[1]) + 1;
+          }
+        }
+        const newJobId = `J-${nextJobNumber}`;
+
         const { data: newJob, error: newJobError } = await supabaseAdmin
           .from('jobs')
           .insert({
-            id: `job_${Date.now()}_${client.id.substring(0, 8)}`,
+            id: newJobId,
             client_id: client.id,
             created_by: userId,
             title: `SMS Communication with ${client.name}`,
             description: 'Auto-created job for SMS communication',
-            service: 'communication',
-            status: 'active',
-            date: new Date().toISOString()
+            job_type: 'Communication',
+            lead_source: 'SMS',
+            status: 'open',
+            date: new Date().toISOString(),
+            revenue: '0'
           })
           .select()
           .single();

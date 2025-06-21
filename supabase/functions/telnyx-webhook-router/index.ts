@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -12,13 +11,49 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 interface TelnyxWebhookData {
   data?: {
     event_type?: string;
+    id?: string;
+    occurred_at?: string;
     payload?: {
+      // Voice call fields
       call_control_id?: string;
-      from?: string;
-      to?: string;
+      // SMS fields
+      id?: string;
+      type?: string; // 'SMS' for SMS messages
+      messaging_profile_id?: string;
+      organization_id?: string;
+      record_type?: string;
+      // Common fields
+      from?: {
+        phone_number?: string;
+        carrier?: string;
+        line_type?: string;
+      };
+      to?: Array<{
+        phone_number?: string;
+        carrier?: string;
+        line_type?: string;
+      }> | string;
       direction?: string;
       state?: string;
+      text?: string;
+      // Timestamps
+      sent_at?: string;
+      received_at?: string;
+      completed_at?: string;
     };
+  };
+  event_type?: string;
+  payload?: {
+    from?: {
+      phone_number?: string;
+    };
+    to?: Array<{
+      phone_number?: string;
+    }>;
+    text?: string;
+    direction?: string;
+    type?: string;
+    messaging_profile_id?: string;
   };
   [key: string]: any;
 }
@@ -86,6 +121,21 @@ const updatePhoneNumberStats = async (supabase: any, phoneNumber: string, routin
   }
 };
 
+const routeToSMSReceiver = async (webhookData: any) => {
+  console.log('📱 Routing SMS to SMS Receiver (JWT disabled)...');
+  
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/sms-receiver`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+    },
+    body: JSON.stringify(webhookData)
+  });
+
+  return response;
+};
+
 const routeToAIDispatcher = async (webhookData: any) => {
   console.log('🤖 Routing to AI Dispatcher...');
   
@@ -116,6 +166,63 @@ const routeToBasicTelephony = async (webhookData: any) => {
   return response;
 };
 
+const isSMSWebhook = (webhookData: TelnyxWebhookData): boolean => {
+  // Check for Telnyx v2 SMS event types
+  const eventType = webhookData.data?.event_type || webhookData.event_type;
+  const isSMSEvent = eventType && (
+    eventType.startsWith('message.') ||
+    eventType === 'message.received' || 
+    eventType === 'message.sent' || 
+    eventType === 'message.delivered' ||
+    eventType === 'message.finalized' ||
+    eventType === 'message.failed'
+  );
+
+  // Check for SMS payload structure in v2 format
+  const hasTextMessage = !!(
+    webhookData.data?.payload?.text || 
+    webhookData.payload?.text
+  );
+
+  // Check for SMS-specific fields in v2 format
+  const hasSMSType = !!(
+    webhookData.data?.payload?.type === 'SMS' ||
+    webhookData.payload?.type === 'SMS'
+  );
+
+  // Check for messaging profile ID (SMS specific)
+  const hasMessagingProfile = !!(
+    webhookData.data?.payload?.messaging_profile_id ||
+    webhookData.payload?.messaging_profile_id
+  );
+
+  // Check if it lacks voice call specific fields
+  const hasCallControlId = !!(
+    webhookData.data?.payload?.call_control_id
+  );
+
+  // Additional check for direction field typical in SMS
+  const hasDirection = !!(
+    webhookData.data?.payload?.direction ||
+    webhookData.payload?.direction
+  );
+
+  const conclusion = (isSMSEvent || hasTextMessage || hasSMSType || hasMessagingProfile) && !hasCallControlId;
+
+  console.log('SMS detection v2:', { 
+    eventType, 
+    isSMSEvent, 
+    hasTextMessage,
+    hasSMSType,
+    hasMessagingProfile,
+    hasDirection,
+    hasCallControlId,
+    conclusion
+  });
+
+  return conclusion;
+};
+
 serve(async (req) => {
   console.log('=== TELNYX WEBHOOK ROUTER START ===');
   console.log('Method:', req.method);
@@ -133,15 +240,38 @@ serve(async (req) => {
 
     const rawBody = await req.text();
     console.log('Raw webhook body length:', rawBody.length);
+    console.log('Raw webhook preview:', rawBody.substring(0, 200) + '...');
 
     let webhookData: TelnyxWebhookData;
     try {
       webhookData = JSON.parse(rawBody);
       console.log('Parsed webhook data keys:', Object.keys(webhookData));
+      console.log('Event type:', webhookData.data?.event_type || webhookData.event_type);
     } catch (parseError) {
       console.error('Failed to parse webhook JSON:', parseError);
       return new Response('Invalid JSON', { status: 400, headers: corsHeaders });
     }
+
+    // Check if this is an SMS webhook
+    if (isSMSWebhook(webhookData)) {
+      console.log('🔄 Detected SMS webhook, routing to SMS receiver');
+      const response = await routeToSMSReceiver(webhookData);
+      const responseBody = await response.text();
+      console.log('SMS handler response status:', response.status);
+      
+      console.log('📱 SMS Webhook received with to number:', 
+        webhookData.data?.payload?.to?.[0]?.phone_number || 
+        webhookData.payload?.to?.[0]?.phone_number
+      );
+      
+      return new Response(responseBody, {
+        status: response.status,
+        headers: { ...corsHeaders, 'Content-Type': response.headers.get('Content-Type') || 'application/json' }
+      });
+    }
+
+    // Handle voice call webhooks
+    console.log('🔄 Detected voice webhook, processing call routing');
 
     // Extract call information
     let callControlId: string | undefined;
@@ -151,8 +281,12 @@ serve(async (req) => {
 
     if (webhookData.data?.payload) {
       callControlId = webhookData.data.payload.call_control_id;
-      from = webhookData.data.payload.from;
-      to = webhookData.data.payload.to;
+      from = typeof webhookData.data.payload.from === 'object' 
+        ? webhookData.data.payload.from.phone_number 
+        : webhookData.data.payload.from;
+      to = typeof webhookData.data.payload.to === 'object' 
+        ? webhookData.data.payload.to[0]?.phone_number 
+        : webhookData.data.payload.to;
       eventType = webhookData.data.event_type;
     }
 

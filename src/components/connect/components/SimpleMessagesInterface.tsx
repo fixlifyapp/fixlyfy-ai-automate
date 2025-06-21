@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useMessageContext } from "@/contexts/MessageContext";
@@ -35,6 +34,64 @@ export const SimpleMessagesInterface = () => {
   const isMobile = useIsMobile();
 
   console.log('SimpleMessagesInterface conversations:', conversations);
+
+  // Update selected conversation when conversations update
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.id !== selectedConversation.id.startsWith('temp-')) {
+      // Find the updated conversation in the new conversations list
+      const updatedConversation = conversations.find(conv => conv.id === selectedConversation.id);
+      if (updatedConversation) {
+        console.log('📱 Updating selected conversation with new messages');
+        setSelectedConversation(updatedConversation);
+      }
+    }
+  }, [conversations]); // This will trigger whenever conversations update
+
+  // Direct real-time subscription for immediate updates
+  useEffect(() => {
+    console.log('🔔 Setting up direct real-time subscriptions for SimpleMessagesInterface');
+    
+    // Subscribe to message changes with immediate refresh
+    const messageChannel = supabase
+      .channel('simple-messages-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          console.log('🔔 Direct message change detected:', payload);
+          // Immediate refresh without delay
+          refreshConversations();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations'
+        },
+        (payload) => {
+          console.log('🔔 Direct conversation change detected:', payload);
+          // Immediate refresh without delay
+          refreshConversations();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Direct realtime status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Direct realtime subscription active');
+        }
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up direct realtime subscription');
+      supabase.removeChannel(messageChannel);
+    };
+  }, [refreshConversations]);
 
   // Check URL for specific client and restore if needed
   useEffect(() => {
@@ -88,11 +145,12 @@ export const SimpleMessagesInterface = () => {
     }
   }, [conversations, restoreArchivedConversation, isMobile]);
 
-  // Auto-refresh conversations every 5 seconds to catch new messages
+  // Fallback polling every 10 seconds as backup
   useEffect(() => {
     const interval = setInterval(() => {
+      console.log('🔄 Fallback refresh (every 10s)');
       refreshConversations();
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [refreshConversations]);
@@ -198,7 +256,9 @@ export const SimpleMessagesInterface = () => {
   };
 
   const handleMessageSent = () => {
-    refreshConversations();
+    console.log('📤 Message sent, forcing immediate refresh');
+    // Force immediate refresh after sending
+    setTimeout(() => refreshConversations(), 100);
   };
 
   // Filter conversations based on search term

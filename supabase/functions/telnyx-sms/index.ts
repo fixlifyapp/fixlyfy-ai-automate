@@ -25,7 +25,8 @@ serve(async (req) => {
       messageLength: requestBody.message?.length,
       clientId: requestBody.client_id,
       jobId: requestBody.job_id,
-      userId: requestBody.user_id
+      userId: requestBody.user_id,
+      conversationId: requestBody.conversation_id
     });
     
     const { 
@@ -33,7 +34,8 @@ serve(async (req) => {
       message, 
       client_id, 
       job_id,
-      user_id
+      user_id,
+      conversation_id
     } = requestBody;
 
     if (!recipientPhone || !message) {
@@ -62,7 +64,7 @@ serve(async (req) => {
       if (userPhoneNumbers && userPhoneNumbers.length > 0) {
         console.log('✅ Found user-specific phone number:', userPhoneNumbers[0].phone_number);
         const fromNumber = userPhoneNumbers[0].phone_number;
-        return await sendSMSAndStore(supabaseAdmin, fromNumber, recipientPhone, message, message, client_id, job_id, user_id);
+        return await sendSMSAndStore(supabaseAdmin, fromNumber, recipientPhone, message, message, client_id, job_id, user_id, conversation_id);
       }
     }
     
@@ -94,7 +96,7 @@ serve(async (req) => {
     console.log('✅ Using phone number for SMS:', fromNumber, 'for user:', sendingUserId);
 
     // Process the message - moved inside function
-    return await sendSMSAndStore(supabaseAdmin, fromNumber, recipientPhone, message, message, client_id, job_id, sendingUserId);
+    return await sendSMSAndStore(supabaseAdmin, fromNumber, recipientPhone, message, message, client_id, job_id, sendingUserId, conversation_id);
 
   } catch (error) {
     console.error('❌ Error in telnyx-sms function:', error);
@@ -111,7 +113,7 @@ serve(async (req) => {
   }
 })
 
-async function sendSMSAndStore(supabaseAdmin: any, fromNumber: string, recipientPhone: string, originalMessage: string, _unused: string, client_id?: string, job_id?: string, user_id?: string) {
+async function sendSMSAndStore(supabaseAdmin: any, fromNumber: string, recipientPhone: string, originalMessage: string, _unused: string, client_id?: string, job_id?: string, user_id?: string, conversation_id?: string) {
   // Check Telnyx API key
   const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
   if (!telnyxApiKey) {
@@ -198,67 +200,83 @@ async function sendSMSAndStore(supabaseAdmin: any, fromNumber: string, recipient
   console.log('✅ SMS sent successfully via Telnyx:', telnyxResult.data?.id);
 
   // Now store the outbound message in the database
-  if (client_id && job_id && user_id) {
+  if (client_id && user_id) {
     console.log('📝 Storing outbound message in database...');
     
     try {
-      // Find or create conversation
-      let conversation;
-      const { data: existingConversation, error: convError } = await supabaseAdmin
-        .from('conversations')
-        .select('*')
-        .eq('client_id', client_id)
-        .eq('job_id', job_id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      let finalConversationId = conversation_id;
+      
+      // If no conversation_id provided, find or create one
+      if (!finalConversationId) {
+        // Find or create conversation
+        let conversation;
+        const conversationQuery = supabaseAdmin
+          .from('conversations')
+          .select('*')
+          .eq('client_id', client_id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        // Add job_id condition only if it's provided
+        if (job_id) {
+          conversationQuery.eq('job_id', job_id);
+        } else {
+          conversationQuery.is('job_id', null);
+        }
+        
+        const { data: existingConversation, error: convError } = await conversationQuery.maybeSingle();
 
-      if (convError) {
-        console.error('❌ Error finding conversation:', convError);
+        if (convError) {
+          console.error('❌ Error finding conversation:', convError);
+        }
+
+        if (existingConversation) {
+          conversation = existingConversation;
+          finalConversationId = conversation.id;
+          console.log('✅ Using existing conversation:', conversation.id);
+        } else {
+          console.log('📝 Creating new conversation for outbound SMS');
+          const { data: newConversation, error: newConvError } = await supabaseAdmin
+            .from('conversations')
+            .insert({
+              client_id: client_id,
+              job_id: job_id || null, // Allow null for connect center messages
+              status: 'active',
+              last_message_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (newConvError) {
+            console.error('❌ Error creating conversation:', newConvError);
+          } else if (newConversation) {
+            conversation = newConversation;
+            finalConversationId = newConversation.id;
+            console.log('✅ Created new conversation:', conversation.id);
+          }
+        }
       }
 
-      if (existingConversation) {
-        conversation = existingConversation;
-        console.log('✅ Using existing conversation:', conversation.id);
-        
-        // Update last_message_at
+      // Update conversation timestamp if we have a conversation
+      if (finalConversationId) {
         await supabaseAdmin
           .from('conversations')
           .update({ 
             last_message_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', conversation.id);
-      } else {
-        console.log('📝 Creating new conversation for outbound SMS');
-        const { data: newConversation, error: newConvError } = await supabaseAdmin
-          .from('conversations')
-          .insert({
-            client_id: client_id,
-            job_id: job_id,
-            status: 'active',
-            last_message_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (newConvError) {
-          console.error('❌ Error creating conversation:', newConvError);
-        } else {
-          conversation = newConversation;
-          console.log('✅ Created new conversation:', conversation.id);
-        }
+          .eq('id', finalConversationId);
       }
 
       // Store the outbound message
-      if (conversation) {
+      if (finalConversationId) {
         const { data: savedMessage, error: messageError } = await supabaseAdmin
           .from('messages')
           .insert({
-            conversation_id: conversation.id,
+            conversation_id: finalConversationId,
             body: finalMessage,
             direction: 'outbound',
             sender: formattedFromPhone,

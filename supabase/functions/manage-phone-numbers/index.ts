@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -61,8 +60,8 @@ serve(async (req) => {
       }
 
       // Configure SMS and Voice webhooks with correct URLs
-      const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/sms-receiver'
-      const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
+      const webhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-webhook-router'
+      const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-webhook-router'
 
       // First, configure the messaging profile to ensure SMS webhook is set properly
       console.log('Configuring messaging profile webhook...')
@@ -73,8 +72,8 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          webhook_url: smsWebhookUrl,
-          webhook_failover_url: smsWebhookUrl,
+          webhook_url: webhookUrl,
+          webhook_failover_url: webhookUrl,
           webhook_api_version: "v2"
         })
       })
@@ -121,7 +120,7 @@ serve(async (req) => {
       await supabaseClient
         .from('telnyx_phone_numbers')
         .update({ 
-          webhook_url: smsWebhookUrl,
+          webhook_url: webhookUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', phone_number_id)
@@ -132,7 +131,7 @@ serve(async (req) => {
           message: 'SMS and Voice webhooks configured successfully',
           details: {
             messaging_profile: messagingResult,
-            sms_webhook: smsWebhookUrl,
+            sms_webhook: webhookUrl,
             voice_webhook: voiceWebhookUrl
           }
         }),

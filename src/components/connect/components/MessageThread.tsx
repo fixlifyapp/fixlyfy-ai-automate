@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Phone, Mail, Clock, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,6 +17,30 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when conversation changes or new messages arrive
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Scroll to bottom when conversation is selected
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.messages.length > 0) {
+      // Small delay to ensure DOM is updated
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [selectedConversation?.id]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [selectedConversation?.messages.length]);
 
   const formatMessageTime = (timestamp: string) => {
     try {
@@ -171,7 +194,10 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
       </div>
 
       {/* Messages Display Area */}
-      <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-4'} space-y-3 bg-fixlyfy-bg-interface`}>
+      <div 
+        ref={messagesContainerRef}
+        className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-4'} space-y-3 bg-fixlyfy-bg-interface`}
+      >
         {selectedConversation.messages.length === 0 ? (
           <div className="text-center py-8">
             <div className="bg-white rounded-full p-4 mx-auto mb-4 w-12 h-12 flex items-center justify-center shadow-sm">
@@ -185,70 +211,74 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
             </p>
           </div>
         ) : (
-          selectedConversation.messages.map((message: any) => {
-            const isFromClient = message.direction === 'inbound';
-            const displaySender = isFromClient ? selectedConversation.client.name : 'You';
-            
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-2 animate-fade-in",
-                  !isFromClient && "flex-row-reverse"
-                )}
-              >
-                <Avatar className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} flex-shrink-0`}>
-                  <AvatarFallback className={cn(
-                    "text-xs font-medium",
-                    isFromClient 
-                      ? "bg-fixlyfy-text-muted/20 text-fixlyfy-text" 
-                      : "bg-fixlyfy text-white"
-                  )}>
-                    {isFromClient 
-                      ? selectedConversation.client.name.substring(0, 2).toUpperCase()
-                      : 'ME'
-                    }
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className={cn(
-                  "flex flex-col max-w-[85%]",
-                  !isFromClient && "items-end"
-                )}>
-                  <div className={cn(
-                    "p-3 rounded-2xl shadow-sm break-words",
-                    isMobile ? "max-w-[280px]" : "max-w-none",
-                    isFromClient 
-                      ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
-                      : "bg-fixlyfy text-white rounded-br-md"
-                  )}>
-                    <p className={`${isMobile ? 'text-sm' : 'text-sm'} break-words leading-relaxed`}>
-                      {message.body}
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted flex-wrap",
+          <>
+            {selectedConversation.messages.map((message: any) => {
+              const isFromClient = message.direction === 'inbound';
+              const displaySender = isFromClient ? selectedConversation.client.name : 'You';
+              
+              return (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex gap-2 animate-fade-in",
                     !isFromClient && "flex-row-reverse"
+                  )}
+                >
+                  <Avatar className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} flex-shrink-0`}>
+                    <AvatarFallback className={cn(
+                      "text-xs font-medium",
+                      isFromClient 
+                        ? "bg-fixlyfy-text-muted/20 text-fixlyfy-text" 
+                        : "bg-fixlyfy text-white"
+                    )}>
+                      {isFromClient 
+                        ? selectedConversation.client.name.substring(0, 2).toUpperCase()
+                        : 'ME'
+                      }
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className={cn(
+                    "flex flex-col max-w-[85%]",
+                    !isFromClient && "items-end"
                   )}>
-                    <span className="font-medium whitespace-nowrap">{displaySender}</span>
-                    <Clock className="h-3 w-3 flex-shrink-0" />
-                    <span className="whitespace-nowrap">{formatMessageTime(message.created_at)}</span>
-                    {!isFromClient && (
-                      <span className={cn(
-                        "ml-1 px-1.5 py-0.5 rounded text-xs whitespace-nowrap",
-                        message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
-                        message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
-                        message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :
-                        "bg-fixlyfy-warning/20 text-fixlyfy-warning"
-                      )}>
-                        {message.status || 'sending'}
-                      </span>
-                    )}
+                    <div className={cn(
+                      "p-3 rounded-2xl shadow-sm break-words",
+                      isMobile ? "max-w-[280px]" : "max-w-none",
+                      isFromClient 
+                        ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
+                        : "bg-fixlyfy text-white rounded-br-md"
+                    )}>
+                      <p className={`${isMobile ? 'text-sm' : 'text-sm'} break-words leading-relaxed`}>
+                        {message.body}
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted flex-wrap",
+                      !isFromClient && "flex-row-reverse"
+                    )}>
+                      <span className="font-medium whitespace-nowrap">{displaySender}</span>
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{formatMessageTime(message.created_at)}</span>
+                      {!isFromClient && (
+                        <span className={cn(
+                          "ml-1 px-1.5 py-0.5 rounded text-xs whitespace-nowrap",
+                          message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
+                          message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
+                          message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :
+                          "bg-fixlyfy-warning/20 text-fixlyfy-warning"
+                        )}>
+                          {message.status || 'sending'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+            {/* Invisible div to scroll to */}
+            <div ref={messagesEndRef} />
+          </>
         )}
       </div>
     </div>
