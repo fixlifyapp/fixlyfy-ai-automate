@@ -56,6 +56,74 @@ interface TelnyxSMSWebhook {
   };
 }
 
+// Telnyx signature verification function
+const verifyTelnyxSignature = async (rawBody: string, signature: string, timestamp: string): Promise<boolean> => {
+  try {
+    // Get Telnyx public key from environment
+    const telnyxPublicKey = Deno.env.get('TELNYX_PUBLIC_KEY') || 'e5jeBd2E62zcfqhmsfbYrlIgfP06y1KjlgRg2cGRg84=';
+    
+    console.log('🔐 Using Telnyx public key for verification:', telnyxPublicKey.substring(0, 10) + '...');
+    
+    // Verify timestamp is within acceptable range (±30 seconds)
+    const now = Math.floor(Date.now() / 1000);
+    const webhookTimestamp = parseInt(timestamp);
+    if (Math.abs(now - webhookTimestamp) > 30) {
+      console.error('❌ Webhook timestamp too old or too new:', {
+        now,
+        webhookTimestamp,
+        difference: Math.abs(now - webhookTimestamp)
+      });
+      return false;
+    }
+    
+    // Build the message to verify: timestamp + "." + body
+    const message = `${timestamp}.${rawBody}`;
+    
+    try {
+      // Decode the signature from base64
+      const signatureBytes = new Uint8Array(
+        atob(signature).split('').map(char => char.charCodeAt(0))
+      );
+      
+      // Decode the public key from base64
+      const publicKeyBytes = new Uint8Array(
+        atob(telnyxPublicKey).split('').map(char => char.charCodeAt(0))
+      );
+      
+      // Import the Ed25519 public key
+      const publicKey = await crypto.subtle.importKey(
+        'raw',
+        publicKeyBytes,
+        {
+          name: 'Ed25519',
+          namedCurve: 'Ed25519'
+        },
+        false,
+        ['verify']
+      );
+      
+      // Verify the signature
+      const isValid = await crypto.subtle.verify(
+        'Ed25519',
+        publicKey,
+        signatureBytes,
+        new TextEncoder().encode(message)
+      );
+      
+      console.log('🔐 Signature verification result:', isValid);
+      return isValid;
+      
+    } catch (decodeError) {
+      console.error('❌ Failed to decode signature:', decodeError);
+      return false;
+    }
+    
+  } catch (error) {
+    console.error('❌ Signature verification error:', error);
+    return false;
+  }
+};
+
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
   if (cleaned.startsWith('1') && cleaned.length === 11) {
@@ -200,6 +268,36 @@ serve(async (req) => {
     const rawBody = await req.text();
     console.log('Raw webhook body received, length:', rawBody.length);
     console.log('Raw webhook body preview:', rawBody.substring(0, 500) + '...');
+
+    // CRITICAL: Verify Telnyx webhook signature for security
+    const signature = req.headers.get('telnyx-signature-ed25519');
+    const timestamp = req.headers.get('telnyx-timestamp');
+    
+    console.log('🔐 Webhook signature headers:', {
+      hasSignature: !!signature,
+      hasTimestamp: !!timestamp,
+      signaturePreview: signature ? signature.substring(0, 20) + '...' : 'none',
+      timestamp: timestamp
+    });
+    
+    if (signature && timestamp) {
+      console.log('🔐 Verifying Telnyx webhook signature...');
+      const isValid = await verifyTelnyxSignature(rawBody, signature, timestamp);
+      if (!isValid) {
+        console.error('❌ Invalid webhook signature - rejecting webhook');
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Invalid webhook signature' 
+        }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      console.log('✅ Webhook signature verified successfully');
+    } else {
+      console.warn('⚠️ No signature headers found - this might be a test webhook or misconfigured endpoint');
+      console.warn('⚠️ In production, you should require signature verification');
+    }
 
     // Parse the webhook data
     let webhookData: TelnyxSMSWebhook;
