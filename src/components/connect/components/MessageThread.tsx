@@ -213,68 +213,68 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
         ) : (
           <>
             {selectedConversation.messages.map((message: any) => {
-              const isFromClient = message.direction === 'inbound';
-              const displaySender = isFromClient ? selectedConversation.client.name : 'You';
-              
-              return (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-2 animate-fade-in",
-                    !isFromClient && "flex-row-reverse"
-                  )}
-                >
-                  <Avatar className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} flex-shrink-0`}>
-                    <AvatarFallback className={cn(
-                      "text-xs font-medium",
-                      isFromClient 
-                        ? "bg-fixlyfy-text-muted/20 text-fixlyfy-text" 
-                        : "bg-fixlyfy text-white"
-                    )}>
-                      {isFromClient 
-                        ? selectedConversation.client.name.substring(0, 2).toUpperCase()
-                        : 'ME'
-                      }
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className={cn(
-                    "flex flex-col max-w-[85%]",
-                    !isFromClient && "items-end"
+            const isFromClient = message.direction === 'inbound';
+            const displaySender = isFromClient ? selectedConversation.client.name : 'You';
+            
+            return (
+              <div
+                key={message.id}
+                className={cn(
+                  "flex gap-2 animate-fade-in",
+                  !isFromClient && "flex-row-reverse"
+                )}
+              >
+                <Avatar className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} flex-shrink-0`}>
+                  <AvatarFallback className={cn(
+                    "text-xs font-medium",
+                    isFromClient 
+                      ? "bg-fixlyfy-text-muted/20 text-fixlyfy-text" 
+                      : "bg-fixlyfy text-white"
                   )}>
-                    <div className={cn(
-                      "p-3 rounded-2xl shadow-sm break-words",
-                      isMobile ? "max-w-[280px]" : "max-w-none",
-                      isFromClient 
-                        ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
-                        : "bg-fixlyfy text-white rounded-br-md"
-                    )}>
-                      <p className={`${isMobile ? 'text-sm' : 'text-sm'} break-words leading-relaxed`}>
-                        {message.body}
-                      </p>
-                    </div>
-                    <div className={cn(
-                      "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted flex-wrap",
-                      !isFromClient && "flex-row-reverse"
-                    )}>
-                      <span className="font-medium whitespace-nowrap">{displaySender}</span>
-                      <Clock className="h-3 w-3 flex-shrink-0" />
-                      <span className="whitespace-nowrap">{formatMessageTime(message.created_at)}</span>
-                      {!isFromClient && (
-                        <span className={cn(
-                          "ml-1 px-1.5 py-0.5 rounded text-xs whitespace-nowrap",
-                          message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
-                          message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
-                          message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :
-                          "bg-fixlyfy-warning/20 text-fixlyfy-warning"
-                        )}>
-                          {message.status || 'sending'}
-                        </span>
-                      )}
-                    </div>
+                    {isFromClient 
+                      ? selectedConversation.client.name.substring(0, 2).toUpperCase()
+                      : 'ME'
+                    }
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className={cn(
+                  "flex flex-col max-w-[85%]",
+                  !isFromClient && "items-end"
+                )}>
+                  <div className={cn(
+                    "p-3 rounded-2xl shadow-sm break-words",
+                    isMobile ? "max-w-[280px]" : "max-w-none",
+                    isFromClient 
+                      ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
+                      : "bg-fixlyfy text-white rounded-br-md"
+                  )}>
+                    <p className={`${isMobile ? 'text-sm' : 'text-sm'} break-words leading-relaxed`}>
+                      {message.body}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted flex-wrap",
+                    !isFromClient && "flex-row-reverse"
+                  )}>
+                    <span className="font-medium whitespace-nowrap">{displaySender}</span>
+                    <Clock className="h-3 w-3 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{formatMessageTime(message.created_at)}</span>
+                    {!isFromClient && (
+                      <span className={cn(
+                        "ml-1 px-1.5 py-0.5 rounded text-xs whitespace-nowrap",
+                        message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
+                        message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
+                        message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :
+                        "bg-fixlyfy-warning/20 text-fixlyfy-warning"
+                      )}>
+                        {message.status || 'sending'}
+                      </span>
+                    )}
                   </div>
                 </div>
-              );
+              </div>
+            );
             })}
             {/* Invisible div to scroll to */}
             <div ref={messagesEndRef} />
