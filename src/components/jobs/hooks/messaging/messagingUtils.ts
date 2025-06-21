@@ -52,48 +52,7 @@ export const sendClientMessage = async ({
       return { success: false, error: "User authentication required" };
     }
     
-    // For connect center messages (no jobId), we need to find or create a conversation
-    let conversationId = existingConversationId;
-    
-    if (!conversationId && clientId) {
-      // Try to find an existing active conversation for this client
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('status', 'active')
-        .order('last_message_at', { ascending: false })
-        .limit(1);
-      
-      if (conversations && conversations.length > 0) {
-        conversationId = conversations[0].id;
-        console.log("Found existing conversation:", conversationId);
-      } else {
-        // Create a new conversation without jobId for connect center
-        const { data: newConversation, error: convError } = await supabase
-          .from('conversations')
-          .insert({
-            client_id: clientId,
-            job_id: jobId || null, // Allow null for connect center
-            status: 'active',
-            last_message_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-        
-        if (convError) {
-          console.error("Error creating conversation:", convError);
-        } else if (newConversation) {
-          conversationId = newConversation.id;
-          console.log("Created new conversation:", conversationId);
-        }
-      }
-    }
-    
-    // The telnyx-sms function now handles secure portal link generation automatically
-    // Pass conversation_id if we have it
+    // Send SMS via Telnyx edge function - let it handle conversation creation and message storage
     const { data, error } = await supabase.functions.invoke('telnyx-sms', {
       body: {
         recipientPhone: clientPhone,
@@ -101,7 +60,7 @@ export const sendClientMessage = async ({
         client_id: clientId || '',
         job_id: jobId || '',
         user_id: userId,
-        conversation_id: conversationId // Pass conversation ID to edge function
+        conversation_id: existingConversationId // Pass existing conversation ID if available
       }
     });
 
@@ -119,21 +78,9 @@ export const sendClientMessage = async ({
 
     console.log("Message sent successfully via telnyx-sms");
     
-    // Trigger a manual refresh after successful send
-    if (conversationId) {
-      // Force a refresh by updating the conversation's updated_at timestamp
-      await supabase
-        .from('conversations')
-        .update({ 
-          updated_at: new Date().toISOString(),
-          last_message_at: new Date().toISOString()
-        })
-        .eq('id', conversationId);
-    }
-    
     return { 
       success: true, 
-      conversationId: conversationId || undefined
+      conversationId: data.conversationId || existingConversationId || undefined
     };
 
   } catch (error) {

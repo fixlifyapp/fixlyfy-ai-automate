@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -52,34 +51,8 @@ export const useMessageSending = ({
 
       setMessages(prev => [...prev, tempMessage]);
       
-      let currentConversationId = conversationId;
-      
-      // If no conversation exists, create one
-      if (!currentConversationId && client.id) {
-        console.log("Creating new conversation for client:", client.id);
-        const { data: newConversation, error: convError } = await supabase
-          .from('conversations')
-          .insert({
-            client_id: client.id,
-            status: 'active',
-            last_message_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-        
-        if (convError) {
-          console.error("Error creating conversation:", convError);
-          throw convError;
-        }
-        
-        currentConversationId = newConversation.id;
-        setConversationId(currentConversationId);
-        console.log("Created conversation:", currentConversationId);
-      }
-      
-      // Send SMS via Telnyx edge function
+      // Send SMS via Telnyx edge function - let it handle conversation creation and message storage
       console.log("Invoking telnyx-sms function...");
-      // Get current user ID for message storage
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
       
@@ -88,7 +61,8 @@ export const useMessageSending = ({
           recipientPhone: client.phone,
           message: message,
           client_id: client.id,
-          user_id: userId
+          user_id: userId,
+          conversation_id: conversationId // Pass existing conversation ID if available
         }
       });
       
@@ -110,29 +84,12 @@ export const useMessageSending = ({
       
       console.log("SMS sent successfully:", data.id);
       
-      // Store the message in the database
-      if (currentConversationId) {
-        console.log("Storing message in database...");
-        const { error: msgError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: currentConversationId,
-            body: message,
-            direction: 'outbound',
-            sender: 'You',
-            recipient: client.phone,
-            status: 'delivered',
-            message_sid: data.id
-          });
-          
-        if (msgError) {
-          console.error("Error storing message:", msgError);
-        } else {
-          console.log("Message stored successfully");
-        }
-          
-        toast.success("Message sent successfully");
+      // Update conversation ID if returned from the function
+      if (data.conversationId && !conversationId) {
+        setConversationId(data.conversationId);
       }
+      
+      toast.success("Message sent successfully");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
